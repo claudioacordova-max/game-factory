@@ -3,6 +3,7 @@ import {
   createGameSession,
   addCopyToActiveDeck,
   baseMana,
+  canEnterEncounter,
   declareAttackers,
   declareBlockers,
   endTurn,
@@ -14,34 +15,18 @@ import {
   summonCreature,
   unlockCreatureType,
   removeCopyFromActiveDeck,
+  createExplorationProgress,
+  currentEncounterId,
+  isDungeonComplete,
+  recordEncounterVictory,
+  recordEncounterDefeat,
+  ExplorationViolation,
 } from './engine/index.js'
 import { resolveEnemyBlocks, runEnemyTurn } from './engine/enemy.js'
 import type { Creature, CreatureCard, DuelState, GameSession } from './engine/index.js'
-
-const PLAYER_DECK: CreatureCard[] = [
-  { id: 'player-squire', name: 'Escudero', attack: 2, maxHealth: 3, cost: { mana: 0, sacrifices: 0 } },
-  { id: 'player-vanguard', name: 'Vanguardia', attack: 3, maxHealth: 4, cost: { mana: 1, sacrifices: 0 } },
-  { id: 'player-imp', name: 'Diablillo', attack: 1, maxHealth: 2, cost: { mana: 0, sacrifices: 0 } },
-  { id: 'player-basilisk', name: 'Basilisco', attack: 4, maxHealth: 4, cost: { mana: 0, sacrifices: 1 } },
-  { id: 'player-warden', name: 'Guardián', attack: 2, maxHealth: 6, cost: { mana: 1, sacrifices: 0 } },
-  { id: 'player-hawk', name: 'Halcón', attack: 3, maxHealth: 2, cost: { mana: 0, sacrifices: 0 } },
-  { id: 'player-ogre', name: 'Ogro', attack: 5, maxHealth: 5, cost: { mana: 0, sacrifices: 1 } },
-]
-
-const TEST_UNLOCK_CARD: CreatureCard = {
-  id: 'test-mossling', name: 'Brote de musgo · prueba', attack: 1, maxHealth: 4, cost: { mana: 0, sacrifices: 0 },
-}
-const PLAYER_CARD_TYPES = [...PLAYER_DECK, TEST_UNLOCK_CARD]
-
-const ENEMY_DECK: CreatureCard[] = [
-  { id: 'enemy-scout', name: 'Explorador sombrío', attack: 2, maxHealth: 3, cost: { mana: 0, sacrifices: 0 } },
-  { id: 'enemy-raider', name: 'Saqueador', attack: 3, maxHealth: 3, cost: { mana: 1, sacrifices: 0 } },
-  { id: 'enemy-cultist', name: 'Cultista', attack: 2, maxHealth: 2, cost: { mana: 0, sacrifices: 1 } },
-  { id: 'enemy-boar', name: 'Jabalí acorazado', attack: 4, maxHealth: 5, cost: { mana: 1, sacrifices: 0 } },
-  { id: 'enemy-bat', name: 'Murciélago', attack: 2, maxHealth: 2, cost: { mana: 0, sacrifices: 0 } },
-  { id: 'enemy-guard', name: 'Guardia de la cripta', attack: 2, maxHealth: 5, cost: { mana: 0, sacrifices: 0 } },
-  { id: 'enemy-ogre', name: 'Ogro de piedra', attack: 4, maxHealth: 4, cost: { mana: 0, sacrifices: 1 } },
-]
+import { DISCOVERY_CARD, DUNGEON_ENCOUNTERS, PLAYER_CARD_TYPES, PLAYER_DECK } from './engine/content.js'
+import PrototypeScene from './scene/PrototypeScene.js'
+import { encounterVictoryMessage } from './ui/explorationMessages.js'
 
 function cardStats(card: CreatureCard): string {
   const cost = [card.cost.mana ? `${card.cost.mana} maná` : '', card.cost.sacrifices ? `${card.cost.sacrifices} sacrificio` : '']
@@ -74,18 +59,21 @@ function CreatureTile({ creature, selected, onClick, disabled, hint }: {
 
 export default function App() {
   const [session, setSession] = useState<GameSession>(() => createGameSession(PLAYER_DECK))
-  const [duel, setDuel] = useState<DuelState>(() => startSessionDuel(session, PLAYER_CARD_TYPES, ENEMY_DECK))
+  const [exploration, setExploration] = useState(() => createExplorationProgress())
+  const [duel, setDuel] = useState<DuelState>(() => startSessionDuel(session, PLAYER_CARD_TYPES, DUNGEON_ENCOUNTERS[0].opponentDeck))
+  const [activeEncounterId, setActiveEncounterId] = useState<string | null>(null)
+  const [isDuelActive, setIsDuelActive] = useState(false)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [sacrificeIds, setSacrificeIds] = useState<string[]>([])
   const [attackerIds, setAttackerIds] = useState<string[]>([])
   const [blockerChoices, setBlockerChoices] = useState<Record<string, string[]>>({})
-  const [notice, setNotice] = useState('Elige una carta para invocarla o comienza el combate.')
+  const [notice, setNotice] = useState('Elige el encuentro disponible en el mapa para entrar a la mazmorra.')
 
   const player = duel.players.player
   const enemy = duel.players.opponent
   const isPlayerMain = duel.phase === 'main' && duel.activePlayer === 'player'
   const selectedCard = player.hand.find((card) => card.id === selectedCardId)
-  const canManageBetweenDuels = duel.phase === 'finished'
+  const canManageBetweenDuels = !isDuelActive
   const usableMana = canManageBetweenDuels ? Math.max(0, player.level - session.fatigue) : baseMana(player)
   const shownMana = canManageBetweenDuels ? usableMana : player.mana
 
@@ -99,10 +87,26 @@ export default function App() {
     }
     setDuel(recovered)
     setSession((current) => finishSessionDuel(current, recovered))
+    setIsDuelActive(false)
+
+    if (recovered.winner === 'player' && activeEncounterId) {
+      const victory = recordEncounterVictory(exploration, activeEncounterId, recovered.id, DUNGEON_ENCOUNTERS)
+      setExploration(victory.progress)
+      if (victory.discoveredCardId === DISCOVERY_CARD.id) {
+        setSession((current) => unlockCreatureType(current, DISCOVERY_CARD))
+        setNotice('Victoria: Brote de musgo se descubrió y añadió a la colección. Puedes incluirlo en la baraja.')
+        return
+      }
+      const enemyName = DUNGEON_ENCOUNTERS.find((entry) => entry.id === activeEncounterId)?.enemyName ?? 'el enemigo'
+      setNotice(encounterVictoryMessage(enemyName, isDungeonComplete(victory.progress, DUNGEON_ENCOUNTERS)))
+    } else if (recovered.winner === 'opponent' && activeEncounterId) {
+      setExploration((current) => recordEncounterDefeat(current, activeEncounterId, recovered.id, DUNGEON_ENCOUNTERS))
+      setNotice('Derrota. Las consecuencias se conservan; puedes ajustar la baraja y reintentar este encuentro.')
+    }
   }
 
   function reject(error: unknown) {
-    setNotice(error instanceof RuleViolation ? error.message : 'No se pudo completar esa acción.')
+    setNotice(error instanceof RuleViolation || error instanceof ExplorationViolation ? error.message : 'No se pudo completar esa acción.')
   }
 
   function selectCard(card: CreatureCard) {
@@ -140,11 +144,11 @@ export default function App() {
       const result = resolveEnemyBlocks(declared)
       const blocked = Object.values(result.blockers).flat().length
       if (result.phase === 'finished') closeDuel(result)
-      else setDuel(result)
+      else {
+        setDuel(result)
+        setNotice(`${blocked} bloqueo(s) del enemigo. Se resolvió el combate.`)
+      }
       setAttackerIds([])
-      setNotice(result.winner === 'player'
-        ? '¡Victoria! El enemigo se quedó sin vida.'
-        : `${blocked} bloqueo(s) del enemigo. Se resolvió el combate.`)
     } catch (error) {
       reject(error)
     }
@@ -168,7 +172,6 @@ export default function App() {
       const result = resolveCombat(declared)
       if (result.phase === 'finished') {
         closeDuel(result)
-        setNotice('Derrota. El invocador se quedó sin vida.')
       } else {
         const nextTurn = endTurn(result)
         setDuel(nextTurn)
@@ -193,13 +196,24 @@ export default function App() {
     }
   }
 
-  function startNextDuel() {
-    setDuel(startSessionDuel(session, PLAYER_CARD_TYPES, ENEMY_DECK))
-    setSelectedCardId(null)
-    setSacrificeIds([])
-    setAttackerIds([])
-    setBlockerChoices({})
-    setNotice('Nuevo duelo: las heridas y pérdidas anteriores se mantienen.')
+  function enterEncounter(encounterId: string) {
+    try {
+      if (isDuelActive) throw new ExplorationViolation('Termina el duelo actual antes de entrar a otro encuentro.')
+      const encounter = DUNGEON_ENCOUNTERS.find((entry) => entry.id === encounterId)
+      if (!encounter || !canEnterEncounter(exploration, encounterId, DUNGEON_ENCOUNTERS)) {
+        throw new ExplorationViolation('Ese encuentro todavía está bloqueado o ya se completó.')
+      }
+      setDuel(startSessionDuel(session, PLAYER_CARD_TYPES, encounter.opponentDeck))
+      setActiveEncounterId(encounter.id)
+      setIsDuelActive(true)
+      setSelectedCardId(null)
+      setSacrificeIds([])
+      setAttackerIds([])
+      setBlockerChoices({})
+      setNotice(`Comienza el duelo contra ${encounter.enemyName}.`)
+    } catch (error) {
+      reject(error)
+    }
   }
 
   function changeDeck(copyId: string, included: boolean) {
@@ -209,40 +223,62 @@ export default function App() {
     setNotice(included ? 'Copia añadida al final de la baraja activa.' : 'Copia retirada de la baraja; sigue en tu colección.')
   }
 
-  function unlockTestCard() {
-    setSession((current) => unlockCreatureType(current, TEST_UNLOCK_CARD))
-    setNotice('Desbloqueo de prueba registrado. El Brote de musgo se añadió una vez al catálogo y la colección; puedes incluirlo en la baraja.')
-  }
-
   const phaseText = duel.phase === 'main' ? 'Fase principal'
     : duel.phase === 'attackers' ? 'Declarar atacantes'
       : duel.phase === 'blockers' ? (duel.activePlayer === 'player' ? 'Elegir bloqueos del enemigo' : 'Declarar tus bloqueos')
         : duel.phase === 'resolved' ? 'Combate resuelto'
           : duel.phase === 'resolve' ? 'Resolver combate' : 'Duelo terminado'
-  const isEnemyAttacking = duel.phase === 'blockers' && duel.activePlayer === 'opponent'
+  const isEnemyAttacking = isDuelActive && duel.phase === 'blockers' && duel.activePlayer === 'opponent'
+  const nextEncounterId = currentEncounterId(exploration, DUNGEON_ENCOUNTERS)
+  const dungeonComplete = isDungeonComplete(exploration, DUNGEON_ENCOUNTERS)
+  const mapNodes = DUNGEON_ENCOUNTERS.map((encounter) => ({
+    id: encounter.id,
+    label: encounter.name,
+    enemyName: encounter.enemyName,
+    status: exploration.completedEncounterIds.includes(encounter.id) ? 'completed' as const
+      : isDuelActive && activeEncounterId === encounter.id ? 'active' as const
+        : nextEncounterId === encounter.id ? 'available' as const : 'locked' as const,
+  }))
 
   return (
     <main className="game-shell">
       <header className="game-header">
         <div>
           <p className="eyebrow">RPG de cartas · Prototipo</p>
-          <h1>Duelo en la cripta</h1>
+          <h1>Exploración de la cripta</h1>
         </div>
         <div className="turn-summary" aria-live="polite">
-          <span className="phase-pill">{phaseText}</span>
-          <span>Turno {duel.turn} · {duel.activePlayer === 'player' ? 'Tuyo' : 'Enemigo'}</span>
+          {isDuelActive
+            ? <><span className="phase-pill">{phaseText}</span><span>Turno {duel.turn} · {duel.activePlayer === 'player' ? 'Tuyo' : 'Enemigo'}</span></>
+            : <><span className="phase-pill">{dungeonComplete ? 'Mazmorra completada' : 'Exploración'}</span><span>{exploration.completedEncounterIds.length} de {DUNGEON_ENCOUNTERS.length} encuentros superados</span></>}
         </div>
       </header>
 
-      {duel.phase === 'finished' && (
+      {duel.phase === 'finished' && !isDuelActive && activeEncounterId && (
         <section className={`result-banner${duel.winner === 'player' ? ' victory' : ' defeat'}`} role="status">
           <div>
-            <strong>{duel.winner === 'player' ? '¡Victoria!' : 'Derrota'}</strong>
-            <p>{duel.winner === 'player' ? 'Has vencido al guardián de la cripta.' : 'El guardián de la cripta te ha derrotado.'}</p>
+            <strong>{duel.winner === 'player' ? (dungeonComplete ? 'Mazmorra completada' : '¡Victoria!') : 'Derrota'}</strong>
+            <p>{duel.winner === 'player'
+              ? `Has vencido a ${DUNGEON_ENCOUNTERS.find((entry) => entry.id === activeEncounterId)?.enemyName ?? 'tu rival'}.${dungeonComplete ? ' Has superado los tres encuentros.' : ' El siguiente encuentro está disponible en el mapa.'}`
+              : `${DUNGEON_ENCOUNTERS.find((entry) => entry.id === activeEncounterId)?.enemyName ?? 'Tu rival'} te venció. Puedes gestionar tu baraja y volver a intentarlo desde el mapa.`}</p>
           </div>
-          <button className="button button-light" type="button" onClick={startNextDuel}>{duel.winner === 'opponent' ? 'Reintentar enfrentamiento' : 'Iniciar siguiente duelo'}</button>
         </section>
       )}
+
+      {dungeonComplete && !isDuelActive && (
+        <section className="dungeon-complete" role="status">
+          <strong>La mazmorra ha terminado</strong>
+          <span>Los tres encuentros están completados. No hay más rivales disponibles.</span>
+        </section>
+      )}
+
+      <section className="exploration-panel" aria-labelledby="exploration-title">
+        <div className="section-heading">
+          <div><p className="section-kicker">Mazmorra · ruta lineal</p><h2 id="exploration-title">Mapa de encuentros</h2></div>
+          <span className="deck-count">{isDuelActive ? 'El duelo actual debe terminar antes de continuar.' : 'Selecciona el encuentro disponible.'}</span>
+        </div>
+        <PrototypeScene nodes={mapNodes} onSelectEncounter={enterEncounter} interactionDisabled={isDuelActive || dungeonComplete} />
+      </section>
 
       <p className="notice" aria-live="polite">{notice}</p>
 
@@ -294,17 +330,14 @@ export default function App() {
             </div>
           </section>
         </div>
-        <div className="test-unlock">
-          <div><strong>Herramienta de prueba · desbloqueo provisional</strong><span>{session.unlockedCardIds.includes(TEST_UNLOCK_CARD.id) ? 'Brote de musgo ya desbloqueado. El tipo conserva su desbloqueo y no puede volver a generar copias.' : 'Carta provisional bloqueada: Brote de musgo · 1 ATQ · 4 VID.'}</span></div>
-          <button className="button button-primary" type="button" disabled={!canManageBetweenDuels || session.unlockedCardIds.includes(TEST_UNLOCK_CARD.id)} onClick={unlockTestCard}>{session.unlockedCardIds.includes(TEST_UNLOCK_CARD.id) ? 'Ya desbloqueada' : 'Desbloquear carta de prueba'}</button>
-        </div>
-        {!canManageBetweenDuels && <p className="management-lock">La colección se consulta durante el duelo; la baraja y la herramienta de prueba se editan entre duelos.</p>}
+        {!canManageBetweenDuels && <p className="management-lock">La colección se consulta durante el duelo; la baraja se edita entre encuentros.</p>}
       </section>
 
+      {isDuelActive && <>
       <section className="duel-board" aria-label="Campo de batalla">
         <section className="side-panel enemy-panel" aria-label="Invocador enemigo">
           <div className="player-heading">
-            <div><p className="section-kicker">Oponente</p><h2>Guardián de la cripta</h2></div>
+            <div><p className="section-kicker">Oponente</p><h2>{DUNGEON_ENCOUNTERS.find((entry) => entry.id === activeEncounterId)?.enemyName}</h2></div>
             <div className="resources"><span className="life-value">♥ {Math.max(0, enemy.life)}</span><span>✦ {enemy.mana} maná</span></div>
           </div>
           <div className="battle-row">
@@ -403,6 +436,7 @@ export default function App() {
       </section>
 
       <footer className="game-footer"><span>{duel.phase === 'finished' ? 'Duelo finalizado · vida del invocador recuperada' : `Cartas en tu mazo: ${player.deck.length} · Cartas en el mazo enemigo: ${enemy.deck.length}`}</span></footer>
+      </>}
     </main>
   )
 }

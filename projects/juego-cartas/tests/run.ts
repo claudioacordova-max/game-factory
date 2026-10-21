@@ -1,6 +1,9 @@
 import { addCopyToActiveDeck, baseMana, createDuel, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, removeCopyFromActiveDeck, resolveCombat, RuleViolation, startCombat, startSessionDuel, summonCreature, unlockCreatureType } from '../src/engine/index.js'
 import { chooseEnemyBlockers, resolveEnemyBlocks, runEnemyTurn } from '../src/engine/enemy.js'
 import type { Creature, CreatureCard, DuelState, PlayerId } from '../src/engine/index.js'
+import { DISCOVERY_CARD, DUNGEON_ENCOUNTERS } from '../src/engine/content.js'
+import { canEnterEncounter, createExplorationProgress, currentEncounterId, isDungeonComplete, recordEncounterDefeat, recordEncounterVictory } from '../src/engine/exploration.js'
+import { encounterVictoryMessage } from '../src/ui/explorationMessages.js'
 
 type Test = { name: string; run: () => void }
 const tests: Test[] = []
@@ -493,6 +496,87 @@ test('la colección inicial no duplica tipos repetidos', () => {
   const repeated = cards('same', 1)
   const session = createGameSession([...repeated, ...repeated])
   equal([session.copies.length, session.unlockedCardIds.length, session.activeDeckCopyIds.length], [1, 1, 1])
+})
+
+test('los tres encuentros conservan las composiciones, estadísticas, costes y orden aprobados', () => {
+  equal(DUNGEON_ENCOUNTERS.map((encounter) => [encounter.id, encounter.enemyName]), [
+    ['threshold-sentinel', 'Centinela del umbral'],
+    ['catacomb-keeper', 'Custodia de las catacumbas'],
+    ['crypt-guardian', 'Guardián de la cripta'],
+  ])
+  equal(DUNGEON_ENCOUNTERS.map((encounter) => encounter.opponentDeck.map((card) => card.id)), [
+    ['enemy-scout', 'enemy-bat'],
+    ['enemy-bat', 'enemy-raider', 'enemy-guard'],
+    ['enemy-scout', 'enemy-raider', 'enemy-cultist', 'enemy-boar', 'enemy-bat', 'enemy-guard', 'enemy-ogre'],
+  ])
+  equal(DUNGEON_ENCOUNTERS[2].opponentDeck.map((card) => [card.attack, card.maxHealth, card.cost]), [
+    [2, 3, { mana: 0, sacrifices: 0 }],
+    [3, 3, { mana: 1, sacrifices: 0 }],
+    [2, 2, { mana: 0, sacrifices: 1 }],
+    [4, 5, { mana: 1, sacrifices: 0 }],
+    [2, 2, { mana: 0, sacrifices: 0 }],
+    [2, 5, { mana: 0, sacrifices: 0 }],
+    [4, 4, { mana: 0, sacrifices: 1 }],
+  ])
+})
+
+test('la mazmorra solo abre el siguiente encuentro al ganar y no permite repetir encuentros completados', () => {
+  let progress = createExplorationProgress()
+  const [first, second, third] = DUNGEON_ENCOUNTERS
+  truthy(first && second && third, 'La ruta debe contener tres encuentros.')
+  equal(currentEncounterId(progress, DUNGEON_ENCOUNTERS), first.id)
+  equal([canEnterEncounter(progress, first.id, DUNGEON_ENCOUNTERS), canEnterEncounter(progress, second.id, DUNGEON_ENCOUNTERS)], [true, false])
+
+  progress = recordEncounterVictory(progress, first.id, 'duel-win-1', DUNGEON_ENCOUNTERS).progress
+  equal([currentEncounterId(progress, DUNGEON_ENCOUNTERS), canEnterEncounter(progress, first.id, DUNGEON_ENCOUNTERS), canEnterEncounter(progress, second.id, DUNGEON_ENCOUNTERS)], [second.id, false, true])
+  progress = recordEncounterVictory(progress, second.id, 'duel-win-2', DUNGEON_ENCOUNTERS).progress
+  equal(currentEncounterId(progress, DUNGEON_ENCOUNTERS), third.id)
+  progress = recordEncounterVictory(progress, third.id, 'duel-win-3', DUNGEON_ENCOUNTERS).progress
+  equal([currentEncounterId(progress, DUNGEON_ENCOUNTERS), isDungeonComplete(progress, DUNGEON_ENCOUNTERS)], [null, true])
+  equal(DUNGEON_ENCOUNTERS.map((entry) => canEnterEncounter(progress, entry.id, DUNGEON_ENCOUNTERS)), [false, false, false])
+})
+
+test('una derrota no avanza la mazmorra y permite reintentar el mismo encuentro con las consecuencias persistentes', () => {
+  const owned = cards('retry-owned', 2)
+  const first = DUNGEON_ENCOUNTERS[0]
+  let progress = createExplorationProgress()
+  const session = createGameSession(owned)
+  const firstDuel = startSessionDuel(session, owned, first.opponentDeck)
+  const loss: DuelState = { ...firstDuel, phase: 'finished', winner: 'opponent' }
+  const afterLoss = finishSessionDuel(session, loss)
+
+  progress = recordEncounterDefeat(progress, first.id, loss.id, DUNGEON_ENCOUNTERS)
+  equal(progress.completedEncounterIds, [])
+  equal(recordEncounterDefeat(progress, first.id, loss.id, DUNGEON_ENCOUNTERS), progress)
+  equal([currentEncounterId(progress, DUNGEON_ENCOUNTERS), canEnterEncounter(progress, first.id, DUNGEON_ENCOUNTERS)], [first.id, true])
+  equal([afterLoss.fatigue, afterLoss.invokerLife], [1, 20])
+  const retry = startSessionDuel(afterLoss, owned, first.opponentDeck)
+  equal(retry.players.opponent.deck.map((card) => card.id), first.opponentDeck.slice(3).map((card) => card.id))
+  equal(retry.players.player.mana, 0)
+})
+
+test('la victoria del primer encuentro descubre Brote de musgo una sola vez sin añadirlo a la baraja', () => {
+  const owned = cards('discovery-starter', 1)
+  const session = createGameSession(owned)
+  const first = DUNGEON_ENCOUNTERS[0]
+  const duel = startSessionDuel(session, owned, first.opponentDeck)
+  const win: DuelState = { ...duel, phase: 'finished', winner: 'player' }
+  const firstResult = recordEncounterVictory(createExplorationProgress(), first.id, duel.id, DUNGEON_ENCOUNTERS)
+  let nextSession = finishSessionDuel(session, win)
+  nextSession = unlockCreatureType(nextSession, DISCOVERY_CARD)
+  equal(firstResult.discoveredCardId, DISCOVERY_CARD.id)
+  equal(nextSession.unlockedCardIds, [...session.unlockedCardIds, DISCOVERY_CARD.id])
+  equal(nextSession.copies.filter((copy) => copy.cardId === DISCOVERY_CARD.id).length, 1)
+  equal(nextSession.activeDeckCopyIds, session.activeDeckCopyIds)
+
+  const repeated = recordEncounterVictory(firstResult.progress, first.id, duel.id, DUNGEON_ENCOUNTERS)
+  nextSession = unlockCreatureType(finishSessionDuel(nextSession, win), DISCOVERY_CARD)
+  equal([repeated.discoveredCardId, repeated.progress, nextSession.copies.filter((copy) => copy.cardId === DISCOVERY_CARD.id).length], [undefined, firstResult.progress, 1])
+})
+
+test('el aviso distingue la victoria final de una victoria que habilita el siguiente encuentro', () => {
+  equal(encounterVictoryMessage('Centinela del umbral', false), 'Victoria contra Centinela del umbral. El siguiente encuentro ya está disponible.')
+  equal(encounterVictoryMessage('Guardián de la cripta', true), 'Victoria contra Guardián de la cripta. La mazmorra ha terminado: has superado los tres encuentros.')
 })
 
 let failed = 0

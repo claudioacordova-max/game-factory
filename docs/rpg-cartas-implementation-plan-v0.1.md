@@ -179,24 +179,34 @@ Estas decisiones completan detalles que la especificación deja abiertos. Deben 
 
 **Tareas**
 
-- [ ] Conectar los encuentros a una representación sencilla de mazmorra.
-- [ ] Implementar las condiciones de acceso a los encuentros definidos para el prototipo.
-- [ ] Integrar al menos un desbloqueo y la gestión de baraja fuera de combate.
-- [ ] Presentar funcionalmente la mazmorra y/o el duelo mediante una escena 3D con Three.js y React Three Fiber.
-- [ ] Mantener las reglas de juego separadas de la capa visual para que el flujo pueda verificarse.
-- [ ] Recorrer manualmente el ciclo completo, incluyendo pérdida y reintento.
-- [ ] Ejecutar pruebas, build y registrar resultados.
+- [x] Conectar tres encuentros lineales a un mapa 3D interactivo; solo está disponible el primero y cada victoria habilita el siguiente.
+- [x] Conservar el encuentro disponible tras una derrota y bloquear permanentemente los encuentros completados.
+- [x] Integrar el descubrimiento de Brote de musgo tras la primera victoria y permitir gestionar la baraja entre duelos.
+- [x] Presentar la mazmorra mediante una escena 3D funcional; los controles accesibles también permiten entrar al nodo disponible.
+- [x] Mantener la progresión y las reglas de juego en módulos TypeScript separados de React y la escena.
+- [x] Recorrer manualmente el ciclo completo, incluyendo pérdida y reintento; el usuario completó los tres encuentros.
+- [x] Ejecutar pruebas, build y registrar resultados.
 
 **Verificación:** recorrido completo de exploración, desbloqueo, edición de baraja, varios duelos, persistencia de heridas/bajas/fatiga y reintento tras derrota; build.
 
 **Criterios de aceptación**
 
-- [ ] Se puede acceder a varios enfrentamientos desde la mazmorra.
-- [ ] Se puede obtener al menos una nueva carta durante la progresión.
-- [ ] Se puede gestionar la baraja entre duelos.
-- [ ] El estado y las consecuencias conectan los encuentros durante la sesión.
-- [ ] El prototipo final utiliza el stack 3D web para representar funcionalmente la mazmorra y/o los duelos.
-- [ ] El ciclo se puede continuar después de ganar o perder.
+- [x] Se puede acceder a varios enfrentamientos desde la mazmorra.
+- [x] Se puede obtener al menos una nueva carta durante la progresión.
+- [x] Se puede gestionar la baraja entre duelos.
+- [x] El estado y las consecuencias conectan los encuentros durante la sesión.
+- [x] El prototipo utiliza el stack 3D web para representar funcionalmente la mazmorra.
+- [x] El ciclo se puede continuar después de ganar o perder.
+
+### Observaciones de playtesting del Hito 6
+
+Las siguientes observaciones fueron aportadas por el usuario tras completar manualmente los tres encuentros. Son hallazgos y posibles asuntos de diseño para futuras iteraciones; **no aprueban cambios de reglas, recompensas, enemigos ni equilibrio**.
+
+- Se consiguió completar la mazmorra de tres encuentros, pero requirió varios intentos.
+- Las criaturas se pierden más rápido de lo que se obtienen copias nuevas.
+- El descubrimiento de una sola carta no compensa necesariamente el desgaste acumulado.
+- Las mecánicas principales funcionan según el diseño aprobado y la experiencia comienza a resultar entretenida.
+- El mapa 3D provisional cumple su función; la presentación visual deberá revisarse en una futura fase de desarrollo 3D.
 
 ### Hito 7 — Revisión técnica y entrega
 
@@ -248,7 +258,7 @@ Añadir una entrada al completar cada hito. Indicar comandos y escenarios manual
 | Hito 3 — 2026-10-21 | `npm run test` (19 casos); `npm run build` | 19/19 pruebas aprobadas; compilación TypeScript y build Vite aprobados (237,29 kB JS sin gzip). Se verificaron heridas tras daño real de combate, muerte, sacrificio, recuperación del invocador tras victoria/derrota y continuidad de copias entre duelos. | Comprobación manual pendiente; seguir los pasos del informe de entrega. Sin guardado después de cerrar o recargar, según alcance. |
 | Hito 4 — 2026-10-21 | `npm run test` (24 casos); `npm run build`; consulta de navegadores disponibles | 24/24 pruebas aprobadas; TypeScript y Vite build aprobados (241,89 kB JS sin gzip). La comprobación visual no se pudo ejecutar: el entorno CUA no mostró navegadores ni pestañas disponibles. | Recorrido manual pendiente. Se documentaron pasos para catálogo, colección, edición de baraja, heridas, bajas y herramienta de desbloqueo en la entrega. No se implementó Hito 5. |
 | Hito 5 — 2026-10-21 | `npm.cmd run test` (27 casos); `npm.cmd run build` | 27/27 pruebas aprobadas; TypeScript y Vite build aprobados (242,47 kB JS sin gzip). Se verificaron derrotas consecutivas, finalización duplicada, victorias hasta fatiga cero, maná bloqueado, límite de cero y fatiga del jugador aislada del maná del enemigo. | Recorrido manual en navegador pendiente; pasos de comprobación incluidos en la entrega. La fatiga persiste en `GameSession` durante la sesión de la página, no tras recargar. |
-| Hito 6 — pendiente | — | — | — |
+| Hito 6 — 2026-10-21 | `npm.cmd run test` (32 casos); `npm.cmd run build` | 32/32 pruebas aprobadas; compilación TypeScript y build Vite aprobados. Bundle principal: 1.160,64 kB sin comprimir; Vite conserva el aviso de chunks mayores a 500 kB. | El usuario completó manualmente los tres encuentros y confirmó el flujo. Se registran sus observaciones de playtesting abajo; cualquier ajuste futuro queda pendiente de aprobación. |
 | Hito 7 — pendiente | — | — | — |
 
 ## Registro de decisiones importantes
@@ -273,6 +283,10 @@ Anotar la fecha, el hito, la decisión, su motivo y si reemplaza una decisión p
 | 2026-10-21 | Hito 4 | `GameSession` mantiene `unlockedCardIds`, las copias individuales y `activeDeckCopyIds` ordenados; el duelo usa únicamente las copias activas. Las siete copias iniciales permanecen seleccionadas al iniciar la sesión | La baraja pasa a ser la selección entre duelos y conserva la continuidad probada en Hito 3 | Provisional |
 | 2026-10-21 | Hito 4 | Retirar una copia de la baraja no la retira de la colección. Solo las copias seleccionadas pueden recibir heridas o bajas; al morir o sacrificarse, la copia desaparece de colección y baraja, mientras el desbloqueo permanece | Mantener separadas la propiedad, la selección para el duelo y el catálogo permanente | Aprobada por el diseñador |
 | 2026-10-21 | Hito 4 | El primer desbloqueo añade una copia a la colección, pero no la selecciona automáticamente en la baraja. Un tipo ya desbloqueado no puede otorgar otra copia, aunque la anterior se haya perdido | La especificación define la entrega de la primera copia y permite que el jugador la incorpore a su baraja; el límite por tipo sigue vigente tras una baja | Provisional |
-| 2026-10-21 | Hito 4 | La carta “Brote de musgo · prueba” (1 ATQ, 4 VID) permanece bloqueada al iniciar. El botón provisional la desbloquea una vez, sin condición de exploración ni recompensa, y la edición solo está habilitada entre duelos | Comprobar el flujo de desbloqueo sin anticipar exploración | Provisional |
+| 2026-10-21 | Hito 4 | La carta “Brote de musgo · prueba” (1 ATQ, 4 VID) permanece bloqueada al iniciar. El botón provisional la desbloquea una vez, sin condición de exploración ni recompensa, y la edición solo está habilitada entre duelos | Comprobar el flujo de desbloqueo sin anticipar exploración | Reemplazada en Hito 6 |
 | 2026-10-21 | Hito 5 | La fatiga se conserva en `GameSession`, se copia al invocador del jugador al iniciar el duelo y el motor calcula su maná inicial y de mantenimiento como `max(0, nivel − fatiga)`; el enemigo mantiene fatiga cero | Mantener la consecuencia persistente en sesión y aplicar la misma regla en cada recuperación de maná sin afectar al oponente | Aprobada |
 | 2026-10-21 | Hito 5 | Cada duelo recibe un ID y `finishSessionDuel` registra los IDs ya asentados; repetir la finalización del mismo duelo devuelve la sesión sin reaplicar fatiga, heridas, bajas ni recuperación | Hacer idempotente el asentamiento del resultado ante llamadas duplicadas | Provisional |
+| 2026-10-21 | Hito 6 | La mazmorra contiene tres encuentros lineales: Centinela del umbral (Explorador sombrío, Murciélago), Custodia de las catacumbas (Murciélago, Saqueador, Guardia de la cripta) y Guardián de la cripta (mazo original de siete cartas, sin cambios) | Composiciones, estadísticas, costes, nombres y orden aprobados por el diseñador antes de implementar | Aprobada |
+| 2026-10-21 | Hito 6 | Una victoria completa el encuentro y habilita el siguiente; una derrota se registra sin avance, dejando disponible el encuentro actual. Ambos resultados se liquidan una sola vez por ID de duelo | Aplicar el flujo lineal aprobado e impedir que se dupliquen avance o recompensas | Aprobada |
+| 2026-10-21 | Hito 6 | Vencer al Centinela desbloquea Brote de musgo mediante `unlockCreatureType`; se añade al catálogo y colección, no a la baraja. Se elimina el botón provisional | Cumplir la condición de descubrimiento aprobada y reutilizar el sistema del Hito 4 | Aprobada |
+| 2026-10-21 | Hito 6 | El progreso de exploración se conserva en memoria de sesión, separado de `GameSession` y del motor de combate; el mapa presenta nodos 3D y delega las acciones a transiciones TypeScript | Mantener reglas y progreso independientes de React y la presentación, sin cambiar el motor de combate | Aprobada |

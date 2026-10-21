@@ -1,4 +1,4 @@
-import { baseMana, createDuel, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, resolveCombat, RuleViolation, startCombat, startSessionDuel, summonCreature } from '../src/engine/index.js'
+import { addCopyToActiveDeck, baseMana, createDuel, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, removeCopyFromActiveDeck, resolveCombat, RuleViolation, startCombat, startSessionDuel, summonCreature, unlockCreatureType } from '../src/engine/index.js'
 import { chooseEnemyBlockers, resolveEnemyBlocks, runEnemyTurn } from '../src/engine/enemy.js'
 import type { Creature, CreatureCard, DuelState, PlayerId } from '../src/engine/index.js'
 
@@ -358,6 +358,91 @@ test('iniciar otro duelo reutiliza solo las copias supervivientes, sin regenerar
   equal(continued.copies.map((copy) => copy.id), ['copy-2'])
   equal(second.players.player.hand.map((entry) => entry.copyId), ['copy-2'])
   equal(second.players.player.life, 20)
+})
+
+test('el catálogo y la colección respetan una copia por tipo y el desbloqueo es de una sola vez', () => {
+  const starters = cards('starter', 1)
+  const locked = cards('locked', 1, { maxHealth: 4 })[0]
+  let session = createGameSession(starters)
+  session = unlockCreatureType(session, locked)
+  const firstUnlock = session
+  session = unlockCreatureType(session, locked)
+  equal(session, firstUnlock, 'Repetir el desbloqueo no debe generar otra copia')
+  equal(session.unlockedCardIds, ['starter-1', 'locked-1'])
+  equal(session.copies.filter((copy) => copy.cardId === locked.id).length, 1)
+  equal(session.activeDeckCopyIds, ['copy-1'], 'Desbloquear no selecciona automáticamente la carta en la baraja')
+})
+
+test('la baraja activa usa solo las copias seleccionadas y mantiene el orden; admite estar vacía', () => {
+  const owned = cards('owned', 4)
+  let session = createGameSession(owned)
+  const [first, second, third] = session.copies
+  session = removeCopyFromActiveDeck(session, first.id)
+  session = removeCopyFromActiveDeck(session, third.id)
+  session = removeCopyFromActiveDeck(session, second.id)
+  session = removeCopyFromActiveDeck(session, session.copies[3].id)
+  session = addCopyToActiveDeck(session, third.id)
+  session = addCopyToActiveDeck(session, first.id)
+  const duel = startSessionDuel(session, owned, cards('enemy', 3))
+  equal(duel.players.player.hand.map((card) => card.copyId), [third.id, first.id])
+  equal(session.copies.length, 4, 'Retirar una copia de la baraja no la retira de la colección')
+
+  session = removeCopyFromActiveDeck(session, third.id)
+  session = removeCopyFromActiveDeck(session, first.id)
+  equal(session.activeDeckCopyIds, [])
+  equal(startSessionDuel(session, owned, cards('enemy', 3)).players.player.hand, [])
+})
+
+test('las copias no seleccionadas no participan ni pierden salud al cerrar el duelo', () => {
+  const owned = cards('owned', 2)
+  let session = createGameSession(owned)
+  const selectedCopy = session.copies[0]
+  const restingCopy = session.copies[1]
+  session = removeCopyFromActiveDeck(session, restingCopy.id)
+  let duel = startSessionDuel(session, owned, cards('enemy', 3))
+  duel = summonCreature(duel, owned[0].id)
+  const unit = duel.players.player.creatures[0]
+  duel = {
+    ...duel,
+    phase: 'finished',
+    winner: 'player',
+    players: { ...duel.players, player: { ...duel.players.player, creatures: [{ ...unit, health: 1 }] } },
+  }
+  const finished = finishSessionDuel(session, duel)
+  equal(finished.copies, [
+    { ...selectedCopy, health: 1 },
+    restingCopy,
+  ])
+  const nextDuel = startSessionDuel(finished, owned, cards('enemy-next', 3))
+  equal(nextDuel.players.player.hand.map((card) => card.copyId), [selectedCopy.id])
+})
+
+test('una baja desaparece de colección y baraja, mantiene el catálogo y no se puede volver a desbloquear', () => {
+  const locked = cards('locked', 1)[0]
+  let session = unlockCreatureType(createGameSession([]), locked)
+  const lostCopyId = session.copies[0].id
+  session = addCopyToActiveDeck(session, lostCopyId)
+  let duel = startSessionDuel(session, [locked], cards('enemy', 3))
+  duel = summonCreature(duel, locked.id)
+  const completed: DuelState = {
+    ...duel,
+    phase: 'finished',
+    winner: 'opponent',
+    players: { ...duel.players, player: { ...duel.players.player, creatures: [] } },
+  }
+  session = finishSessionDuel(session, completed)
+  equal(session.copies, [])
+  equal(session.activeDeckCopyIds, [])
+  equal(session.unlockedCardIds, [locked.id])
+  const repeatedUnlock = unlockCreatureType(session, locked)
+  equal(repeatedUnlock.copies, [], 'La copia perdida no se debe regenerar por repetir el desbloqueo')
+  equal(repeatedUnlock.unlockedCardIds, [locked.id])
+})
+
+test('la colección inicial no duplica tipos repetidos', () => {
+  const repeated = cards('same', 1)
+  const session = createGameSession([...repeated, ...repeated])
+  equal([session.copies.length, session.unlockedCardIds.length, session.activeDeckCopyIds.length], [1, 1, 1])
 })
 
 let failed = 0

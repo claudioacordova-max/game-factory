@@ -113,6 +113,27 @@ h2 { margin: 0; font-size: 1.35rem; font-weight: 600; }
 .result-banner p { margin: 0.2rem 0 0; color: #cbd6c1; font-size: 0.82rem; }
 .result-banner.defeat { border-color: #80584e; background: #3a2926; }
 
+.management-panel { margin: 0 0 1rem; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; background: #191e1a; }
+.management-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; }
+.management-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+.management-section { min-width: 0; border: 1px solid #333e35; border-radius: 9px; padding: 0.75rem; background: #151a16; }
+.management-section h3 { margin: 0 0 0.6rem; color: #e6eadf; font-size: 0.84rem; }
+.management-section h3 span { color: var(--muted); font-weight: 400; }
+.management-list { display: grid; gap: 0.45rem; }
+.management-item { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 0.5rem; border: 1px solid #303a31; border-radius: 7px; padding: 0.5rem 0.55rem; background: #1d241f; }
+.management-item > div { display: grid; gap: 0.2rem; min-width: 0; }
+.management-item strong { overflow: hidden; color: #e9ede4; font-size: 0.74rem; text-overflow: ellipsis; }
+.management-item > span, .copy-detail { color: var(--muted); font-size: 0.66rem; }
+.management-help, .management-lock { margin: 0 0 0.55rem; color: var(--muted); font-size: 0.68rem; line-height: 1.4; }
+.management-lock { margin: 0.65rem 0 0; }
+.button-small { flex: none; border: 1px solid #526047; border-radius: 6px; padding: 0.35rem 0.5rem; color: #e2ead8; background: #293328; font-size: 0.65rem; font-weight: 700; cursor: pointer; }
+.button-small:disabled { opacity: 0.45; cursor: not-allowed; }
+.test-unlock { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 0.75rem; border: 1px dashed #776b47; border-radius: 9px; padding: 0.7rem; background: #242218; }
+.test-unlock > div { display: grid; gap: 0.25rem; }
+.test-unlock strong { color: #ead99c; font-size: 0.74rem; }
+.test-unlock span { color: #bcb59d; font-size: 0.68rem; }
+.test-unlock .button-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
 @media (max-width: 640px) {
   .game-shell { width: min(100% - 1rem, 1080px); padding-top: 1rem; }
   .game-header { align-items: flex-start; }
@@ -128,4 +149,7 @@ h2 { margin: 0; font-size: 1.35rem; font-weight: 600; }
   .assignment-order { grid-column: auto; }
   .selection-panel, .result-banner { align-items: flex-start; flex-direction: column; }
   .game-footer { align-items: flex-start; }
+  .management-heading, .test-unlock { align-items: flex-start; flex-direction: column; }
+  .management-grid { grid-template-columns: 1fr; }
+  .management-item { align-items: flex-start; }
 }

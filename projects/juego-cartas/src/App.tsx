@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   createGameSession,
+  addCopyToActiveDeck,
   declareAttackers,
   declareBlockers,
   endTurn,
@@ -10,6 +11,8 @@ import {
   startSessionDuel,
   startCombat,
   summonCreature,
+  unlockCreatureType,
+  removeCopyFromActiveDeck,
 } from './engine/index.js'
 import { resolveEnemyBlocks, runEnemyTurn } from './engine/enemy.js'
 import type { Creature, CreatureCard, DuelState, GameSession } from './engine/index.js'
@@ -23,6 +26,11 @@ const PLAYER_DECK: CreatureCard[] = [
   { id: 'player-hawk', name: 'Halcón', attack: 3, maxHealth: 2, cost: { mana: 0, sacrifices: 0 } },
   { id: 'player-ogre', name: 'Ogro', attack: 5, maxHealth: 5, cost: { mana: 0, sacrifices: 1 } },
 ]
+
+const TEST_UNLOCK_CARD: CreatureCard = {
+  id: 'test-mossling', name: 'Brote de musgo · prueba', attack: 1, maxHealth: 4, cost: { mana: 0, sacrifices: 0 },
+}
+const PLAYER_CARD_TYPES = [...PLAYER_DECK, TEST_UNLOCK_CARD]
 
 const ENEMY_DECK: CreatureCard[] = [
   { id: 'enemy-scout', name: 'Explorador sombrío', attack: 2, maxHealth: 3, cost: { mana: 0, sacrifices: 0 } },
@@ -65,7 +73,7 @@ function CreatureTile({ creature, selected, onClick, disabled, hint }: {
 
 export default function App() {
   const [session, setSession] = useState<GameSession>(() => createGameSession(PLAYER_DECK))
-  const [duel, setDuel] = useState<DuelState>(() => startSessionDuel(session, PLAYER_DECK, ENEMY_DECK))
+  const [duel, setDuel] = useState<DuelState>(() => startSessionDuel(session, PLAYER_CARD_TYPES, ENEMY_DECK))
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [sacrificeIds, setSacrificeIds] = useState<string[]>([])
   const [attackerIds, setAttackerIds] = useState<string[]>([])
@@ -76,6 +84,7 @@ export default function App() {
   const enemy = duel.players.opponent
   const isPlayerMain = duel.phase === 'main' && duel.activePlayer === 'player'
   const selectedCard = player.hand.find((card) => card.id === selectedCardId)
+  const canManageBetweenDuels = duel.phase === 'finished'
 
   function closeDuel(result: DuelState) {
     const recovered = {
@@ -182,12 +191,24 @@ export default function App() {
   }
 
   function startNextDuel() {
-    setDuel(startSessionDuel(session, PLAYER_DECK, ENEMY_DECK))
+    setDuel(startSessionDuel(session, PLAYER_CARD_TYPES, ENEMY_DECK))
     setSelectedCardId(null)
     setSacrificeIds([])
     setAttackerIds([])
     setBlockerChoices({})
     setNotice('Nuevo duelo: las heridas y pérdidas anteriores se mantienen.')
+  }
+
+  function changeDeck(copyId: string, included: boolean) {
+    setSession((current) => included
+      ? addCopyToActiveDeck(current, copyId)
+      : removeCopyFromActiveDeck(current, copyId))
+    setNotice(included ? 'Copia añadida al final de la baraja activa.' : 'Copia retirada de la baraja; sigue en tu colección.')
+  }
+
+  function unlockTestCard() {
+    setSession((current) => unlockCreatureType(current, TEST_UNLOCK_CARD))
+    setNotice('Desbloqueo de prueba registrado. El Brote de musgo se añadió una vez al catálogo y la colección; puedes incluirlo en la baraja.')
   }
 
   const phaseText = duel.phase === 'main' ? 'Fase principal'
@@ -222,15 +243,59 @@ export default function App() {
 
       <p className="notice" aria-live="polite">{notice}</p>
 
-      <section className="session-summary" aria-label="Estado persistente de la partida">
-        <strong>Partida · Invocador {session.invokerLife}/20 VID · {session.copies.length} copia(s) disponibles</strong>
-        <div className="session-copies">
-          {session.copies.map((copy) => {
-            const card = PLAYER_DECK.find((entry) => entry.id === copy.cardId)
-            return <span key={copy.id}>{card?.name ?? copy.cardId} {copy.health}/{card?.maxHealth ?? '?'} VID</span>
-          })}
-          {session.copies.length === 0 && <span>Sin copias disponibles.</span>}
+      <section className="management-panel" aria-label="Catálogo, colección y baraja">
+        <div className="management-heading">
+          <div><p className="section-kicker">Gestión entre duelos</p><h2>Catálogo y colección</h2></div>
+          <span className="deck-count">Invocador {session.invokerLife}/20 VID · {session.copies.length} copia(s)</span>
         </div>
+        <div className="management-grid">
+          <section className="management-section" aria-labelledby="catalog-title">
+            <h3 id="catalog-title">Catálogo desbloqueado <span>({session.unlockedCardIds.length})</span></h3>
+            <div className="management-list">
+              {session.unlockedCardIds.map((cardId) => {
+                const card = PLAYER_CARD_TYPES.find((entry) => entry.id === cardId)
+                const owned = session.copies.some((copy) => copy.cardId === cardId)
+                return <div className="management-item" key={cardId}><strong>{card?.name ?? cardId}</strong><span>{owned ? 'Copia en colección' : 'Sin copias disponibles'}</span></div>
+              })}
+            </div>
+          </section>
+
+          <section className="management-section" aria-labelledby="collection-title">
+            <h3 id="collection-title">Colección <span>({session.copies.length})</span></h3>
+            <div className="management-list">
+              {session.copies.map((copy) => {
+                const card = PLAYER_CARD_TYPES.find((entry) => entry.id === copy.cardId)
+                const inDeck = session.activeDeckCopyIds.includes(copy.id)
+                if (!card) return null
+                return (
+                  <div className="management-item" key={copy.id}>
+                    <div><strong>{card.name}</strong><span className="copy-detail">ID {copy.id} · {copy.health}/{card.maxHealth} VID{copy.health < card.maxHealth ? ' · Herida' : ''}</span></div>
+                    <button className="button button-small" type="button" disabled={!canManageBetweenDuels} onClick={() => changeDeck(copy.id, !inDeck)}>{inDeck ? 'Retirar de baraja' : 'Añadir a baraja'}</button>
+                  </div>
+                )
+              })}
+              {session.copies.length === 0 && <p className="empty-row">No hay copias en la colección.</p>}
+            </div>
+          </section>
+
+          <section className="management-section" aria-labelledby="active-deck-title">
+            <h3 id="active-deck-title">Baraja activa <span>({session.activeDeckCopyIds.length})</span></h3>
+            <p className="management-help">El orden de selección determina el orden de las cartas al iniciar el duelo. Se permite dejarla vacía.</p>
+            <div className="management-list">
+              {session.activeDeckCopyIds.map((copyId, index) => {
+                const copy = session.copies.find((entry) => entry.id === copyId)
+                const card = copy && PLAYER_CARD_TYPES.find((entry) => entry.id === copy.cardId)
+                return copy && card ? <div className="management-item" key={copyId}><strong>{index + 1}. {card.name}</strong><button className="button button-small" type="button" disabled={!canManageBetweenDuels} onClick={() => changeDeck(copyId, false)}>Retirar</button></div> : null
+              })}
+              {session.activeDeckCopyIds.length === 0 && <p className="empty-row">Baraja vacía; el siguiente duelo empezará sin cartas.</p>}
+            </div>
+          </section>
+        </div>
+        <div className="test-unlock">
+          <div><strong>Herramienta de prueba · desbloqueo provisional</strong><span>{session.unlockedCardIds.includes(TEST_UNLOCK_CARD.id) ? 'Brote de musgo ya desbloqueado. El tipo conserva su desbloqueo y no puede volver a generar copias.' : 'Carta provisional bloqueada: Brote de musgo · 1 ATQ · 4 VID.'}</span></div>
+          <button className="button button-primary" type="button" disabled={!canManageBetweenDuels || session.unlockedCardIds.includes(TEST_UNLOCK_CARD.id)} onClick={unlockTestCard}>{session.unlockedCardIds.includes(TEST_UNLOCK_CARD.id) ? 'Ya desbloqueada' : 'Desbloquear carta de prueba'}</button>
+        </div>
+        {!canManageBetweenDuels && <p className="management-lock">La colección se consulta durante el duelo; la baraja y la herramienta de prueba se editan entre duelos.</p>}
       </section>
 
       <section className="duel-board" aria-label="Campo de batalla">

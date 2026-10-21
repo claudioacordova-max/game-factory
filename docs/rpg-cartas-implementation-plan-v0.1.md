@@ -3,7 +3,7 @@
 **Versión:** 0.1  
 **Fecha:** 21 de octubre de 2026  
 **Proyecto:** `projects/juego-cartas`  
-**Estado:** Plan aprobado; Hitos 1–3 implementados; hitos 4–7 pendientes
+**Estado:** Plan aprobado; Hitos 1–4 implementados; hitos 5–7 pendientes
 **Fuente de requisitos:** [`rpg-cartas-prototype-spec-v0.2.md`](rpg-cartas-prototype-spec-v0.2.md)
 
 ## Propósito y forma de trabajo
@@ -121,13 +121,14 @@ Estas decisiones completan detalles que la especificación deja abiertos. Deben 
 
 **Tareas**
 
-- [ ] Representar por separado catálogo, copias de la colección y baraja activa.
-- [ ] Implementar el desbloqueo que registra el tipo en el catálogo y entrega su primera copia.
-- [ ] Aplicar el límite provisional de una copia por tipo en la colección.
-- [ ] Permitir añadir y quitar cartas de la baraja fuera del combate, incluso dejarla vacía.
-- [ ] Retirar de la baraja las copias eliminadas permanentemente.
-- [ ] Añadir pruebas de desbloqueo, límite de copias, edición de baraja y bajas.
-- [ ] Completar un recorrido manual de obtención y preparación; ejecutar pruebas y build.
+- [x] Representar por separado catálogo, copias de la colección y baraja activa.
+- [x] Implementar el desbloqueo que registra el tipo en el catálogo y entrega su primera copia.
+- [x] Aplicar el límite provisional de una copia por tipo en la colección.
+- [x] Permitir añadir y quitar cartas de la baraja fuera del combate, incluso dejarla vacía.
+- [x] Retirar de la baraja las copias eliminadas permanentemente.
+- [x] Añadir pruebas de desbloqueo, límite de copias, edición de baraja y bajas.
+- [x] Ejecutar `npm run test` y `npm run build`.
+- [ ] Completar un recorrido manual de obtención y preparación; no había navegador disponible en el entorno.
 
 **Verificación:** pruebas automatizadas de las invariantes de colección y baraja y un recorrido manual de obtención y preparación.
 
@@ -244,7 +245,7 @@ Añadir una entrada al completar cada hito. Indicar comandos y escenarios manual
 | Hito 1 — 2026-10-21 | `npm run test` (10 casos); `npm run build` | 10/10 pruebas aprobadas; compilación TypeScript y build Vite aprobados. Incluye comprobación por ID de sacrificio/invocación y persistencia de daño no letal tras avanzar turnos. Vite mostró el aviso de chunk mayor a 500 kB, propio de la plantilla 3D existente. | Sin defectos del motor pendientes en el alcance del Hito 1. No se añadió prueba visual; el motor se prueba sin React. |
 | Hito 2 — 2026-10-21 | `npm run test` (14 casos); `npm run build`; intento de abrir la interfaz con CUA | 14/14 pruebas aprobadas; compilación TypeScript y build Vite aprobados (235,89 kB JS sin gzip). Se probaron turno del enemigo con sacrificio, bloqueos deterministas y finales de victoria y derrota. No se pudo hacer comprobación manual: no había navegadores ni pestañas disponibles. | Falta recorrer visualmente una victoria y una derrota en navegador. No se avanzó al Hito 3. |
 | Hito 3 — 2026-10-21 | `npm run test` (19 casos); `npm run build` | 19/19 pruebas aprobadas; compilación TypeScript y build Vite aprobados (237,29 kB JS sin gzip). Se verificaron heridas tras daño real de combate, muerte, sacrificio, recuperación del invocador tras victoria/derrota y continuidad de copias entre duelos. | Comprobación manual pendiente; seguir los pasos del informe de entrega. Sin guardado después de cerrar o recargar, según alcance. |
-| Hito 4 — pendiente | — | — | — |
+| Hito 4 — 2026-10-21 | `npm run test` (24 casos); `npm run build`; consulta de navegadores disponibles | 24/24 pruebas aprobadas; TypeScript y Vite build aprobados (241,89 kB JS sin gzip). La comprobación visual no se pudo ejecutar: el entorno CUA no mostró navegadores ni pestañas disponibles. | Recorrido manual pendiente. Se documentaron pasos para catálogo, colección, edición de baraja, heridas, bajas y herramienta de desbloqueo en la entrega. No se implementó Hito 5. |
 | Hito 5 — pendiente | — | — | — |
 | Hito 6 — pendiente | — | — | — |
 | Hito 7 — pendiente | — | — | — |
@@ -268,3 +269,7 @@ Anotar la fecha, el hito, la decisión, su motivo y si reemplaza una decisión p
 | 2026-10-21 | Hito 2 | Los mazos y el orden de cartas son fijos; reiniciar crea un duelo nuevo | Repetibilidad; no introduce colección ni persistencia entre duelos | Provisional |
 | 2026-10-21 | Hito 3 | `GameSession` es la fuente de verdad persistente en memoria: registra copias con ID propio, salud y tipos desbloqueados; cada duelo se construye desde las copias supervivientes y consolida cambios al terminar | Implementar continuidad de sesión sin mezclar el estado temporal del combate ni introducir guardado externo | Provisional |
 | 2026-10-21 | Hito 3 | El control provisional “Iniciar siguiente duelo” aparece al finalizar un combate y reutiliza las copias de la sesión; el mazo determinista del enemigo vuelve a empezar | Permitir comprobar manualmente dos duelos sin incorporar exploración, recompensas ni edición de baraja | Provisional |
+| 2026-10-21 | Hito 4 | `GameSession` mantiene `unlockedCardIds`, las copias individuales y `activeDeckCopyIds` ordenados; el duelo usa únicamente las copias activas. Las siete copias iniciales permanecen seleccionadas al iniciar la sesión | La baraja pasa a ser la selección entre duelos y conserva la continuidad probada en Hito 3 | Provisional |
+| 2026-10-21 | Hito 4 | Retirar una copia de la baraja no la retira de la colección. Solo las copias seleccionadas pueden recibir heridas o bajas; al morir o sacrificarse, la copia desaparece de colección y baraja, mientras el desbloqueo permanece | Mantener separadas la propiedad, la selección para el duelo y el catálogo permanente | Aprobada por el diseñador |
+| 2026-10-21 | Hito 4 | El primer desbloqueo añade una copia a la colección, pero no la selecciona automáticamente en la baraja. Un tipo ya desbloqueado no puede otorgar otra copia, aunque la anterior se haya perdido | La especificación define la entrega de la primera copia y permite que el jugador la incorpore a su baraja; el límite por tipo sigue vigente tras una baja | Provisional |
+| 2026-10-21 | Hito 4 | La carta “Brote de musgo · prueba” (1 ATQ, 4 VID) permanece bloqueada al iniciar. El botón provisional la desbloquea una vez, sin condición de exploración ni recompensa, y la edición solo está habilitada entre duelos | Comprobar el flujo de desbloqueo sin anticipar exploración | Provisional |

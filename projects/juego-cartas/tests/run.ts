@@ -1,5 +1,6 @@
 import { baseMana, createDuel, declareAttackers, declareBlockers, endTurn, resolveCombat, RuleViolation, startCombat, summonCreature } from '../src/engine/index.js'
-import type { CreatureCard, DuelState, PlayerId } from '../src/engine/index.js'
+import { chooseEnemyBlockers, resolveEnemyBlocks, runEnemyTurn } from '../src/engine/enemy.js'
+import type { Creature, CreatureCard, DuelState, PlayerId } from '../src/engine/index.js'
 
 type Test = { name: string; run: () => void }
 const tests: Test[] = []
@@ -45,6 +46,16 @@ function summon(state: DuelState, cardId: string): DuelState {
 
 function closeTurn(state: DuelState): DuelState {
   return endTurn(resolveCombat(declareBlockers(declareAttackers(startCombat(state), []), {})))
+}
+
+function creature(id: string, owner: PlayerId, attack: number, health: number): Creature {
+  return {
+    id,
+    owner,
+    health,
+    summonedTurn: 1,
+    card: { id: `card-${id}`, name: id, attack, maxHealth: health, cost: { mana: 0, sacrifices: 0 } },
+  }
 }
 
 function bringToMain(state: DuelState, player: PlayerId): DuelState {
@@ -184,6 +195,76 @@ test('un bloqueador no puede asignarse a dos atacantes', () => {
   const blockerId = state.players.opponent.creatures[0].id
   state = declareAttackers(startCombat(state), attackerIds)
   throwsRule(() => declareBlockers(state, { [attackerIds[0]]: [blockerId], [attackerIds[1]]: [blockerId] }))
+})
+
+test('el enemigo juega cartas legales y declara atacantes de forma determinista', () => {
+  const enemyDeck = [
+    ...cards('enemy-free', 1),
+    ...cards('enemy-ritual', 1, { cost: { mana: 0, sacrifices: 1 } }),
+    ...cards('enemy-mana', 1, { cost: { mana: 1, sacrifices: 0 } }),
+    ...cards('enemy-next', 1),
+  ]
+  const initial = createDuel({ playerDeck: cards('p', 3), opponentDeck: enemyDeck, firstPlayer: 'opponent' })
+  const state = runEnemyTurn(initial)
+  equal(state.phase, 'blockers')
+  equal(state.activePlayer, 'opponent')
+  equal(state.attackers, state.players.opponent.creatures.map((unit) => unit.id))
+  equal(state.players.opponent.creatures.map((unit) => unit.card.name), ['Criatura enemy-ritual-1', 'Criatura enemy-mana-1'])
+  equal(state.players.opponent.hand.map((card) => card.id), [])
+  equal(state.players.opponent.deck.map((card) => card.id), ['enemy-next-1'])
+})
+
+test('el enemigo asigna bloqueos deterministas y resuelve el combate mediante el motor', () => {
+  const initial = createDuel({ playerDeck: cards('p', 3), opponentDeck: cards('o', 3) })
+  const attackers = [creature('attacker-fragile', 'player', 5, 1), creature('attacker-tough', 'player', 3, 4)]
+  const blockers = [creature('blocker-weak', 'opponent', 1, 3), creature('blocker-lethal', 'opponent', 4, 2)]
+  const state: DuelState = {
+    ...initial,
+    phase: 'blockers',
+    attackers: attackers.map((unit) => unit.id),
+    players: {
+      ...initial.players,
+      player: { ...initial.players.player, creatures: attackers },
+      opponent: { ...initial.players.opponent, creatures: blockers },
+    },
+  }
+  equal(chooseEnemyBlockers(state), {
+    'attacker-fragile': ['blocker-weak'],
+    'attacker-tough': ['blocker-lethal'],
+  })
+  const resolved = resolveEnemyBlocks(state)
+  equal(resolved.phase, 'resolved')
+  equal(resolved.players.player.creatures, [])
+  equal(resolved.players.opponent.creatures, [])
+  equal(resolved.players.player.life, 20)
+})
+
+test('un ataque sin defensores puede cerrar el duelo con victoria del jugador', () => {
+  const initial = createDuel({ playerDeck: cards('p', 3), opponentDeck: cards('o', 3) })
+  const attacker = creature('finisher', 'player', 20, 20)
+  const state: DuelState = {
+    ...initial,
+    phase: 'blockers',
+    attackers: [attacker.id],
+    players: {
+      ...initial.players,
+      player: { ...initial.players.player, creatures: [attacker] },
+      opponent: { ...initial.players.opponent, creatures: [] },
+    },
+  }
+  const result = resolveEnemyBlocks(state)
+  equal([result.phase, result.winner, result.players.opponent.life], ['finished', 'player', 0])
+})
+
+test('el duelo termina en derrota cuando el ataque del enemigo reduce la vida a cero', () => {
+  const initial = createDuel({
+    playerDeck: cards('p', 3),
+    opponentDeck: cards('o', 3, { attack: 7, maxHealth: 3 }),
+    firstPlayer: 'opponent',
+  })
+  const enemyTurn = runEnemyTurn(initial)
+  const result = resolveCombat(declareBlockers(enemyTurn, {}))
+  equal([result.phase, result.winner, result.players.player.life], ['finished', 'opponent', -1])
 })
 
 let failed = 0

@@ -3,7 +3,7 @@
 **Versión:** 0.1  
 **Fecha:** 21 de octubre de 2026  
 **Proyecto:** `projects/juego-cartas`  
-**Estado:** Plan aprobado; Hito 1 implementado; hitos restantes pendientes
+**Estado:** Plan aprobado; Hitos 1 y 2 implementados; hitos 3–7 pendientes
 **Fuente de requisitos:** [`rpg-cartas-prototype-spec-v0.2.md`](rpg-cartas-prototype-spec-v0.2.md)
 
 ## Propósito y forma de trabajo
@@ -65,22 +65,23 @@ Estas decisiones completan detalles que la especificación deja abiertos. Deben 
 
 **Tareas**
 
-- [ ] Mostrar el estado relevante del duelo y sus fases.
-- [ ] Conectar las acciones de interfaz con comandos del motor.
-- [ ] Permitir jugar cartas legales y declarar ataques y bloqueos.
-- [ ] Implementar la política determinista del enemigo.
-- [ ] Mostrar claramente el resultado del duelo y prevenir acciones inválidas.
-- [ ] Probar manualmente una victoria y una derrota; añadir pruebas automatizadas de transiciones críticas cuando corresponda.
-- [ ] Ejecutar `npm run build` y registrar resultados.
+- [x] Mostrar el estado relevante del duelo y sus fases.
+- [x] Conectar las acciones de interfaz con comandos del motor.
+- [x] Permitir jugar cartas legales, elegir sacrificios y declarar ataques y bloqueos.
+- [x] Implementar una política determinista del enemigo.
+- [x] Mostrar claramente el resultado del duelo y prevenir acciones inválidas.
+- [x] Añadir pruebas automatizadas de turnos de enemigo, bloqueos y resultados de victoria/derrota.
+- [ ] Recorrer manualmente una victoria y una derrota en navegador; el entorno no ofreció un navegador disponible.
+- [x] Ejecutar `npm run test` y `npm run build` y registrar resultados.
 
-**Verificación:** recorrer manualmente un duelo ganado y uno perdido; ejecutar pruebas y compilación.
+**Verificación:** `npm run test` y `npm run build` pasan. Las pruebas del motor verifican victoria y derrota. Falta recorrer manualmente la interfaz: no hubo navegador disponible en el entorno.
 
 **Criterios de aceptación**
 
-- [ ] El jugador puede iniciar y terminar un duelo desde la interfaz.
-- [ ] La interfaz refleja el estado del motor y permite las acciones legales principales.
-- [ ] Los resultados mostrados corresponden con las reglas del motor.
-- [ ] Se han probado tanto victoria como derrota.
+- [x] El jugador puede iniciar y terminar un duelo desde la interfaz.
+- [x] La interfaz refleja el estado del motor y permite las acciones legales principales.
+- [x] Los resultados mostrados corresponden con las reglas del motor.
+- [x] Se verificaron victoria y derrota con pruebas del motor; falta comprobarlas manualmente en la interfaz.
 
 ### Hito 3 — Consecuencias entre duelos
 
@@ -241,7 +242,7 @@ Añadir una entrada al completar cada hito. Indicar comandos y escenarios manual
 | Hito / fecha | Pruebas y comandos ejecutados | Resultado | Defectos o seguimiento |
 |---|---|---|---|
 | Hito 1 — 2026-10-21 | `npm run test` (10 casos); `npm run build` | 10/10 pruebas aprobadas; compilación TypeScript y build Vite aprobados. Incluye comprobación por ID de sacrificio/invocación y persistencia de daño no letal tras avanzar turnos. Vite mostró el aviso de chunk mayor a 500 kB, propio de la plantilla 3D existente. | Sin defectos del motor pendientes en el alcance del Hito 1. No se añadió prueba visual; el motor se prueba sin React. |
-| Hito 2 — pendiente | — | — | — |
+| Hito 2 — 2026-10-21 | `npm run test` (14 casos); `npm run build`; intento de abrir la interfaz con CUA | 14/14 pruebas aprobadas; compilación TypeScript y build Vite aprobados (235,89 kB JS sin gzip). Se probaron turno del enemigo con sacrificio, bloqueos deterministas y finales de victoria y derrota. No se pudo hacer comprobación manual: no había navegadores ni pestañas disponibles. | Falta recorrer visualmente una victoria y una derrota en navegador. No se avanzó al Hito 3. |
 | Hito 3 — pendiente | — | — | — |
 | Hito 4 — pendiente | — | — | — |
 | Hito 5 — pendiente | — | — | — |
@@ -261,4 +262,7 @@ Anotar la fecha, el hito, la decisión, su motivo y si reemplaza una decisión p
 | 2026-10-21 | Hito 1 | El mazo de duelo conserva el orden recibido; las tres cartas iniciales se toman desde arriba y los robos posteriores también siguen ese orden | Mantener resultados repetibles y evitar introducir aleatoriedad de barajado no definida | Provisional |
 | 2026-10-21 | Hito 1 | El mantenimiento inicial se aplica al crear el duelo; cada fin de turno alterna al siguiente jugador, recupera su maná hasta el nivel y roba una carta si queda disponible | Ciclo mínimo y determinista mientras no hay interfaz | Provisional |
 | 2026-10-21 | Hito 1 | Pruebas TypeScript compiladas con `tsc` y ejecutadas por Node.js; no se agregó framework externo | Reutilizar Node 22 y TypeScript ya disponibles en el proyecto | Provisional |
-| — | — | — | — | — |
+| 2026-10-21 | Hito 2 | Interfaz 2D HTML/CSS; las fases de combate y el daño siguen en el motor TypeScript existente | Hito 2 permite interfaz 2D temporal y requiere evitar reglas de combate duplicadas en React | Provisional |
+| 2026-10-21 | Hito 2 | Enemigo juega cartas legales en orden de mano, usa sus primeras criaturas como sacrificio cuando hace falta y ataca con todas las criaturas | Política simple, fija y verificable según el plan aprobado | Provisional |
+| 2026-10-21 | Hito 2 | Al defender contra un ataque del jugador, el enemigo asigna como máximo un bloqueador disponible por atacante; elige el primero que pueda matarlo y, si no lo hay, el primero disponible | Mantiene la política determinista sin ampliar la IA | Provisional |
+| 2026-10-21 | Hito 2 | Los mazos y el orden de cartas son fijos; reiniciar crea un duelo nuevo | Repetibilidad; no introduce colección ni persistencia entre duelos | Provisional |

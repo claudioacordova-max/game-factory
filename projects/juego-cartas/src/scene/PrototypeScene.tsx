@@ -1,3 +1,6 @@
+// Carga las declaraciones JSX de R3F aunque esta escena no se monte en la interfaz 2D.
+import type {} from '@react-three/fiber'
+
 export default function PrototypeScene() {
   return (
     <>

@@ -3,7 +3,7 @@
 **Versión:** 0.1  
 **Fecha:** 21 de octubre de 2026  
 **Proyecto:** `projects/juego-cartas`  
-**Estado:** Plan aprobado; Hitos 1 y 2 implementados; hitos 3–7 pendientes
+**Estado:** Plan aprobado; Hitos 1–3 implementados; hitos 4–7 pendientes
 **Fuente de requisitos:** [`rpg-cartas-prototype-spec-v0.2.md`](rpg-cartas-prototype-spec-v0.2.md)
 
 ## Propósito y forma de trabajo
@@ -93,23 +93,23 @@ Estas decisiones completan detalles que la especificación deja abiertos. Deben 
 
 **Tareas**
 
-- [ ] Definir el estado de partida que contiene las copias individuales y los desbloqueos.
-- [ ] Trasladar heridas del duelo a las copias de la colección.
-- [ ] Eliminar definitivamente las criaturas muertas y sacrificadas de la colección.
-- [ ] Conservar el desbloqueo del tipo después de perder su copia.
-- [ ] Restaurar completamente la vida del invocador al cerrar el duelo.
-- [ ] Añadir pruebas de heridas entre duelos, muerte permanente, sacrificio y restauración de vida.
-- [ ] Ejecutar pruebas y build; registrar resultados.
+- [x] Definir el estado de partida que contiene las copias individuales y los desbloqueos.
+- [x] Trasladar heridas del duelo a las copias de la colección.
+- [x] Eliminar definitivamente las criaturas muertas y sacrificadas de la colección.
+- [x] Conservar el desbloqueo del tipo después de perder su copia.
+- [x] Restaurar completamente la vida del invocador al cerrar el duelo.
+- [x] Añadir pruebas de heridas entre duelos, muerte permanente, sacrificio y restauración de vida.
+- [x] Ejecutar pruebas y build; registrar resultados.
 
 **Verificación:** pruebas automatizadas con varios duelos sucesivos y comprobación del estado resultante.
 
 **Criterios de aceptación**
 
-- [ ] Una criatura superviviente comienza el siguiente duelo con su vida actual previa y su vida máxima intacta.
-- [ ] Las criaturas muertas o sacrificadas ya no están disponibles en duelos posteriores.
-- [ ] El tipo de carta perdido sigue desbloqueado.
-- [ ] La vida del invocador se restaura completamente al terminar cada duelo.
-- [ ] No se requiere persistencia después de cerrar o recargar el navegador.
+- [x] Una criatura superviviente comienza el siguiente duelo con su vida actual previa y su vida máxima intacta.
+- [x] Las criaturas muertas o sacrificadas ya no están disponibles en duelos posteriores.
+- [x] El tipo de carta perdido sigue desbloqueado.
+- [x] La vida del invocador se restaura completamente al terminar cada duelo.
+- [x] No se requiere persistencia después de cerrar o recargar el navegador.
 
 ### Hito 4 — Catálogo, colección y baraja activa
 
@@ -243,7 +243,7 @@ Añadir una entrada al completar cada hito. Indicar comandos y escenarios manual
 |---|---|---|---|
 | Hito 1 — 2026-10-21 | `npm run test` (10 casos); `npm run build` | 10/10 pruebas aprobadas; compilación TypeScript y build Vite aprobados. Incluye comprobación por ID de sacrificio/invocación y persistencia de daño no letal tras avanzar turnos. Vite mostró el aviso de chunk mayor a 500 kB, propio de la plantilla 3D existente. | Sin defectos del motor pendientes en el alcance del Hito 1. No se añadió prueba visual; el motor se prueba sin React. |
 | Hito 2 — 2026-10-21 | `npm run test` (14 casos); `npm run build`; intento de abrir la interfaz con CUA | 14/14 pruebas aprobadas; compilación TypeScript y build Vite aprobados (235,89 kB JS sin gzip). Se probaron turno del enemigo con sacrificio, bloqueos deterministas y finales de victoria y derrota. No se pudo hacer comprobación manual: no había navegadores ni pestañas disponibles. | Falta recorrer visualmente una victoria y una derrota en navegador. No se avanzó al Hito 3. |
-| Hito 3 — pendiente | — | — | — |
+| Hito 3 — 2026-10-21 | `npm run test` (19 casos); `npm run build` | 19/19 pruebas aprobadas; compilación TypeScript y build Vite aprobados (237,29 kB JS sin gzip). Se verificaron heridas tras daño real de combate, muerte, sacrificio, recuperación del invocador tras victoria/derrota y continuidad de copias entre duelos. | Comprobación manual pendiente; seguir los pasos del informe de entrega. Sin guardado después de cerrar o recargar, según alcance. |
 | Hito 4 — pendiente | — | — | — |
 | Hito 5 — pendiente | — | — | — |
 | Hito 6 — pendiente | — | — | — |
@@ -266,3 +266,5 @@ Anotar la fecha, el hito, la decisión, su motivo y si reemplaza una decisión p
 | 2026-10-21 | Hito 2 | Enemigo juega cartas legales en orden de mano, usa sus primeras criaturas como sacrificio cuando hace falta y ataca con todas las criaturas | Política simple, fija y verificable según el plan aprobado | Provisional |
 | 2026-10-21 | Hito 2 | Al defender contra un ataque del jugador, el enemigo asigna como máximo un bloqueador disponible por atacante; elige el primero que pueda matarlo y, si no lo hay, el primero disponible | Mantiene la política determinista sin ampliar la IA | Provisional |
 | 2026-10-21 | Hito 2 | Los mazos y el orden de cartas son fijos; reiniciar crea un duelo nuevo | Repetibilidad; no introduce colección ni persistencia entre duelos | Provisional |
+| 2026-10-21 | Hito 3 | `GameSession` es la fuente de verdad persistente en memoria: registra copias con ID propio, salud y tipos desbloqueados; cada duelo se construye desde las copias supervivientes y consolida cambios al terminar | Implementar continuidad de sesión sin mezclar el estado temporal del combate ni introducir guardado externo | Provisional |
+| 2026-10-21 | Hito 3 | El control provisional “Iniciar siguiente duelo” aparece al finalizar un combate y reutiliza las copias de la sesión; el mazo determinista del enemigo vuelve a empezar | Permitir comprobar manualmente dos duelos sin incorporar exploración, recompensas ni edición de baraja | Provisional |

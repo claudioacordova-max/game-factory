@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import {
-  createDuel,
+  createGameSession,
   declareAttackers,
   declareBlockers,
   endTurn,
+  finishSessionDuel,
   resolveCombat,
   RuleViolation,
+  startSessionDuel,
   startCombat,
   summonCreature,
 } from './engine/index.js'
 import { resolveEnemyBlocks, runEnemyTurn } from './engine/enemy.js'
-import type { Creature, CreatureCard, DuelState } from './engine/index.js'
+import type { Creature, CreatureCard, DuelState, GameSession } from './engine/index.js'
 
 const PLAYER_DECK: CreatureCard[] = [
   { id: 'player-squire', name: 'Escudero', attack: 2, maxHealth: 3, cost: { mana: 0, sacrifices: 0 } },
@@ -31,10 +33,6 @@ const ENEMY_DECK: CreatureCard[] = [
   { id: 'enemy-guard', name: 'Guardia de la cripta', attack: 2, maxHealth: 5, cost: { mana: 0, sacrifices: 0 } },
   { id: 'enemy-ogre', name: 'Ogro de piedra', attack: 4, maxHealth: 4, cost: { mana: 0, sacrifices: 1 } },
 ]
-
-function newDuel(): DuelState {
-  return createDuel({ playerDeck: PLAYER_DECK, opponentDeck: ENEMY_DECK })
-}
 
 function cardStats(card: CreatureCard): string {
   const cost = [card.cost.mana ? `${card.cost.mana} maná` : '', card.cost.sacrifices ? `${card.cost.sacrifices} sacrificio` : '']
@@ -66,7 +64,8 @@ function CreatureTile({ creature, selected, onClick, disabled, hint }: {
 }
 
 export default function App() {
-  const [duel, setDuel] = useState<DuelState>(newDuel)
+  const [session, setSession] = useState<GameSession>(() => createGameSession(PLAYER_DECK))
+  const [duel, setDuel] = useState<DuelState>(() => startSessionDuel(session, PLAYER_DECK, ENEMY_DECK))
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [sacrificeIds, setSacrificeIds] = useState<string[]>([])
   const [attackerIds, setAttackerIds] = useState<string[]>([])
@@ -77,6 +76,18 @@ export default function App() {
   const enemy = duel.players.opponent
   const isPlayerMain = duel.phase === 'main' && duel.activePlayer === 'player'
   const selectedCard = player.hand.find((card) => card.id === selectedCardId)
+
+  function closeDuel(result: DuelState) {
+    const recovered = {
+      ...result,
+      players: {
+        ...result.players,
+        player: { ...result.players.player, life: 20 },
+      },
+    }
+    setDuel(recovered)
+    setSession((current) => finishSessionDuel(current, recovered))
+  }
 
   function reject(error: unknown) {
     setNotice(error instanceof RuleViolation ? error.message : 'No se pudo completar esa acción.')
@@ -116,7 +127,8 @@ export default function App() {
       const declared = declareAttackers(duel, attackerIds)
       const result = resolveEnemyBlocks(declared)
       const blocked = Object.values(result.blockers).flat().length
-      setDuel(result)
+      if (result.phase === 'finished') closeDuel(result)
+      else setDuel(result)
       setAttackerIds([])
       setNotice(result.winner === 'player'
         ? '¡Victoria! El enemigo se quedó sin vida.'
@@ -143,7 +155,7 @@ export default function App() {
       const declared = declareBlockers(duel, blockerChoices)
       const result = resolveCombat(declared)
       if (result.phase === 'finished') {
-        setDuel(result)
+        closeDuel(result)
         setNotice('Derrota. El invocador se quedó sin vida.')
       } else {
         const nextTurn = endTurn(result)
@@ -169,13 +181,13 @@ export default function App() {
     }
   }
 
-  function restart() {
-    setDuel(newDuel())
+  function startNextDuel() {
+    setDuel(startSessionDuel(session, PLAYER_DECK, ENEMY_DECK))
     setSelectedCardId(null)
     setSacrificeIds([])
     setAttackerIds([])
     setBlockerChoices({})
-    setNotice('Nuevo duelo. Elige una carta para invocarla o comienza el combate.')
+    setNotice('Nuevo duelo: las heridas y pérdidas anteriores se mantienen.')
   }
 
   const phaseText = duel.phase === 'main' ? 'Fase principal'
@@ -204,11 +216,22 @@ export default function App() {
             <strong>{duel.winner === 'player' ? '¡Victoria!' : 'Derrota'}</strong>
             <p>{duel.winner === 'player' ? 'Has vencido al guardián de la cripta.' : 'El guardián de la cripta te ha derrotado.'}</p>
           </div>
-          <button className="button button-light" type="button" onClick={restart}>Jugar otra vez</button>
+          <button className="button button-light" type="button" onClick={startNextDuel}>Iniciar siguiente duelo</button>
         </section>
       )}
 
       <p className="notice" aria-live="polite">{notice}</p>
+
+      <section className="session-summary" aria-label="Estado persistente de la partida">
+        <strong>Partida · Invocador {session.invokerLife}/20 VID · {session.copies.length} copia(s) disponibles</strong>
+        <div className="session-copies">
+          {session.copies.map((copy) => {
+            const card = PLAYER_DECK.find((entry) => entry.id === copy.cardId)
+            return <span key={copy.id}>{card?.name ?? copy.cardId} {copy.health}/{card?.maxHealth ?? '?'} VID</span>
+          })}
+          {session.copies.length === 0 && <span>Sin copias disponibles.</span>}
+        </div>
+      </section>
 
       <section className="duel-board" aria-label="Campo de batalla">
         <section className="side-panel enemy-panel" aria-label="Invocador enemigo">
@@ -310,7 +333,7 @@ export default function App() {
         {duel.phase !== 'finished' && <span className="control-help">Las fases y el daño se resuelven con el motor del duelo.</span>}
       </section>
 
-      <footer className="game-footer"><span>{duel.phase === 'finished' ? 'Duelo finalizado' : `Cartas en tu mazo: ${player.deck.length} · Cartas en el mazo enemigo: ${enemy.deck.length}`}</span>{duel.phase !== 'finished' && <button type="button" className="text-button" onClick={restart}>Reiniciar duelo</button>}</footer>
+      <footer className="game-footer"><span>{duel.phase === 'finished' ? 'Duelo finalizado · vida del invocador recuperada' : `Cartas en tu mazo: ${player.deck.length} · Cartas en el mazo enemigo: ${enemy.deck.length}`}</span></footer>
     </main>
   )
 }

@@ -13,10 +13,15 @@ export interface CreatureCard {
   attack: number
   maxHealth: number
   cost: SummonCost
+  /** Temporary duel reference to an owned copy; absent from opponent cards. */
+  copyId?: string
+  startingHealth?: number
 }
 
 export interface Creature {
   id: string
+  /** Persistent identity of the owned copy represented by this duel creature. */
+  copyId?: string
   card: CreatureCard
   owner: PlayerId
   health: number

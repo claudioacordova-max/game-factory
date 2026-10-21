@@ -83,9 +83,10 @@ export function summonCreature(state: DuelState, cardId: string, sacrificeIds: s
 
   const creature: Creature = {
     id: `creature-${state.nextCreatureNumber}`,
+    copyId: card.copyId,
     card,
     owner,
-    health: card.maxHealth,
+    health: card.startingHealth ?? card.maxHealth,
     summonedTurn: state.turn,
   }
   const nextInvoker: Invoker = {

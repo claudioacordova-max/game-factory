@@ -39,6 +39,9 @@ h2 { margin: 0; font-size: 1.35rem; font-weight: 600; }
 .turn-summary { display: flex; align-items: flex-end; flex-direction: column; gap: 0.45rem; color: var(--muted); font-size: 0.82rem; text-align: right; }
 .phase-pill { border: 1px solid #546148; border-radius: 99px; padding: 0.3rem 0.65rem; color: var(--accent); background: #263023; font-weight: 700; }
 .notice { margin: 0 0 1rem; border: 1px solid #39463a; border-radius: 10px; padding: 0.75rem 0.9rem; color: #d8dfd5; background: #1c241d; font-size: 0.9rem; }
+.session-summary { margin: 0 0 1rem; border: 1px solid #39443c; border-radius: 10px; padding: 0.75rem 0.9rem; color: #dce4d7; background: #191e1a; font-size: 0.8rem; }
+.session-copies { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
+.session-copies span { border: 1px solid #3f4b3c; border-radius: 99px; padding: 0.25rem 0.55rem; color: #c5d0bd; background: #222a21; font-size: 0.7rem; }
 
 .duel-board { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(145deg, #1b211c, #171b18); box-shadow: 0 20px 60px #0004; }
 .side-panel { padding: 1.2rem 1.25rem 1.35rem; }

@@ -1,4 +1,4 @@
-import { baseMana, createDuel, declareAttackers, declareBlockers, endTurn, resolveCombat, RuleViolation, startCombat, summonCreature } from '../src/engine/index.js'
+import { baseMana, createDuel, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, resolveCombat, RuleViolation, startCombat, startSessionDuel, summonCreature } from '../src/engine/index.js'
 import { chooseEnemyBlockers, resolveEnemyBlocks, runEnemyTurn } from '../src/engine/enemy.js'
 import type { Creature, CreatureCard, DuelState, PlayerId } from '../src/engine/index.js'
 
@@ -265,6 +265,99 @@ test('el duelo termina en derrota cuando el ataque del enemigo reduce la vida a 
   const enemyTurn = runEnemyTurn(initial)
   const result = resolveCombat(declareBlockers(enemyTurn, {}))
   equal([result.phase, result.winner, result.players.player.life], ['finished', 'opponent', -1])
+})
+
+test('conserva heridas de combate en la misma copia al iniciar el duelo siguiente', () => {
+  const card: CreatureCard = { id: 'persistent', name: 'Persistente', attack: 1, maxHealth: 5, cost: { mana: 0, sacrifices: 0 } }
+  const session = createGameSession([card])
+  let duel = startSessionDuel(session, [card], cards('enemy', 3))
+  duel = summonCreature(duel, card.id)
+  const unit = duel.players.player.creatures[0]
+  const enemyUnit = creature('blocker', 'opponent', 2, 5)
+  duel = {
+    ...duel,
+    activePlayer: 'player',
+    phase: 'blockers',
+    attackers: [unit.id],
+    players: {
+      ...duel.players,
+      opponent: { ...duel.players.opponent, creatures: [enemyUnit] },
+    },
+  }
+  const combat = resolveCombat(declareBlockers(duel, { [unit.id]: [enemyUnit.id] }))
+  equal(combat.players.player.creatures[0].health, 3)
+  const completed: DuelState = { ...combat, phase: 'finished', winner: 'opponent' }
+  const continued = finishSessionDuel(session, completed)
+  const nextDuel = startSessionDuel(continued, [card], cards('enemy-next', 3))
+  equal(continued.copies, [{ id: 'copy-1', cardId: 'persistent', health: 3 }])
+  equal(nextDuel.players.player.hand[0], { ...card, copyId: 'copy-1', startingHealth: 3 })
+})
+
+test('una criatura muerta se elimina permanentemente y no vuelve al duelo siguiente', () => {
+  const owned = cards('owned', 2)
+  const session = createGameSession(owned)
+  let duel = startSessionDuel(session, owned, cards('enemy', 3))
+  duel = summonCreature(duel, owned[0].id)
+  const dead = duel.players.player.creatures[0]
+  const completed: DuelState = {
+    ...duel,
+    phase: 'finished',
+    winner: 'opponent',
+    players: { ...duel.players, player: { ...duel.players.player, life: 0, creatures: [] } },
+  }
+  const continued = finishSessionDuel(session, completed)
+  const nextDuel = startSessionDuel(continued, owned, cards('enemy-next', 3))
+  equal(continued.copies.map((copy) => copy.id), ['copy-2'])
+  truthy(!nextDuel.players.player.hand.some((card) => card.copyId === dead.copyId), 'La copia muerta no debe reaparecer')
+  equal(continued.unlockedCardIds, ['owned-1', 'owned-2'])
+})
+
+test('una criatura sacrificada se pierde permanentemente al cerrar el duelo', () => {
+  const owned = [
+    ...cards('sacrifice', 1),
+    ...cards('ritual', 1, { cost: { mana: 0, sacrifices: 1 } }),
+  ]
+  const session = createGameSession(owned)
+  let duel = startSessionDuel(session, owned, cards('enemy', 3))
+  duel = summonCreature(duel, owned[0].id)
+  const sacrificed = duel.players.player.creatures[0]
+  duel = summonCreature(duel, owned[1].id, [sacrificed.id])
+  const completed: DuelState = { ...duel, phase: 'finished', winner: 'player' }
+  const continued = finishSessionDuel(session, completed)
+  equal(continued.copies.map((copy) => copy.cardId), ['ritual-1'])
+  equal(continued.unlockedCardIds, ['sacrifice-1', 'ritual-1'])
+})
+
+test('la vida del invocador se recupera a 20 tras victoria o derrota', () => {
+  const card = cards('owned', 1)[0]
+  const session = createGameSession([card])
+  const initial = startSessionDuel(session, [card], cards('enemy', 3))
+  for (const winner of ['player', 'opponent'] as const) {
+    const completed: DuelState = {
+      ...initial,
+      phase: 'finished',
+      winner,
+      players: { ...initial.players, player: { ...initial.players.player, life: winner === 'player' ? 6 : 0 } },
+    }
+    equal(finishSessionDuel(session, completed).invokerLife, 20)
+  }
+})
+
+test('iniciar otro duelo reutiliza solo las copias supervivientes, sin regenerarlas', () => {
+  const owned = cards('owned', 2)
+  const session = createGameSession(owned)
+  const first = startSessionDuel(session, owned, cards('enemy', 3))
+  const completed: DuelState = {
+    ...first,
+    phase: 'finished',
+    winner: 'opponent',
+    players: { ...first.players, player: { ...first.players.player, life: 0, hand: first.players.player.hand.slice(1) } },
+  }
+  const continued = finishSessionDuel(session, completed)
+  const second = startSessionDuel(continued, owned, cards('enemy-next', 3))
+  equal(continued.copies.map((copy) => copy.id), ['copy-2'])
+  equal(second.players.player.hand.map((entry) => entry.copyId), ['copy-2'])
+  equal(second.players.player.life, 20)
 })
 
 let failed = 0

@@ -3,7 +3,7 @@
 **Versión:** 0.1  
 **Fecha:** 21 de octubre de 2026  
 **Proyecto:** `projects/juego-cartas`  
-**Estado:** Plan aprobado; implementación pendiente  
+**Estado:** Plan aprobado; Hito 1 implementado; hitos restantes pendientes
 **Fuente de requisitos:** [`rpg-cartas-prototype-spec-v0.2.md`](rpg-cartas-prototype-spec-v0.2.md)
 
 ## Propósito y forma de trabajo
@@ -37,23 +37,23 @@ Estas decisiones completan detalles que la especificación deja abiertos. Deben 
 
 **Tareas**
 
-- [ ] Definir los tipos de datos mínimos para duelo, invocador, criatura, carta, mazo y fases.
-- [ ] Implementar mantenimiento, recuperación de maná, robo y avance de turno.
-- [ ] Implementar invocaciones con costes de maná y sacrificio.
-- [ ] Implementar declaración de atacantes y bloqueadores, incluyendo bloqueo múltiple según la decisión provisional.
-- [ ] Resolver el daño a criaturas e invocadores, las muertes y las condiciones de victoria.
-- [ ] Añadir pruebas automatizadas para valores iniciales, robo, costes, fases, combate, muerte, victoria y mazo vacío.
-- [ ] Ejecutar las pruebas y `npm run build`; registrar resultados abajo.
+- [x] Definir los tipos de datos mínimos para duelo, invocador, criatura, carta, mazo y fases.
+- [x] Implementar mantenimiento, recuperación de maná, robo y avance de turno.
+- [x] Implementar invocaciones con costes de maná y sacrificio.
+- [x] Implementar declaración de atacantes y bloqueadores, incluyendo bloqueo múltiple según la decisión provisional.
+- [x] Resolver el daño a criaturas e invocadores, las muertes y las condiciones de victoria.
+- [x] Añadir pruebas automatizadas para valores iniciales, robo, costes, fases, combate, muerte, victoria y mazo vacío.
+- [x] Ejecutar las pruebas y `npm run build`; registrar resultados abajo.
 
 **Verificación:** pruebas automatizadas del motor y compilación. Revisar especialmente el orden de asignación de daño a bloqueadores múltiples.
 
 **Criterios de aceptación**
 
-- [ ] Los casos cubiertos producen resultados deterministas y coherentes con la especificación.
-- [ ] Un invocador pierde al llegar a cero de vida; quedarse sin cartas no causa derrota.
-- [ ] Una criatura recién invocada puede atacar ese turno.
-- [ ] El motor se puede probar sin montar la interfaz React.
-- [ ] Las pruebas y la compilación terminan correctamente.
+- [x] Los casos cubiertos producen resultados deterministas y coherentes con la especificación.
+- [x] Un invocador pierde al llegar a cero de vida; quedarse sin cartas no causa derrota.
+- [x] Una criatura recién invocada puede atacar ese turno.
+- [x] El motor se puede probar sin montar la interfaz React.
+- [x] Las pruebas y la compilación terminan correctamente.
 
 ### Hito 2 — Duelo jugable contra un enemigo
 
@@ -240,7 +240,7 @@ Añadir una entrada al completar cada hito. Indicar comandos y escenarios manual
 
 | Hito / fecha | Pruebas y comandos ejecutados | Resultado | Defectos o seguimiento |
 |---|---|---|---|
-| Hito 1 — pendiente | — | — | — |
+| Hito 1 — 2026-10-21 | `npm run test` (10 casos); `npm run build` | 10/10 pruebas aprobadas; compilación TypeScript y build Vite aprobados. Incluye comprobación por ID de sacrificio/invocación y persistencia de daño no letal tras avanzar turnos. Vite mostró el aviso de chunk mayor a 500 kB, propio de la plantilla 3D existente. | Sin defectos del motor pendientes en el alcance del Hito 1. No se añadió prueba visual; el motor se prueba sin React. |
 | Hito 2 — pendiente | — | — | — |
 | Hito 3 — pendiente | — | — | — |
 | Hito 4 — pendiente | — | — | — |
@@ -258,4 +258,7 @@ Anotar la fecha, el hito, la decisión, su motivo y si reemplaza una decisión p
 | 2026-10-21 | Planificación | Resolución de bloqueadores múltiples según decisiones provisionales de este documento | Aclaración aprobada durante la planificación técnica | Aprobada |
 | 2026-10-21 | Planificación | Mantener y probar la limitación de maná cero con fatiga 1 a nivel 1 | Consecuencia de las reglas aprobadas; no cambiar mecánicas | Aprobada |
 | 2026-10-21 | Planificación | Interfaz 2D provisional para el primer duelo; stack 3D web en el prototipo final | Aclaración aprobada durante la planificación técnica | Aprobada |
+| 2026-10-21 | Hito 1 | El mazo de duelo conserva el orden recibido; las tres cartas iniciales se toman desde arriba y los robos posteriores también siguen ese orden | Mantener resultados repetibles y evitar introducir aleatoriedad de barajado no definida | Provisional |
+| 2026-10-21 | Hito 1 | El mantenimiento inicial se aplica al crear el duelo; cada fin de turno alterna al siguiente jugador, recupera su maná hasta el nivel y roba una carta si queda disponible | Ciclo mínimo y determinista mientras no hay interfaz | Provisional |
+| 2026-10-21 | Hito 1 | Pruebas TypeScript compiladas con `tsc` y ejecutadas por Node.js; no se agregó framework externo | Reutilizar Node 22 y TypeScript ya disponibles en el proyecto | Provisional |
 | — | — | — | — | — |

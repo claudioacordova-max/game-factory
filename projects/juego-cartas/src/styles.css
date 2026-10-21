@@ -52,6 +52,7 @@ h2 { margin: 0; font-size: 1.35rem; font-weight: 600; }
 .resources { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.65rem; color: #d9dfd4; font-size: 0.83rem; font-weight: 600; }
 .resources > span { border: 1px solid #414b40; border-radius: 99px; padding: 0.35rem 0.7rem; background: #171b18a8; white-space: nowrap; }
 .resources .life-value { border-color: #754f48; color: #ffb6a4; }
+.fatigue-status { margin: 0.65rem 0 0; color: #d5c79e; font-size: 0.74rem; }
 .battle-row { margin-top: 1.05rem; }
 .row-label { display: flex; align-items: baseline; gap: 0.55rem; margin-bottom: 0.55rem; color: #e2e5dc; font-size: 0.8rem; }
 .row-label span, .deck-count { color: var(--muted); font-size: 0.76rem; }

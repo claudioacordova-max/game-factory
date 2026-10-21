@@ -343,6 +343,56 @@ test('la vida del invocador se recupera a 20 tras victoria o derrota', () => {
   }
 })
 
+test('derrotas consecutivas aumentan la fatiga una vez por duelo y la conservan en el reintento', () => {
+  const owned = cards('fatigue-owned', 1)
+  const session = createGameSession(owned)
+  const first = startSessionDuel(session, owned, cards('enemy', 3))
+  const firstLoss: DuelState = {
+    ...first,
+    phase: 'finished',
+    winner: 'opponent',
+    players: { ...first.players, player: { ...first.players.player, life: 0 } },
+  }
+  const afterFirstLoss = finishSessionDuel(session, firstLoss)
+  equal([afterFirstLoss.fatigue, afterFirstLoss.invokerLife], [1, 20])
+
+  const duplicateSettlement = finishSessionDuel(afterFirstLoss, firstLoss)
+  equal(duplicateSettlement, afterFirstLoss, 'Finalizar dos veces el mismo duelo no debe volver a aplicar sus consecuencias')
+
+  const retry = startSessionDuel(afterFirstLoss, owned, cards('enemy-retry', 3))
+  equal([retry.players.player.fatigue, retry.players.player.mana, retry.players.opponent.fatigue, retry.players.opponent.mana], [1, 0, 0, 1])
+  equal([baseMana(retry.players.player), baseMana(retry.players.opponent)], [0, 1])
+
+  const afterRetryLoss = finishSessionDuel(afterFirstLoss, { ...retry, phase: 'finished', winner: 'opponent' })
+  equal(afterRetryLoss.fatigue, 2, 'Una segunda derrota distinta debe sumar otra fatiga')
+  let maintained = closeTurn(retry)
+  maintained = closeTurn(maintained)
+  equal([maintained.players.player.mana, maintained.players.opponent.mana], [0, 1], 'El mantenimiento respeta la fatiga del jugador y el maná normal del enemigo')
+})
+
+test('las victorias reducen la fatiga hasta cero sin hacerla negativa', () => {
+  const owned = cards('victory-owned', 1)
+  let session = { ...createGameSession(owned), fatigue: 2 }
+  const firstWin = startSessionDuel(session, owned, cards('enemy', 3))
+  equal([firstWin.players.player.fatigue, firstWin.players.player.mana], [2, 0])
+  session = finishSessionDuel(session, { ...firstWin, phase: 'finished', winner: 'player' })
+  equal(session.fatigue, 1)
+
+  const secondWin = startSessionDuel(session, owned, cards('enemy-next', 3))
+  session = finishSessionDuel(session, { ...secondWin, phase: 'finished', winner: 'player' })
+  equal(session.fatigue, 0)
+
+  const thirdWin = startSessionDuel(session, owned, cards('enemy-last', 3))
+  session = finishSessionDuel(session, { ...thirdWin, phase: 'finished', winner: 'player' })
+  equal(session.fatigue, 0, 'Una victoria con fatiga cero debe dejarla en cero')
+})
+
+test('cada punto de fatiga bloquea maná y el máximo utilizable nunca es negativo', () => {
+  const invoker = createDuel({ playerDeck: cards('p', 3), opponentDeck: cards('o', 3), playerFatigue: 1 }).players.player
+  equal(baseMana({ ...invoker, level: 3 }), 2)
+  equal(baseMana({ ...invoker, level: 1, fatigue: 3 }), 0)
+})
+
 test('iniciar otro duelo reutiliza solo las copias supervivientes, sin regenerarlas', () => {
   const owned = cards('owned', 2)
   const session = createGameSession(owned)

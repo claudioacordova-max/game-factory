@@ -30,6 +30,8 @@ export interface Creature {
 
 export interface Invoker {
   level: number
+  /** Persistent session fatigue applied only to the player invoker. */
+  fatigue: number
   life: number
   mana: number
   hand: CreatureCard[]
@@ -38,6 +40,8 @@ export interface Invoker {
 }
 
 export interface DuelState {
+  /** Unique identity used to make session outcome settlement idempotent. */
+  id: string
   players: Record<PlayerId, Invoker>
   activePlayer: PlayerId
   turn: number
@@ -53,4 +57,5 @@ export interface DuelSetup {
   playerDeck: CreatureCard[]
   opponentDeck: CreatureCard[]
   firstPlayer?: PlayerId
+  playerFatigue?: number
 }

@@ -15,6 +15,9 @@ export interface GameSession {
   /** Ordered references to collection copies selected for the next duel. */
   activeDeckCopyIds: string[]
   invokerLife: number
+  fatigue: number
+  /** Duel results already committed; prevents duplicate settlement. */
+  settledDuelIds: string[]
   nextCopyNumber: number
 }
 
@@ -28,6 +31,8 @@ export function createGameSession(cards: CreatureCard[]): GameSession {
     unlockedCardIds: uniqueCards.map((card) => card.id),
     activeDeckCopyIds: copies.map((copy) => copy.id),
     invokerLife: INITIAL_LIFE,
+    fatigue: 0,
+    settledDuelIds: [],
     nextCopyNumber: copies.length + 1,
   }
 }
@@ -69,12 +74,13 @@ export function startSessionDuel(session: GameSession, cardTypes: CreatureCard[]
     if (!copy || !card) return []
     return [{ ...card, copyId: copy.id, startingHealth: copy.health }]
   })
-  return createDuel({ playerDeck, opponentDeck })
+  return createDuel({ playerDeck, opponentDeck, playerFatigue: session.fatigue })
 }
 
 /** Commits wounds and permanent losses only for copies selected into this duel. */
 export function finishSessionDuel(session: GameSession, duel: DuelState): GameSession {
   if (duel.phase !== 'finished') throw new RuleViolation('Solo se puede cerrar una partida al terminar el duelo.')
+  if (session.settledDuelIds.includes(duel.id)) return session
 
   const participatingIds = new Set(session.activeDeckCopyIds)
   const remainingHealth = new Map(duel.players.player.creatures
@@ -96,5 +102,9 @@ export function finishSessionDuel(session: GameSession, duel: DuelState): GameSe
     }),
     activeDeckCopyIds: session.activeDeckCopyIds.filter((id) => !lostIds.has(id)),
     invokerLife: INITIAL_LIFE,
+    fatigue: duel.winner === 'opponent'
+      ? session.fatigue + 1
+      : Math.max(0, session.fatigue - 1),
+    settledDuelIds: [...session.settledDuelIds, duel.id],
   }
 }

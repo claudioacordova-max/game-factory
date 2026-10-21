@@ -10,17 +10,19 @@ export class RuleViolation extends Error {
 const INITIAL_LIFE = 20
 const INITIAL_LEVEL = 1
 const INITIAL_HAND_SIZE = 3
+let nextDuelNumber = 1
 
 function opponentOf(player: PlayerId): PlayerId {
   return player === 'player' ? 'opponent' : 'player'
 }
 
-function makeInvoker(deck: CreatureCard[]): Invoker {
+function makeInvoker(deck: CreatureCard[], fatigue = 0): Invoker {
   const orderedDeck = [...deck]
   return {
     level: INITIAL_LEVEL,
+    fatigue,
     life: INITIAL_LIFE,
-    mana: INITIAL_LEVEL,
+    mana: Math.max(0, INITIAL_LEVEL - fatigue),
     hand: orderedDeck.splice(0, INITIAL_HAND_SIZE),
     deck: orderedDeck,
     creatures: [],
@@ -30,8 +32,9 @@ function makeInvoker(deck: CreatureCard[]): Invoker {
 export function createDuel(setup: DuelSetup): DuelState {
   const firstPlayer = setup.firstPlayer ?? 'player'
   return {
+    id: `duel-${nextDuelNumber++}`,
     players: {
-      player: makeInvoker(setup.playerDeck),
+      player: makeInvoker(setup.playerDeck, setup.playerFatigue ?? 0),
       opponent: makeInvoker(setup.opponentDeck),
     },
     activePlayer: firstPlayer,
@@ -45,7 +48,7 @@ export function createDuel(setup: DuelSetup): DuelState {
 }
 
 export function baseMana(invoker: Invoker): number {
-  return invoker.level
+  return Math.max(0, invoker.level - invoker.fatigue)
 }
 
 function requireOngoing(state: DuelState): void {

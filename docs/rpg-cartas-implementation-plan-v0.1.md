@@ -149,22 +149,23 @@ Estas decisiones completan detalles que la especificación deja abiertos. Deben 
 
 **Tareas**
 
-- [ ] Aplicar el incremento de fatiga después de una derrota.
-- [ ] Aplicar la reducción de fatiga después de una victoria, con mínimo de cero.
-- [ ] Calcular el maná utilizable según maná base y fatiga, con mínimo de cero.
-- [ ] Devolver al jugador a la exploración frente al enemigo tras la derrota.
-- [ ] Permitir reorganizar la baraja y reintentar ese encuentro.
-- [ ] Añadir pruebas de fatiga, límite inferior, maná utilizable y derrota seguida de reintento.
-- [ ] Ejecutar pruebas, recorrido manual y build; registrar resultados.
+- [x] Aplicar el incremento de fatiga después de una derrota.
+- [x] Aplicar la reducción de fatiga después de una victoria, con mínimo de cero.
+- [x] Calcular el maná utilizable según maná base y fatiga, con mínimo de cero.
+- [x] Mantener el flujo entre duelos existente frente al mismo enemigo después de la derrota, sin adelantar la exploración del Hito 6.
+- [x] Permitir reorganizar la baraja y reintentar ese encuentro.
+- [x] Añadir pruebas de derrotas consecutivas, victorias, fatiga cero, maná bloqueado, continuidad e idempotencia de finalización.
+- [x] Ejecutar pruebas automatizadas y build; registrar resultados.
+- [ ] Completar el recorrido manual en navegador.
 
 **Verificación:** automatizar los cálculos y probar manualmente derrota, reorganización y reintento.
 
 **Criterios de aceptación**
 
-- [ ] Derrota suma exactamente un punto de fatiga y victoria resta exactamente uno hasta cero.
-- [ ] La fatiga limita el maná utilizable sin cambiar el nivel ni el maná base.
-- [ ] Tras una derrota se conservan las heridas y bajas, se restaura la vida del invocador y se puede reintentar el mismo encuentro.
-- [ ] No se han añadido mecanismos para eliminar fatiga.
+- [x] Derrota suma exactamente un punto de fatiga y victoria resta exactamente uno hasta cero.
+- [x] La fatiga limita el maná utilizable sin cambiar el nivel ni el maná base.
+- [x] Tras una derrota se conservan las heridas y bajas, se restaura la vida del invocador y se puede reintentar el mismo encuentro.
+- [x] No se han añadido mecanismos para eliminar fatiga.
 
 **Limitación de diseño para playtesting:** con nivel 1, el maná máximo base inicial es 1; una derrota deja 1 punto de fatiga y, por tanto, 0 de maná utilizable. Esto puede impedir invocar cartas con coste de maná hasta reducir fatiga (por ejemplo, ganando un duelo) o reiniciar la sesión. Es una consecuencia de las reglas aprobadas: no se cambiará en la implementación. Debe comprobarse y anotarse durante las pruebas.
 
@@ -246,7 +247,7 @@ Añadir una entrada al completar cada hito. Indicar comandos y escenarios manual
 | Hito 2 — 2026-10-21 | `npm run test` (14 casos); `npm run build`; intento de abrir la interfaz con CUA | 14/14 pruebas aprobadas; compilación TypeScript y build Vite aprobados (235,89 kB JS sin gzip). Se probaron turno del enemigo con sacrificio, bloqueos deterministas y finales de victoria y derrota. No se pudo hacer comprobación manual: no había navegadores ni pestañas disponibles. | Falta recorrer visualmente una victoria y una derrota en navegador. No se avanzó al Hito 3. |
 | Hito 3 — 2026-10-21 | `npm run test` (19 casos); `npm run build` | 19/19 pruebas aprobadas; compilación TypeScript y build Vite aprobados (237,29 kB JS sin gzip). Se verificaron heridas tras daño real de combate, muerte, sacrificio, recuperación del invocador tras victoria/derrota y continuidad de copias entre duelos. | Comprobación manual pendiente; seguir los pasos del informe de entrega. Sin guardado después de cerrar o recargar, según alcance. |
 | Hito 4 — 2026-10-21 | `npm run test` (24 casos); `npm run build`; consulta de navegadores disponibles | 24/24 pruebas aprobadas; TypeScript y Vite build aprobados (241,89 kB JS sin gzip). La comprobación visual no se pudo ejecutar: el entorno CUA no mostró navegadores ni pestañas disponibles. | Recorrido manual pendiente. Se documentaron pasos para catálogo, colección, edición de baraja, heridas, bajas y herramienta de desbloqueo en la entrega. No se implementó Hito 5. |
-| Hito 5 — pendiente | — | — | — |
+| Hito 5 — 2026-10-21 | `npm.cmd run test` (27 casos); `npm.cmd run build` | 27/27 pruebas aprobadas; TypeScript y Vite build aprobados (242,47 kB JS sin gzip). Se verificaron derrotas consecutivas, finalización duplicada, victorias hasta fatiga cero, maná bloqueado, límite de cero y fatiga del jugador aislada del maná del enemigo. | Recorrido manual en navegador pendiente; pasos de comprobación incluidos en la entrega. La fatiga persiste en `GameSession` durante la sesión de la página, no tras recargar. |
 | Hito 6 — pendiente | — | — | — |
 | Hito 7 — pendiente | — | — | — |
 
@@ -273,3 +274,5 @@ Anotar la fecha, el hito, la decisión, su motivo y si reemplaza una decisión p
 | 2026-10-21 | Hito 4 | Retirar una copia de la baraja no la retira de la colección. Solo las copias seleccionadas pueden recibir heridas o bajas; al morir o sacrificarse, la copia desaparece de colección y baraja, mientras el desbloqueo permanece | Mantener separadas la propiedad, la selección para el duelo y el catálogo permanente | Aprobada por el diseñador |
 | 2026-10-21 | Hito 4 | El primer desbloqueo añade una copia a la colección, pero no la selecciona automáticamente en la baraja. Un tipo ya desbloqueado no puede otorgar otra copia, aunque la anterior se haya perdido | La especificación define la entrega de la primera copia y permite que el jugador la incorpore a su baraja; el límite por tipo sigue vigente tras una baja | Provisional |
 | 2026-10-21 | Hito 4 | La carta “Brote de musgo · prueba” (1 ATQ, 4 VID) permanece bloqueada al iniciar. El botón provisional la desbloquea una vez, sin condición de exploración ni recompensa, y la edición solo está habilitada entre duelos | Comprobar el flujo de desbloqueo sin anticipar exploración | Provisional |
+| 2026-10-21 | Hito 5 | La fatiga se conserva en `GameSession`, se copia al invocador del jugador al iniciar el duelo y el motor calcula su maná inicial y de mantenimiento como `max(0, nivel − fatiga)`; el enemigo mantiene fatiga cero | Mantener la consecuencia persistente en sesión y aplicar la misma regla en cada recuperación de maná sin afectar al oponente | Aprobada |
+| 2026-10-21 | Hito 5 | Cada duelo recibe un ID y `finishSessionDuel` registra los IDs ya asentados; repetir la finalización del mismo duelo devuelve la sesión sin reaplicar fatiga, heridas, bajas ni recuperación | Hacer idempotente el asentamiento del resultado ante llamadas duplicadas | Provisional |

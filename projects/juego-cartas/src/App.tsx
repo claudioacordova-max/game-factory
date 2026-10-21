@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   createGameSession,
   addCopyToActiveDeck,
+  baseMana,
   declareAttackers,
   declareBlockers,
   endTurn,
@@ -85,6 +86,8 @@ export default function App() {
   const isPlayerMain = duel.phase === 'main' && duel.activePlayer === 'player'
   const selectedCard = player.hand.find((card) => card.id === selectedCardId)
   const canManageBetweenDuels = duel.phase === 'finished'
+  const usableMana = canManageBetweenDuels ? Math.max(0, player.level - session.fatigue) : baseMana(player)
+  const shownMana = canManageBetweenDuels ? usableMana : player.mana
 
   function closeDuel(result: DuelState) {
     const recovered = {
@@ -237,7 +240,7 @@ export default function App() {
             <strong>{duel.winner === 'player' ? '¡Victoria!' : 'Derrota'}</strong>
             <p>{duel.winner === 'player' ? 'Has vencido al guardián de la cripta.' : 'El guardián de la cripta te ha derrotado.'}</p>
           </div>
-          <button className="button button-light" type="button" onClick={startNextDuel}>Iniciar siguiente duelo</button>
+          <button className="button button-light" type="button" onClick={startNextDuel}>{duel.winner === 'opponent' ? 'Reintentar enfrentamiento' : 'Iniciar siguiente duelo'}</button>
         </section>
       )}
 
@@ -246,7 +249,7 @@ export default function App() {
       <section className="management-panel" aria-label="Catálogo, colección y baraja">
         <div className="management-heading">
           <div><p className="section-kicker">Gestión entre duelos</p><h2>Catálogo y colección</h2></div>
-          <span className="deck-count">Invocador {session.invokerLife}/20 VID · {session.copies.length} copia(s)</span>
+          <span className="deck-count">Invocador {session.invokerLife}/20 VID · Fatiga {session.fatigue} · {session.copies.length} copia(s)</span>
         </div>
         <div className="management-grid">
           <section className="management-section" aria-labelledby="catalog-title">
@@ -319,8 +322,9 @@ export default function App() {
         <section className="side-panel player-panel" aria-label="Tu invocador">
           <div className="player-heading">
             <div><p className="section-kicker">Tu invocador · Nivel {player.level}</p><h2>Invocador</h2></div>
-            <div className="resources"><span className="life-value">♥ {Math.max(0, player.life)}</span><span>✦ {player.mana} / {player.level} maná</span></div>
+            <div className="resources"><span className="life-value">♥ {Math.max(0, player.life)}</span><span>✦ {shownMana} / {usableMana} maná utilizable</span></div>
           </div>
+          <p className="fatigue-status">Fatiga {session.fatigue}: bloquea {Math.min(session.fatigue, player.level)} de {player.level} maná base.</p>
           <div className="battle-row">
             <div className="row-label"><strong>Tu mesa</strong><span>{player.creatures.length} criatura(s)</span></div>
             <div className="creature-row">

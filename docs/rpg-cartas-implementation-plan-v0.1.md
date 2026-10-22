@@ -3,7 +3,7 @@
 **Versión:** 0.1  
 **Fecha:** 21 de octubre de 2026  
 **Proyecto:** `projects/juego-cartas`  
-**Estado:** Plan aprobado; Hitos 1–4 implementados; hitos 5–7 pendientes
+**Estado:** Hitos 1–7 completados; informe de validación v0.1 registrado
 **Fuente de requisitos:** [`rpg-cartas-prototype-spec-v0.2.md`](rpg-cartas-prototype-spec-v0.2.md)
 
 ## Propósito y forma de trabajo
@@ -216,24 +216,24 @@ Las siguientes observaciones fueron aportadas por el usuario tras completar manu
 
 **Tareas**
 
-- [ ] Ejecutar todas las pruebas automatizadas disponibles.
-- [ ] Ejecutar `npm run build`.
-- [ ] Recorrer los 12 criterios de aceptación de la especificación funcional.
-- [ ] Corregir defectos que impidan completar el ciclo aprobado.
-- [ ] Registrar pruebas ejecutadas y sus resultados.
-- [ ] Registrar las decisiones provisionales tomadas y las limitaciones conocidas.
-- [ ] Confirmar que no se implementaron funcionalidades futuras o experimentales.
+- [x] Ejecutar todas las pruebas automatizadas disponibles.
+- [x] Ejecutar `npm run build`.
+- [x] Auditar individualmente los 12 criterios de aceptación de la especificación funcional.
+- [x] Revisar el código frente al ciclo aprobado; no se identificaron defectos funcionales que requieran cambios de implementación.
+- [x] Registrar pruebas automatizadas, pruebas manuales confirmadas por el usuario, resultados, decisiones provisionales y limitaciones en el informe de validación.
+- [x] Confirmar mediante revisión del alcance que no se añadieron funcionalidades futuras o experimentales.
+- [x] Actualizar el README para describir el mapa 3D, los combates 2D provisionales y la persistencia limitada a la sesión.
 
-**Verificación:** pruebas automatizadas, build y checklist manual de aceptación.
+**Verificación:** pruebas automatizadas y build ejecutados por Codex; checklist manual realizado durante los Hitos 1–6 y confirmado por el usuario. El informe diferencia ambas fuentes de evidencia.
 
 **Criterios de aceptación**
 
-- [ ] Es posible iniciar y completar duelos, robar e invocar, declarar ataques y bloqueos y resolver daño.
-- [ ] Heridas y bajas se conservan entre duelos; la baraja se puede editar y se puede desbloquear una carta.
-- [ ] Se pueden jugar varios duelos consecutivos y aplicar/recuperar fatiga según las reglas.
-- [ ] La vida del invocador se recupera tras victoria o derrota.
-- [ ] Se puede continuar el ciclo después de una derrota.
-- [ ] Se entrega un informe de pruebas, decisiones provisionales y limitaciones.
+- [x] Es posible iniciar y completar duelos, robar e invocar, declarar ataques y bloqueos y resolver daño.
+- [x] Heridas y bajas se conservan entre duelos; la baraja se puede editar y se puede desbloquear una carta.
+- [x] Se pueden jugar varios duelos consecutivos y aplicar/recuperar fatiga según las reglas.
+- [x] La vida del invocador se recupera tras victoria o derrota.
+- [x] Se puede continuar el ciclo después de una derrota.
+- [x] Se entrega un informe de pruebas, decisiones provisionales y limitaciones en [`rpg-cartas-validation-report-v0.1.md`](rpg-cartas-validation-report-v0.1.md).
 
 ## Riesgos, ambigüedades y limitaciones
 
@@ -244,7 +244,7 @@ Las siguientes observaciones fueron aportadas por el usuario tras completar manu
 5. **Progresión de nivel:** se especifica el incremento de maná base por nivel, pero no un método para subir de nivel. El prototipo comienza en nivel 1 y no inventa una progresión.
 6. **Preparación del mazo:** no se define el procedimiento para crear/mezclar el mazo de duelo ni qué ocurre con cartas no jugadas al finalizar. Se fijarán reglas operativas mínimas al implementar el Hito 1 y se documentarán sin alterar la baraja persistente.
 7. **Transición visual:** la interfaz 2D sirve para validar el primer duelo; la entrega final debe usar Three.js y React Three Fiber de forma funcional. Mantener la lógica desacoplada de la vista reduce el riesgo de rehacer reglas al cambiar la representación.
-8. **Infraestructura de pruebas:** el proyecto no incluye pruebas automatizadas actualmente. La herramienta y los scripts se decidirán al iniciar el Hito 1, manteniendo dependencias de desarrollo al mínimo.
+8. **Infraestructura de pruebas (resuelto en Hito 1):** se usa TypeScript compilado y Node.js para las pruebas deterministas; el Hito 7 confirma 32 casos automatizados aprobados sin añadir un framework externo.
 9. **Alcance futuro excluido:** creación o reinvocación mediante habilidades, fichas, mejoras persistentes, descanso y curación avanzada, rendición, habilidades adicionales, arquetipos, torneos, mazmorras complejas, puzles y recompensas avanzadas quedan fuera de estos hitos.
 
 ## Registro de resultados de pruebas
@@ -259,7 +259,7 @@ Añadir una entrada al completar cada hito. Indicar comandos y escenarios manual
 | Hito 4 — 2026-10-21 | `npm run test` (24 casos); `npm run build`; consulta de navegadores disponibles | 24/24 pruebas aprobadas; TypeScript y Vite build aprobados (241,89 kB JS sin gzip). La comprobación visual no se pudo ejecutar: el entorno CUA no mostró navegadores ni pestañas disponibles. | Recorrido manual pendiente. Se documentaron pasos para catálogo, colección, edición de baraja, heridas, bajas y herramienta de desbloqueo en la entrega. No se implementó Hito 5. |
 | Hito 5 — 2026-10-21 | `npm.cmd run test` (27 casos); `npm.cmd run build` | 27/27 pruebas aprobadas; TypeScript y Vite build aprobados (242,47 kB JS sin gzip). Se verificaron derrotas consecutivas, finalización duplicada, victorias hasta fatiga cero, maná bloqueado, límite de cero y fatiga del jugador aislada del maná del enemigo. | Recorrido manual en navegador pendiente; pasos de comprobación incluidos en la entrega. La fatiga persiste en `GameSession` durante la sesión de la página, no tras recargar. |
 | Hito 6 — 2026-10-21 | `npm.cmd run test` (32 casos); `npm.cmd run build` | 32/32 pruebas aprobadas; compilación TypeScript y build Vite aprobados. Bundle principal: 1.160,64 kB sin comprimir; Vite conserva el aviso de chunks mayores a 500 kB. | El usuario completó manualmente los tres encuentros y confirmó el flujo. Se registran sus observaciones de playtesting abajo; cualquier ajuste futuro queda pendiente de aprobación. |
-| Hito 7 — pendiente | — | — | — |
+| Hito 7 — 2026-10-22 | `npm.cmd run test`; `npm.cmd run build`; `git diff --check`; revisión de los 12 criterios | 32/32 pruebas aprobadas. TypeScript y build Vite aprobados; bundle principal 1.160,64 kB sin comprimir y aviso de chunk superior a 500 kB. `git diff --check` terminó con código 0; Git mostró avisos de conversión LF→CRLF para dos archivos editados. | El usuario confirma que realizó las comprobaciones manuales durante los Hitos 1–6, incluidas las categorías detalladas en el informe. No se requiere organizar otro recorrido. Sin defectos funcionales identificados en la auditoría. Informe: [`rpg-cartas-validation-report-v0.1.md`](rpg-cartas-validation-report-v0.1.md). |
 
 ## Registro de decisiones importantes
 
@@ -290,3 +290,4 @@ Anotar la fecha, el hito, la decisión, su motivo y si reemplaza una decisión p
 | 2026-10-21 | Hito 6 | Una victoria completa el encuentro y habilita el siguiente; una derrota se registra sin avance, dejando disponible el encuentro actual. Ambos resultados se liquidan una sola vez por ID de duelo | Aplicar el flujo lineal aprobado e impedir que se dupliquen avance o recompensas | Aprobada |
 | 2026-10-21 | Hito 6 | Vencer al Centinela desbloquea Brote de musgo mediante `unlockCreatureType`; se añade al catálogo y colección, no a la baraja. Se elimina el botón provisional | Cumplir la condición de descubrimiento aprobada y reutilizar el sistema del Hito 4 | Aprobada |
 | 2026-10-21 | Hito 6 | El progreso de exploración se conserva en memoria de sesión, separado de `GameSession` y del motor de combate; el mapa presenta nodos 3D y delega las acciones a transiciones TypeScript | Mantener reglas y progreso independientes de React y la presentación, sin cambiar el motor de combate | Aprobada |
+| 2026-10-22 | Hito 7 | Actualizar README e informe para describir el mapa de exploración 3D, los combates 2D provisionales y la persistencia durante la sesión; sin modificar la implementación | Cierre documental tras validar los criterios de aceptación | Completada |

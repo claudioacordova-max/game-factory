@@ -216,7 +216,7 @@ Los **pesos** son parámetros [E] autorizados en bloque para la demo, aunque sus
 | Insumos de manufactura | Para un circuito de caravana | Mantener criterio básico | Mantener criterio básico |
 | Joyas | Sin meta | 1 joya/adulto | 4 joyas/adulto |
 | Muebles | Sin meta | 1 mueble/integrante | 4 muebles/familia |
-| Dinero para ascender | 200 + 100 × integrantes | 1.000 monedas | 2.000 monedas (meta registrable) |
+| Dinero para ascender | 200 + 100 × integrantes | 1.000 monedas (ascenso 2→3) | 2.000 monedas (meta de prosperidad; no habilita un tramo 4) |
 
 **Confirmado en conversación:** objetivos acumulativos; ropa 1→2→4 mudas por integrante; metas de bienes duraderos y dinero; formula inicial **200 + 100 por integrante**; la meta de **1.000** y la de **2.000** se mencionaron como cifras para probar.
 **[E]** El segundo tramo concreta las expresiones «un mueble por integrante» y «joyas para adultos» con 1 por persona/adulto; el tercero concreta «4 o 5 muebles» en **4** por familia. Estas cuantías se autorizaron en bloque como parámetros [E] para el primer test, sin afirmar que estén balanceadas.
@@ -238,6 +238,7 @@ Los umbrales de 7 días, 5/3 lotes y la interpretación de colores para artícul
 
 - **Ascenso 1→2:** todas las necesidades básicas pertinentes están **verdes** y dinero ≥ **200 + 100×integrantes**.
 - **Ascenso 2→3:** se cumplieron los requisitos materiales del tramo 2, necesidades básicas en verde y dinero ≥ **1.000**.
+- La meta monetaria de **2.000** del tramo 3 registra prosperidad; no es el umbral de ascenso 2→3 ni crea un tramo 4. El tramo 3 sigue siendo el máximo de esta demo.
 - **Mantención de tramo 2:** puede haber necesidades básicas **amarillas**. Desciende a 1 si alguna necesidad básica llega a **rojo** o si el dinero cae **por debajo** del umbral con que accedió a 2.
 - **Mantención de tramo 3 [E]:** desciende a 2 si deja de cumplir necesidades fundamentales que sustentan niveles anteriores en estado no rojo o si el dinero cae por debajo de **1.000**. Si un requisito básico está rojo, se aplican descensos sucesivos hasta llegar al tramo que pueda sostener, como máximo al 1.
 - **Bienes duraderos:** conservar siempre tras el descenso, salvo desgaste/consumo normal.
@@ -550,6 +551,7 @@ El diseñador **aceptó expresamente en bloque todos los valores [E]** para usar
 | D6 | **Orden de procesamiento diario y selección automática de progreso** descritos (§6.5, §9.3–9.4). | **[E] Aprobada** |
 | D7 | **Puerto solo para caravana**; no visitable, no seleccionable, sin comercio presencial para el jugador (§1, §3, §9, §11). | **[C] Aprobada** |
 | D8 | **Descenso automático de tramo sin colchón monetario** como conducta del primer test; los bienes adquiridos se conservan (§6.4). | **[C] Aprobada** |
+| D9 | Aclaración del diseñador (23 de octubre de 2026): el ascenso 2→3 requiere **1.000 monedas**; **2.000 monedas** es solo la meta monetaria de prosperidad del tramo 3, sin implementar ascenso a tramo 4. El descenso de tramo 3→2 sigue ocurriendo por debajo de **1.000 monedas** (§6.2, §6.4). | **[C] Aprobada** |
 
 **No quedan decisiones de diseño previamente identificadas como bloqueantes para entregar esta especificación a Codex.** Los riesgos de §14 son asuntos de verificación y playtesting, no pendientes de aprobación. Si durante la planificación aparece una contradicción nueva que realmente afecte al comportamiento funcional, debe señalarse y consultarse al diseñador antes de resolverla.
 

@@ -116,6 +116,7 @@ Las pruebas automáticas cubrirán reglas individuales, conservación de inventa
 | 3 | Economía autónoma y simulaciones reproducibles 9/36/90; 21 pruebas, build y revisión aprobados. | `7c9d0f0` |
 | 4 | Jugador, transacciones personales y tiempo; 29 pruebas, build y revisión aprobados. | `11bfaaf` |
 | 5 | Playtesting humano aprobado por el diseñador (23-10-2026): movimiento, exploración de ambos pueblos e interacciones con NPC confirmados; 31 pruebas, build y revisión aprobados. | Cierre local en este commit |
+| 6 | Playtesting humano aprobado por el diseñador (23-10-2026): compras, ventas, límites, rechazos y actualización de dinero/inventario confirmados. 34 pruebas y build aprobados; revisión independiente aprobada. Observación baja pendiente: agregar aserción de reintento tras rechazo. | Cierre local en este commit |
 
 ## Ejecución posterior con Game Factory v1
 

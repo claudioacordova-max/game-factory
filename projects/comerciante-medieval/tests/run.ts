@@ -17,6 +17,11 @@ import {
   sellToNeed,
   advancePlayerDay,
   travelToVillage,
+  quoteBuyFromBusiness,
+  quoteSellToNeed,
+  saleGoodsForTarget,
+  tradeQuantityStatus,
+  tradeTotalTenthsForQuantity,
   type EconomicState,
   type Family,
   type VillageId,
@@ -232,6 +237,84 @@ test('venta a negocio procesa compras rojas inmediatas una vez, sin avanzar cale
   equal(repeatPass.events.length, 0, 'la misma oferta no vuelve a transferirse')
   equal(repeatPass.state.families[family.id].household.inventory.food, 28, 'inventario no se duplica al reabrir menú')
   equal(repeatPass.state.families[unrelatedFamily.id].household.inventory.firewood, 0, 'repetir la evaluación no procesa a otra familia')
+})
+
+test('cotizaciones UI exponen máximos actuales de compra y venta y se refrescan tras operar', () => {
+  equal(tradeTotalTenthsForQuantity(3, GOODS_CATALOG.food.playerBuyPriceTenths), 135, 'total explícito de cantidad elegida en décimas')
+  equal(tradeTotalTenthsForQuantity(0, GOODS_CATALOG.food.playerBuyPriceTenths), undefined, 'cantidad cero no genera total')
+  equal(tradeTotalTenthsForQuantity(1.5, GOODS_CATALOG.food.playerBuyPriceTenths), undefined, 'cantidad fraccional no genera total')
+  equal(tradeTotalTenthsForQuantity(Number.NaN, GOODS_CATALOG.food.playerBuyPriceTenths), undefined, 'cantidad NaN no genera total')
+  equal(tradeTotalTenthsForQuantity(Number.MAX_SAFE_INTEGER, GOODS_CATALOG.food.playerBuyPriceTenths), undefined, 'importe no seguro no genera total')
+  equal(tradeQuantityStatus(5, 5), 'within-maximum', 'cantidad igual al máximo es viable')
+  equal(tradeQuantityStatus(6, 5), 'exceeds-maximum', 'cantidad mayor al máximo queda marcada como rechazo')
+  equal(tradeQuantityStatus(0, 5), 'invalid', 'cantidad inválida no se clasifica como viable')
+  equal(tradeQuantityStatus(Number.NaN, 5), 'invalid', 'NaN no se clasifica como viable')
+  let game = createInitialGameState()
+  const inVillageB = travelToVillage(game, 'village-b')
+  ok(inVillageB.ok, 'viaje de preparación para cotizar negocio B')
+  const jewelry = quoteBuyFromBusiness(inVillageB.state, 'jeweler-b', 'jewelry')
+  equal(jewelry.maxQuantity, 1, 'máximo de joyas limitado por saldo inicial')
+  equal(jewelry.totalTenths, 1620, 'total cotizado usa tarifa fija')
+  equal(jewelry.moneyAfterTenths, 1380, 'dinero resultante cotizado')
+  const bought = buyFromBusiness(game, 'farmer-a', 'food', 2)
+  ok(bought.ok, 'compra de alimentos disponible')
+  game = bought.state
+  equal(quoteBuyFromBusiness(game, 'farmer-a', 'food').maxQuantity, 18, 'stock comercial refrescado luego de compra')
+  game.player.inventory.food = 4
+  game.economy.families['family-farmer-a'].household.inventory.food = 24
+  const householdTarget = { type: 'household' as const, familyId: 'family-farmer-a' }
+  equal(saleGoodsForTarget(game, householdTarget).includes('food'), true, 'menú Hogar ofrece necesidad actual')
+  const foodSale = quoteSellToNeed(game, householdTarget, 'food')
+  equal(foodSale.maxQuantity, 4, 'máximo doméstico limitado por necesidad, carga y fondos')
+  equal(foodSale.totalTenths, 220, 'ingreso por venta cotizado')
+  const sold = sellToNeed(game, householdTarget, 'food', foodSale.maxQuantity)
+  ok(sold.ok, 'venta doméstica aceptada')
+  equal(quoteSellToNeed(sold.state, householdTarget, 'food').maxQuantity, 0, 'cotización desaparece al cubrir necesidad')
+  equal(sold.state.economy.day, game.economy.day, 'transacciones no avanzan día')
+})
+
+test('confirmación explícita sobre el máximo por fondos rechaza la venta completa sin transferencias', () => {
+  const state = createInitialGameState()
+  const buyer = state.economy.families['family-farmer-a']
+  buyer.moneyTenths = 80
+  buyer.household.inventory.food = 26
+  state.player.inventory.food = 2
+  const target = { type: 'household' as const, familyId: buyer.id }
+  equal(quoteSellToNeed(state, target, 'food').maxQuantity, 1, 'máximo cotizado por fondos')
+  const before = JSON.stringify(state)
+  const result = sellToNeed(state, target, 'food', 2, { requireFullAcceptance: true })
+  ok(!result.ok && result.error.code === 'insufficient-funds', 'cantidad superior a lo costeable se rechaza')
+  if (!result.ok) ok(result.error.message.includes('Máximo aceptable actual: 1'), 'el rechazo informa el máximo actual')
+  equal(JSON.stringify(state), before, 'rechazo explícito no altera estado, dinero ni inventarios')
+  equal(JSON.stringify(result.state), before, 'acción rechazada devuelve estado idéntico')
+})
+
+test('recorrido compra, viaje de un día y venta sincroniza estado integrado y rechazo no altera saldo', () => {
+  let game = createInitialGameState()
+  const purchase = buyFromBusiness(game, 'farmer-a', 'food', 6)
+  ok(purchase.ok, 'compra de carga aceptada en Pueblo A')
+  game = purchase.state
+  equal(game.player.moneyTenths, 2730, 'saldo después de comprar')
+  equal(playerLoadHalfUnits(game.player.inventory), 12, 'carga después de comprar')
+  equal(game.economy.day, 1, 'comerciar conserva el día')
+  const travel = travelToVillage(game, 'village-b')
+  ok(travel.ok, 'viaje a Pueblo B aceptado')
+  game = travel.state
+  equal(game.player.villageId, 'village-b', 'destino B sincronizado')
+  equal(game.economy.day, 2, 'viaje procesa un solo día global')
+  const householdTarget = { type: 'household' as const, familyId: 'family-farmer-b' }
+  game.economy.families['family-farmer-b'].household.inventory.food = 24
+  const quote = quoteSellToNeed(game, householdTarget, 'food')
+  equal(quote.maxQuantity, 4, 'demanda disponible al llegar')
+  const sale = sellToNeed(game, householdTarget, 'food', 4, { requireFullAcceptance: true })
+  ok(sale.ok, 'venta en pueblo destino aceptada')
+  equal(sale.state.player.moneyTenths, 2950, 'saldo sincronizado luego de vender')
+  equal(sale.state.player.inventory.food, 2, 'inventario sincronizado luego de vender')
+  const rejected = sellToNeed(sale.state, householdTarget, 'food', 2, { requireFullAcceptance: true })
+  ok(!rejected.ok, 'reventa sin necesidad rechazada')
+  equal(rejected.state.player.moneyTenths, sale.state.player.moneyTenths, 'rechazo conserva dinero')
+  equal(rejected.state.player.inventory.food, sale.state.player.inventory.food, 'rechazo conserva carga')
+  equal(sale.state.economy.day, 2, 'ventas tampoco avanzan día')
 })
 
 test('oferta explícita mayor que necesidad actual se rechaza completa y no altera el estado', () => {

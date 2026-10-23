@@ -88,6 +88,31 @@ export function buyFromBusiness(state: GameState, businessId: string, good: Good
 
 export type PlayerSaleTarget = { type: 'household'; familyId: string } | { type: 'business'; businessId: string }
 
+export interface PlayerTradeQuote {
+  good: Good
+  unitPriceTenths: number
+  maxQuantity: number
+  totalTenths: number
+  moneyAfterTenths: number
+  loadAfterHalfUnits: number
+  rejection?: string
+}
+
+/** Safe total calculation for the currently entered amount in the trade panel. */
+export function tradeTotalTenthsForQuantity(quantity: number, unitPriceTenths: number): number | undefined {
+  if (!Number.isSafeInteger(quantity) || quantity <= 0 || !Number.isSafeInteger(unitPriceTenths) || unitPriceTenths <= 0) return undefined
+  const total = quantity * unitPriceTenths
+  return Number.isSafeInteger(total) ? total : undefined
+}
+
+export type TradeQuantityStatus = 'invalid' | 'within-maximum' | 'exceeds-maximum'
+
+/** Classifies the entered amount against the latest quote maximum. */
+export function tradeQuantityStatus(quantity: number, maximum: number): TradeQuantityStatus {
+  if (!Number.isSafeInteger(quantity) || quantity <= 0 || !Number.isSafeInteger(maximum) || maximum < 0) return 'invalid'
+  return quantity <= maximum ? 'within-maximum' : 'exceeds-maximum'
+}
+
 interface NeedTarget { maxQuantity: number; destination: string; basicQuantity: number; progressUnits: number; familyId: string }
 
 function householdNeed(economy: EconomicState, familyId: string, good: Good): NeedTarget | undefined {
@@ -142,10 +167,79 @@ function businessNeed(economy: EconomicState, businessId: string, good: Good): N
   return { maxQuantity: missing, basicQuantity: missing, destination: `business:${business.id}:productive`, progressUnits: 0, familyId: family.id }
 }
 
-/** Offer carried goods directly to one household or the relevant business. A cash-limited family may accept a partial integer quantity. */
-export function sellToNeed(state: GameState, target: PlayerSaleTarget, good: Good, quantity: number): PlayerActionResult {
+/** Returns only goods currently relevant to the selected recipient. */
+export function saleGoodsForTarget(state: GameState, target: PlayerSaleTarget): Good[] {
+  if (target.type === 'household') {
+    const family = state.economy.families[target.familyId]
+    if (!family || family.villageId !== state.player.villageId) return []
+    return GOODS.filter(good => (householdNeed(state.economy, target.familyId, good)?.maxQuantity ?? 0) > 0)
+  }
+  const business = state.economy.businesses[target.businessId]
+  if (!business || business.villageId !== state.player.villageId) return []
+  return GOODS.filter(good => (businessNeed(state.economy, target.businessId, good)?.maxQuantity ?? 0) > 0)
+}
+
+/** Calculates a current purchase maximum for display; buyFromBusiness remains the authority at confirmation. */
+export function quoteBuyFromBusiness(state: GameState, businessId: string, good: Good): PlayerTradeQuote {
+  const business = state.economy.businesses[businessId]
+  const unitPriceTenths = GOODS_CATALOG[good].playerBuyPriceTenths
+  const loadNow = playerLoadHalfUnits(state.player.inventory)
+  const maxByStock = business?.villageId === state.player.villageId ? business.commercialInventory[good] : 0
+  const maxByMoney = Math.floor(state.player.moneyTenths / unitPriceTenths)
+  const maxByLoad = Math.floor((state.player.capacityHalfUnits - loadNow) / GOODS_CATALOG[good].weightHalfUnits)
+  const maxQuantity = Math.max(0, Math.min(maxByStock, maxByMoney, maxByLoad))
+  const totalTenths = maxQuantity * unitPriceTenths
+  let rejection: string | undefined
+  if (!business) rejection = 'Negocio inexistente.'
+  else if (business.villageId !== state.player.villageId) rejection = 'El negocio está en otro pueblo.'
+  else if (maxByStock <= 0) rejection = 'No hay existencias comerciales disponibles.'
+  else if (maxByMoney <= 0) rejection = 'No tienes dinero suficiente.'
+  else if (maxByLoad <= 0) rejection = 'No tienes capacidad de carga disponible.'
+  return { good, unitPriceTenths, maxQuantity, totalTenths, moneyAfterTenths: state.player.moneyTenths - totalTenths, loadAfterHalfUnits: loadNow + maxQuantity * GOODS_CATALOG[good].weightHalfUnits, ...(rejection ? { rejection } : {}) }
+}
+
+/** Calculates the currently acceptable sale maximum, including carried stock and family funds. */
+export function quoteSellToNeed(state: GameState, target: PlayerSaleTarget, good: Good): PlayerTradeQuote {
+  const unitPriceTenths = GOODS_CATALOG[good].playerSellPriceTenths
+  const loadNow = playerLoadHalfUnits(state.player.inventory)
+  let need: NeedTarget | undefined
+  let family: EconomicState['families'][string] | undefined
+  if (target.type === 'household') {
+    family = state.economy.families[target.familyId]
+    if (family?.villageId === state.player.villageId) need = householdNeed(state.economy, target.familyId, good)
+  } else {
+    const business = state.economy.businesses[target.businessId]
+    if (business?.villageId === state.player.villageId) {
+      family = state.economy.families[business.familyId]
+      need = businessNeed(state.economy, target.businessId, good)
+    }
+  }
+  const progressKey = need ? `${state.economy.day}:${need.familyId}` : ''
+  const progressRemaining = need ? Math.max(0, 1 - (state.progressBoughtToday[progressKey] ?? 0)) : 0
+  const acceptable = need ? Math.min(need.maxQuantity, need.basicQuantity + (need.progressUnits > 0 ? progressRemaining : 0)) : 0
+  const maxQuantity = family && need
+    ? Math.max(0, Math.min(state.player.inventory[good], acceptable, Math.floor(family.moneyTenths / unitPriceTenths)))
+    : 0
+  const totalTenths = maxQuantity * unitPriceTenths
+  let rejection: string | undefined
+  if (!family) rejection = target.type === 'household' ? 'Familia inexistente o en otro pueblo.' : 'Negocio inexistente o en otro pueblo.'
+  else if (!need) rejection = 'Este bien no corresponde a una necesidad actual.'
+  else if (state.player.inventory[good] <= 0) rejection = 'No llevas este bien.'
+  else if (acceptable <= 0) rejection = need.progressUnits > 0 && progressRemaining === 0 ? 'La familia ya recibió su bien de progreso de hoy.' : 'La necesidad ya está cubierta.'
+  else if (family.moneyTenths < unitPriceTenths) rejection = 'La familia no tiene dinero suficiente.'
+  return { good, unitPriceTenths, maxQuantity, totalTenths, moneyAfterTenths: state.player.moneyTenths + totalTenths, loadAfterHalfUnits: loadNow - maxQuantity * GOODS_CATALOG[good].weightHalfUnits, ...(rejection ? { rejection } : {}) }
+}
+
+/** Offer carried goods directly to one household or the relevant business. Legacy callers may accept an affordable partial quantity. */
+export function sellToNeed(state: GameState, target: PlayerSaleTarget, good: Good, quantity: number, options: { requireFullAcceptance?: boolean } = {}): PlayerActionResult {
   if (!validQuantity(quantity)) return reject(state, 'invalid-quantity', 'La cantidad debe ser un entero positivo.')
-  if (state.player.inventory[good] < quantity) return reject(state, 'not-carried', 'No llevas esa cantidad.')
+  if (state.player.inventory[good] < quantity) {
+    if (options.requireFullAcceptance) {
+      const maximum = quoteSellToNeed(state, target, good).maxQuantity
+      return reject(state, 'not-carried', `No llevas esa cantidad. Máximo aceptable actual: ${maximum}.`)
+    }
+    return reject(state, 'not-carried', 'No llevas esa cantidad.')
+  }
   let need: NeedTarget | undefined
   if (target.type === 'household') {
     const family = state.economy.families[target.familyId]
@@ -170,13 +264,25 @@ export function sellToNeed(state: GameState, target: PlayerSaleTarget, good: Goo
   }
   if (quantity > acceptableQuantity) {
     if (need.progressUnits > 0 && progressRemaining === 0 && quantity > need.basicQuantity) {
+      if (options.requireFullAcceptance) {
+        const maximum = quoteSellToNeed(state, target, good).maxQuantity
+        return reject(state, 'daily-progress-limit', `La familia ya recibió su bien de progreso de hoy. Máximo aceptable actual: ${maximum}.`)
+      }
       return reject(state, 'daily-progress-limit', 'La familia ya recibió su bien de progreso de hoy.')
+    }
+    if (options.requireFullAcceptance) {
+      const maximum = quoteSellToNeed(state, target, good).maxQuantity
+      return reject(state, 'not-needed', `La cantidad ofrecida supera la necesidad actual. Máximo aceptable actual: ${maximum}.`)
     }
     return reject(state, 'not-needed', 'La cantidad ofrecida supera la necesidad aceptable actual.')
   }
   const unitPrice = GOODS_CATALOG[good].playerSellPriceTenths
   const family = state.economy.families[need.familyId]
   const accepted = Math.min(quantity, Math.floor(family.moneyTenths / unitPrice))
+  if (options.requireFullAcceptance && accepted < quantity) {
+    const maximum = quoteSellToNeed(state, target, good).maxQuantity
+    return reject(state, 'insufficient-funds', `La familia no tiene fondos para esa cantidad. Máximo aceptable actual: ${maximum}.`)
+  }
   if (accepted <= 0) {
     if (family.moneyTenths < unitPrice) return reject(state, 'insufficient-funds', 'La familia no tiene dinero suficiente.')
     return reject(state, 'not-needed', 'El destinatario no acepta esa cantidad.')

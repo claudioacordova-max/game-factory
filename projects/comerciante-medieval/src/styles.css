@@ -15,6 +15,13 @@ button { font: inherit; }
 .eyebrow { margin: 0 0 .3rem; color: #e1ba69; font-size: .75rem; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
 h1 { margin: 0; font-size: clamp(1.65rem, 3vw, 2.35rem); }
 .day-chip { border: 1px solid #526558; border-radius: 99px; padding: .55rem .9rem; color: #f6e6b7; background: #26352c; font-weight: 700; }
+.hud-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: .65rem; margin-bottom: 1rem; }
+.hud-card { display: grid; gap: .25rem; padding: .65rem .8rem; border: 1px solid #46564a; border-radius: 8px; background: #222e27; }
+.hud-card span { color: #c9d1c8; font-size: .75rem; }
+.hud-card strong { color: #fff4d5; font-size: .9rem; }
+.inventory-hud { grid-column: span 1; }
+.time-button { padding: .6rem .85rem; border: 1px solid #c39c55; border-radius: 7px; color: #fff7e2; background: #725630; cursor: pointer; font-weight: 800; }
+.time-button:hover { background: #89693d; }
 .game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1rem; align-items: start; }
 .scene-frame { position: relative; height: min(74vh, 700px); min-height: 440px; overflow: hidden; border: 1px solid #536156; border-radius: 12px; background: #b9d2db; }
 .scene-caption { position: absolute; left: .85rem; bottom: .8rem; padding: .45rem .65rem; border-radius: 6px; color: white; background: #18241edb; font-size: .85rem; pointer-events: none; }
@@ -31,11 +38,22 @@ kbd { min-width: 4.3rem; padding: .3rem .45rem; border: 1px solid #738272; borde
 .primary-button:hover, .travel-button:hover, .option-button:hover { background: #80603a; }
 .travel-button { text-align: left; }
 .option-button { margin-top: .35rem; }
+.field-label { display: block; margin: .65rem 0 .25rem; color: #e8ddc4; font-size: .82rem; font-weight: 700; }
+select, input[type="number"] { width: 100%; min-height: 2.45rem; padding: .45rem .55rem; border: 1px solid #71806f; border-radius: 5px; color: #f6f1e7; background: #17221c; font: inherit; }
+.quote-box { display: grid; gap: .25rem; margin-top: .65rem; padding: .6rem; border-radius: 6px; color: #c9d1c8; background: #17221c; font-size: .82rem; }
+.quote-box strong { color: #f6e6b7; }
+.trade-result { padding: .45rem; border-left: 2px solid #8c7140; background: #17221c; }
+.trade-button:disabled { opacity: .45; cursor: not-allowed; }
+.trade-message { padding: .55rem; border-radius: 5px; font-size: .84rem !important; }
+.trade-message.success { color: #d8f0ce; background: #29462f; }
+.trade-message.error, .rejection-note { color: #ffe0d8 !important; background: #552f2b; padding: .55rem; border-radius: 5px; }
 .interaction-card { border-color: #c39c55; }
 .interaction-card .eyebrow { margin-top: .2rem; }
 .close-button { position: absolute; top: .45rem; right: .5rem; width: 2rem; height: 2rem; border: 0; border-radius: 5px; color: #eee; background: transparent; font-size: 1.4rem; cursor: pointer; }
 .footer-note { margin: .8rem 0 0; color: #aeb9ad; font-size: .82rem; }
 @media (max-width: 900px) {
+  .hud-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .time-button { min-height: 3rem; }
   .game-layout { grid-template-columns: 1fr; }
   .play-panel { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
   .scene-frame { height: min(66vh, 620px); min-height: 380px; }
@@ -43,4 +61,7 @@ kbd { min-width: 4.3rem; padding: .3rem .45rem; border: 1px solid #738272; borde
 @media (max-width: 480px) {
   .game-shell { width: min(100% - 1rem, 1440px); padding-top: .7rem; }
   .scene-frame { min-height: 330px; height: 52vh; }
+  .hud-grid { gap: .4rem; }
+  .hud-card { padding: .5rem; }
+  .hud-card strong { font-size: .8rem; }
 }

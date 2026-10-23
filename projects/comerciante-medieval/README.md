@@ -18,6 +18,12 @@ npm run dev
 
 Abre en el navegador la dirección local que muestra Vite (normalmente `http://localhost:5173`).
 
+## Bucle comercial (Hito 6)
+
+Muévete con WASD o las flechas y pulsa E, o usa el botón de interacción junto a un NPC. En **Negocio** puedes comprar del stock comercial o vender insumos pertinentes; en **Hogar** puedes vender bienes que la familia necesite. El menú muestra el precio fijo, el máximo actual, el total y el resultado previsto. Confirma una cantidad entera para ver el resultado; una operación rechazada no cambia dinero ni inventario.
+
+Comerciar y caminar no avanzan el calendario. Usa **Avanzar día** o viaja al otro pueblo para procesar un día económico global.
+
 Para compilar y previsualizar la versión de producción:
 
 ```sh

@@ -1,18 +1,26 @@
 import { useEffect, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
-import type { Group } from 'three'
+import { useFrame, useThree } from '@react-three/fiber'
+import { Vector3, type Group } from 'three'
 import { isBeyondNpcInteractionDistance, NPC_INTERACTION_DISTANCE, npcsForVillage, type VillageNpc } from './world.js'
 import type { VillageId } from '../engine/model.js'
 
 interface VillageSceneProps {
   villageId: VillageId
   onNearbyChange: (npc: VillageNpc | undefined) => void
+  interactionPromptRef: { current: HTMLDivElement | null }
   onInteract: (npc: VillageNpc) => void
   interactionNpcId?: string
   onInteractionOutOfRange: () => void
 }
 
 const WALK_SPEED = 4.5
+const MOVEMENT_KEYS = ['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright']
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && (
+    target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+  )
+}
 
 function House({ position, roofColor, business = false }: { position: readonly [number, number, number]; roofColor: string; business?: boolean }) {
   return (
@@ -92,8 +100,9 @@ function VillageGround({ villageId }: { villageId: VillageId }) {
   )
 }
 
-export default function VillageScene({ villageId, onNearbyChange, onInteract, interactionNpcId, onInteractionOutOfRange }: VillageSceneProps) {
+export default function VillageScene({ villageId, onNearbyChange, interactionPromptRef, onInteract, interactionNpcId, onInteractionOutOfRange }: VillageSceneProps) {
   const playerRef = useRef<Group>(null)
+  const promptPosition = useRef(new Vector3())
   const keys = useRef(new Set<string>())
   const nearbyId = useRef<string | undefined>(undefined)
   const nearbyCallback = useRef(onNearbyChange)
@@ -101,6 +110,7 @@ export default function VillageScene({ villageId, onNearbyChange, onInteract, in
   const outOfRangeCallback = useRef(onInteractionOutOfRange)
   const interactionNpcIdRef = useRef(interactionNpcId)
   const closedInteractionNpcId = useRef<string | undefined>(undefined)
+  const { camera, size } = useThree()
   nearbyCallback.current = onNearbyChange
   interactCallback.current = onInteract
   outOfRangeCallback.current = onInteractionOutOfRange
@@ -110,7 +120,11 @@ export default function VillageScene({ villageId, onNearbyChange, onInteract, in
   useEffect(() => {
     const down = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase()
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright'].includes(key)) event.preventDefault()
+      if (isEditableTarget(event.target)) {
+        keys.current.clear()
+        return
+      }
+      if (MOVEMENT_KEYS.includes(key)) event.preventDefault()
       keys.current.add(key)
       if (key === 'e' && nearbyId.current) {
         const npc = npcs.find(candidate => candidate.id === nearbyId.current)
@@ -118,9 +132,20 @@ export default function VillageScene({ villageId, onNearbyChange, onInteract, in
       }
     }
     const up = (event: KeyboardEvent) => keys.current.delete(event.key.toLowerCase())
+    const clearOnEditableFocus = (event: FocusEvent) => {
+      if (isEditableTarget(event.target)) keys.current.clear()
+    }
+    const clearOnWindowBlur = () => keys.current.clear()
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
+    window.addEventListener('blur', clearOnWindowBlur)
+    document.addEventListener('focusin', clearOnEditableFocus)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', clearOnWindowBlur)
+      document.removeEventListener('focusin', clearOnEditableFocus)
+    }
   }, [npcs])
 
   useFrame((_, delta) => {
@@ -152,6 +177,17 @@ export default function VillageScene({ villageId, onNearbyChange, onInteract, in
     if (closest?.id !== nearbyId.current) {
       nearbyId.current = closest?.id
       nearbyCallback.current(closest)
+    }
+
+    const prompt = interactionPromptRef.current
+    if (prompt && nearbyId.current) {
+      const position = promptPosition.current
+        .set(player.position.x, player.position.y + 2.05, player.position.z)
+        .project(camera)
+      const left = Math.max(12, Math.min(size.width - 12, (position.x * 0.5 + 0.5) * size.width))
+      const top = Math.max(12, Math.min(size.height - 12, (-position.y * 0.5 + 0.5) * size.height))
+      prompt.style.left = `${left}px`
+      prompt.style.top = `${top}px`
     }
   })
 

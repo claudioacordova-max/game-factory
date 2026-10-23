@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { advancePlayerDay, buyFromBusiness, createInitialGameState, GOODS, GOODS_CATALOG, playerLoadHalfUnits, quoteBuyFromBusiness, quoteSellToNeed, saleGoodsForTarget, sellToNeed, tradeQuantityStatus, tradeTotalTenthsForQuantity, travelToVillage, type GameState, type Good, type PlayerSaleTarget, type VillageId } from './engine/index.js'
 import VillageScene from './scene/VillageScene.js'
@@ -17,6 +17,7 @@ export default function App() {
   const [quantity, setQuantity] = useState(1)
   const [tradeMessage, setTradeMessage] = useState<{ text: string; success: boolean }>()
   const [showExperiments, setShowExperiments] = useState(false)
+  const interactionPromptRef = useRef<HTMLDivElement>(null)
   const village = VILLAGES.find(candidate => candidate.id === game.player.villageId)!
   const npc = interaction ? npcForId(interaction.npcId) : undefined
   const family = npc ? game.economy.families[npc.familyId] : undefined
@@ -95,25 +96,17 @@ export default function App() {
             <color attach="background" args={[game.player.villageId === 'village-a' ? '#b9d2db' : '#b8c5cd']} />
             <ambientLight intensity={1.15} />
             <directionalLight position={[-6, 12, 6]} intensity={2.1} castShadow />
-            <VillageScene key={game.player.villageId} villageId={game.player.villageId} onNearbyChange={setNearby} interactionNpcId={interaction?.npcId} onInteractionOutOfRange={() => setInteraction(undefined)} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setSelectedGood(undefined); setQuantity(1) }} />
+            <VillageScene key={game.player.villageId} villageId={game.player.villageId} onNearbyChange={setNearby} interactionPromptRef={interactionPromptRef} interactionNpcId={interaction?.npcId} onInteractionOutOfRange={() => setInteraction(undefined)} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setSelectedGood(undefined); setQuantity(1) }} />
           </Canvas>
           <div className="scene-caption">{village.name} · {village.theme === 'fields' ? 'campos y caminos de tierra' : 'canteras y casas de piedra'}</div>
-        </div>
-        <aside className="play-panel">
-          <section className="panel-card">
-            <h2>Explorar</h2>
-            <p>Camina por el pueblo y acércate a sus habitantes.</p>
-            <div className="key-guide"><kbd>W A S D</kbd><span>o flechas para caminar</span></div>
-            <div className="key-guide"><kbd>E</kbd><span>hablar al estar cerca</span></div>
-            <div className="nearby-card" aria-live="polite">
-              {nearby ? <><strong>{nearby.name}</strong><span>{nearby.role} · pulsa E o el botón para interactuar</span><button className="primary-button" onClick={() => { setTradeMessage(undefined); setInteraction({ npcId: nearby.id }); setSelectedGood(undefined); setQuantity(1) }}>Interactuar</button></> : <span>Acércate a un habitante para interactuar.</span>}
-            </div>
-          </section>
-          <section className="panel-card">
+          <div ref={interactionPromptRef} className="interaction-prompt" aria-live="polite" aria-hidden={!nearby}>
+            <kbd>E</kbd><span>Hablar</span>
+          </div>
+          <section className="panel-card travel-overlay" aria-label="Viajar">
             <h2>Viajar</h2><p>El viaje cambia de pueblo y avanza un día económico.</p>
             {villageOptions.map(destination => <button className="travel-button" key={destination.id} onClick={() => travel(destination.id)}>Viajar a {destination.name} · 1 día</button>)}
           </section>
-          {interaction && npc && family && business && <section className="panel-card interaction-card" aria-live="polite">
+          {interaction && npc && family && business && <aside className="panel-card interaction-card interaction-overlay" aria-live="polite">
             <button className="close-button" aria-label="Cerrar interacción" onClick={() => setInteraction(undefined)}>×</button>
             <p className="eyebrow">Habitante · {npc.role}</p><h2>{npc.name}</h2>
             {!interaction.option ? <>
@@ -151,8 +144,8 @@ export default function App() {
               </>}
               {tradeMessage && <p className={tradeMessage.success ? 'trade-message success' : 'trade-message error'} role="status">{tradeMessage.text}</p>}
             </>}
-          </section>}
-        </aside>
+          </aside>}
+        </div>
       </section>
       <section className="tools-toggle-area">
         <button className="option-button tools-toggle" aria-expanded={showExperiments} onClick={() => setShowExperiments(open => !open)}>{showExperiments ? 'Cerrar herramientas de prueba' : 'Abrir herramientas de inspección y prueba'}</button>

@@ -55,3 +55,32 @@ Before substantial implementation, follow the repository's applicable planning a
 Check the affected flow in the implemented interface, not only the code. Verify relevant control states, action clarity, visible feedback, legibility, and consistency with surrounding UI and the game scene. Inspect the screen sizes and input methods the prototype supports or the issue affects; do not assume a single desktop layout is sufficient. Use technical checks for functional behavior, visual inspection for presentation, and human playtesting when hands-on evaluation of the changed gameplay experience or controls is needed under the project workflow.
 
 Report what was checked, what changed in the player's experience, and any remaining limitation or decision. A passing build alone does not establish that an interface improvement is clear or usable.
+
+### Inspect a rendered build
+
+For work that changes the interface, 3D composition, legibility, feedback, or placement of elements, inspect the running result when a compatible browser tool is available. Keep the inspection proportional: a small correction may need only the affected screen and one relevant state; broader layout work may need several desktop sizes and states.
+
+Use the project's documented development command and a local loopback URL. Check the installed Node.js version with `node --version`; the README published for `@playwright/cli@0.1.22` lists Node.js 18 or newer. Requirements may differ for later CLI versions. On Windows/PowerShell, the validated temporary invocation is:
+
+```powershell
+$visualDir = Join-Path $env:TEMP ("game-factory-visual-" + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $visualDir | Out-Null
+Push-Location $visualDir
+node --version
+npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli --version
+npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual open http://127.0.0.1:5173/ --browser=chrome --headed
+npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual snapshot
+npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual eval "() => ({ title: document.title, canvases: Array.from(document.querySelectorAll('canvas')).map(c => { const gl = c.getContext('webgl2') || c.getContext('webgl'); return { width: c.width, height: c.height, webgl: Boolean(gl) }; }) })"
+npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual resize 1440 900
+npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual screenshot --filename=desktop-1440x900.png
+npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual resize 1024 768
+npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual screenshot --filename=desktop-1024x768.png
+npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual close
+Pop-Location
+```
+
+Replace the example URL and sizes with those used by the project and task. The sizes are examples, not a fixed test matrix. Run the development server separately, and stop it after inspection. Run the CLI from the temporary directory so screenshots and CLI snapshots/logs stay outside source files and Git staging. This temporary npm invocation may fetch the pinned CLI into npm's cache; do not install it globally or add it to project dependencies. Do not run `playwright-cli install`, `install-browser`, or skill installation as part of this procedure. If the compatible CLI, installed Chrome, or required network access is unavailable, report the limitation instead of changing system or repository setup without authorization. Consult `playwright-cli --help` or `playwright-cli --help <command>` when command syntax differs.
+
+Confirm that the expected page loaded and that a 3D canvas has non-zero dimensions and an active WebGL context when the game uses WebGL. A canvas or DOM snapshot alone does not prove the scene rendered: open the saved PNGs in an image-capable tool and inspect the pixels. Check the relevant composition, legibility, overlap, scale, element placement, and visual feedback at the chosen sizes. For interaction changes, use CLI input commands such as `click` or `press` to reach representative states and capture those states when feasible; a complete playthrough is not required for a focused visual change.
+
+Correct evident visual defects only within the approved scope, then repeat the affected captures and visual inspection. Report the sizes and states actually inspected, concrete observations, anything that could not be checked, and whether human playtesting remains necessary. If PNGs were generated but could not be opened and examined, state that visual review was not completed. Close only the browser session started for this inspection, stop its development server, and keep generated evidence outside the repository and staging.

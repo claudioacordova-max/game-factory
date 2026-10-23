@@ -35,6 +35,7 @@ export default function App() {
   const [tradeMessage, setTradeMessage] = useState<{ text: string; success: boolean }>()
   const [showExperiments, setShowExperiments] = useState(false)
   const interactionPromptRef = useRef<HTMLDivElement>(null)
+  const playerFacingRef = useRef(0)
   const village = VILLAGES.find(candidate => candidate.id === game.player.villageId)!
   const npc = interaction ? npcForId(interaction.npcId) : undefined
   const family = npc ? game.economy.families[npc.familyId] : undefined
@@ -111,7 +112,7 @@ export default function App() {
             <color attach="background" args={[game.player.villageId === 'village-a' ? '#b9d2db' : '#b8c5cd']} />
             <ambientLight intensity={1.15} />
             <directionalLight position={[-6, 12, 6]} intensity={2.1} castShadow />
-            <VillageScene key={game.player.villageId} villageId={game.player.villageId} onNearbyChange={setNearby} interactionPromptRef={interactionPromptRef} interactionNpcId={interaction?.npcId} onInteractionOutOfRange={() => setInteraction(undefined)} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setTradeMode('buy') }} />
+            <VillageScene key={game.player.villageId} villageId={game.player.villageId} onNearbyChange={setNearby} interactionPromptRef={interactionPromptRef} playerFacingRef={playerFacingRef} interactionNpcId={interaction?.npcId} onInteractionOutOfRange={() => setInteraction(undefined)} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setTradeMode('buy') }} />
           </Canvas>
           <div className="scene-caption">{village.name} · {village.theme === 'fields' ? 'campos y caminos de tierra' : 'canteras y casas de piedra'}</div>
           <div ref={interactionPromptRef} className="interaction-prompt" aria-live="polite" aria-hidden={!nearby}>

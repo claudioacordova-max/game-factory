@@ -33,6 +33,7 @@ import {
   type VillageId,
 } from '../src/engine/index.js'
 import { isBeyondNpcInteractionDistance, npcForId, npcsForVillage, NPC_INTERACTION_DISTANCE, VILLAGE_NPCS, VILLAGES } from '../src/scene/world.js'
+import { clampedMovementStep, yawFromMovementDirection } from '../src/scene/playerOrientation.js'
 
 let passed = 0
 function equal<T>(actual: T, expected: T, label: string): void {
@@ -947,6 +948,43 @@ test('los destinos 3D corresponden a travelToVillage y cada viaje avanza un día
   }
   const portResult = travelToVillage(state, 'port' as never)
   equal(portResult.ok, false, 'el puerto no puede seleccionarse como destino')
+})
+
+test('el yaw visual sigue las cuatro direcciones y diagonales; quieto conserva orientación', () => {
+  const directions = [
+    [0, -1, Math.PI],
+    [1, 0, Math.PI / 2],
+    [0, 1, 0],
+    [-1, 0, -Math.PI / 2],
+    [1, -1, (3 * Math.PI) / 4],
+    [1, 1, Math.PI / 4],
+    [-1, 1, -Math.PI / 4],
+    [-1, -1, (-3 * Math.PI) / 4],
+  ] as const
+  for (const [x, z, expectedYaw] of directions) {
+    equal(yawFromMovementDirection(x, z), expectedYaw, `yaw para (${x}, ${z})`)
+  }
+  equal(yawFromMovementDirection(0, 0), undefined, 'sin movimiento no solicita un cambio de orientación')
+})
+
+test('el yaw usa solo el desplazamiento efectivo tras aplicar los límites del jugador', () => {
+  const bounds = [
+    [9.3, 0, 1, 0],
+    [-9.3, 0, -1, 0],
+    [0, -9.3, 0, -1],
+    [0, 9.3, 0, 1],
+  ] as const
+  for (const [x, z, deltaX, deltaZ] of bounds) {
+    const step = clampedMovementStep(x, z, deltaX, deltaZ)
+    equal(step.x, x, `posición X fija en límite desde (${x}, ${z})`)
+    equal(step.z, z, `posición Z fija en límite desde (${x}, ${z})`)
+    equal(step.yaw, undefined, `no cambia el rumbo al empujar fuera desde (${x}, ${z})`)
+  }
+
+  const edgeStep = clampedMovementStep(9.2, 0, 0.4, 0.2)
+  equal(edgeStep.x, 9.3, 'el movimiento X conserva el clamp existente')
+  equal(edgeStep.z, 0.2, 'el movimiento Z conserva el avance tangencial')
+  equal(edgeStep.yaw, Math.atan2(9.3 - 9.2, 0.2), 'el rumbo sigue el desplazamiento efectivo tras el clamp')
 })
 
 console.log(`\n${passed} pruebas del motor y la integración 3D aprobadas.`)

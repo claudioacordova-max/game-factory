@@ -2,12 +2,14 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Vector3, type Group } from 'three'
 import { isBeyondNpcInteractionDistance, NPC_INTERACTION_DISTANCE, npcsForVillage, type ProfessionKey, type VillageNpc } from './world.js'
+import { clampedMovementStep } from './playerOrientation.js'
 import type { VillageId } from '../engine/model.js'
 
 interface VillageSceneProps {
   villageId: VillageId
   onNearbyChange: (npc: VillageNpc | undefined) => void
   interactionPromptRef: { current: HTMLDivElement | null }
+  playerFacingRef: { current: number }
   onInteract: (npc: VillageNpc) => void
   interactionNpcId?: string
   onInteractionOutOfRange: () => void
@@ -166,15 +168,105 @@ function Person({ npc, active }: { npc: VillageNpc; active: boolean }) {
   )
 }
 
+type DecorationPosition = readonly [number, number, number]
+
+const VALLEY_TREE_POSITIONS: readonly { position: DecorationPosition; scale: number }[] = [
+  { position: [-8.6, 0, -7.2], scale: 0.9 },
+  { position: [7.6, 0, -7.5], scale: 0.95 },
+  { position: [9.1, 0, -5.4], scale: 1.05 },
+  { position: [8.7, 0, -9.4], scale: 0.8 },
+  { position: [-9, 0, -3.8], scale: 0.82 },
+  { position: [-9.2, 0, 3.3], scale: 0.88 },
+  { position: [9.1, 0, 4.6], scale: 0.92 },
+  { position: [-8.8, 0, 8.2], scale: 0.95 },
+]
+
+const STONE_FORMATIONS: readonly { position: DecorationPosition; scale: number }[] = [
+  { position: [-9, 0, -7.6], scale: 1.05 },
+  { position: [9, 0, -7.9], scale: 1.12 },
+  { position: [-9.5, 0, 4.5], scale: 0.9 },
+  { position: [9.4, 0, 4.8], scale: 1.0 },
+]
+
+function LowPolyTree({ position, scale = 1 }: { position: DecorationPosition; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 1, 0]} castShadow>
+        <cylinderGeometry args={[0.15, 0.24, 2, 6]} />
+        <meshStandardMaterial color="#62472f" />
+      </mesh>
+      <mesh position={[0, 2.05, 0]} castShadow>
+        <dodecahedronGeometry args={[0.92, 0]} />
+        <meshStandardMaterial color="#3d6844" />
+      </mesh>
+      <mesh position={[-0.34, 2.48, 0.02]} castShadow>
+        <dodecahedronGeometry args={[0.66, 0]} />
+        <meshStandardMaterial color="#4c774b" />
+      </mesh>
+      <mesh position={[0.34, 2.43, -0.02]} castShadow>
+        <dodecahedronGeometry args={[0.62, 0]} />
+        <meshStandardMaterial color="#365d3d" />
+      </mesh>
+    </group>
+  )
+}
+
+function RockFormation({ position, scale = 1 }: { position: DecorationPosition; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 0.8, 0]} castShadow>
+        <dodecahedronGeometry args={[1.05, 0]} />
+        <meshStandardMaterial color="#77766f" />
+      </mesh>
+      <mesh position={[-0.67, 0.52, 0.12]} castShadow>
+        <dodecahedronGeometry args={[0.68, 0]} />
+        <meshStandardMaterial color="#8a887e" />
+      </mesh>
+      <mesh position={[0.65, 0.46, -0.12]} castShadow>
+        <dodecahedronGeometry args={[0.62, 0]} />
+        <meshStandardMaterial color="#656760" />
+      </mesh>
+      <mesh position={[0.04, 1.35, -0.05]} castShadow>
+        <coneGeometry args={[0.5, 1.4, 5]} />
+        <meshStandardMaterial color="#77766f" />
+      </mesh>
+    </group>
+  )
+}
+
+function Horizon({ fieldVillage }: { fieldVillage: boolean }) {
+  const hillColor = fieldVillage ? '#78844f' : '#666963'
+  return (
+    <group>
+      {[-28, -18, -8, 4, 16, 27].map((x, index) => (
+        <mesh key={x} position={[x, 0.55 + (index % 2) * 0.18, -33]} scale={[1.08, 0.34, 0.72]}>
+          <icosahedronGeometry args={[3.9, 0]} />
+          <meshStandardMaterial color={hillColor} />
+        </mesh>
+      ))}
+      {fieldVillage ? (
+        <group>
+          {[-25, -16, 16, 25].map((x, index) => <LowPolyTree key={x} position={[x, 0, -26]} scale={0.42 + (index % 2) * 0.08} />)}
+        </group>
+      ) : (
+        <group>
+          {[-25, -16, 16, 25].map((x, index) => <RockFormation key={x} position={[x, 0, -27]} scale={0.38 + (index % 2) * 0.07} />)}
+        </group>
+      )}
+    </group>
+  )
+}
+
 function VillageGround({ villageId }: { villageId: VillageId }) {
   const fieldVillage = villageId === 'village-a'
   const roof = fieldVillage ? '#814d3f' : '#4e5965'
   return (
     <>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
-        <planeGeometry args={[22, 22]} />
+        <planeGeometry args={[80, 80]} />
         <meshStandardMaterial color={fieldVillage ? '#71804c' : '#77756e'} />
       </mesh>
+      <Horizon fieldVillage={fieldVillage} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[3.2, 22]} />
         <meshStandardMaterial color={fieldVillage ? '#bba77c' : '#aaa397'} />
@@ -185,13 +277,15 @@ function VillageGround({ villageId }: { villageId: VillageId }) {
       </mesh>
       {fieldVillage ? (
         <>
-          {[-8.5, 8.5].map(x => <group key={x} position={[x, 0, -7]}><mesh position={[0, 1.1, 0]}><cylinderGeometry args={[0.16, 0.24, 2.2]} /><meshStandardMaterial color="#61472f" /></mesh><mesh position={[0, 2.25, 0]}><sphereGeometry args={[0.9, 12, 10]} /><meshStandardMaterial color="#3e6942" /></mesh></group>)}
+          {VALLEY_TREE_POSITIONS.map(tree => <LowPolyTree key={tree.position.join(',')} {...tree} />)}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[8, 0.02, 7]}><planeGeometry args={[3.5, 3]} /><meshStandardMaterial color="#899a54" /></mesh>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-8, 0.02, 7]}><planeGeometry args={[3.5, 3]} /><meshStandardMaterial color="#899a54" /></mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-7.3, 0.025, 6]}><planeGeometry args={[2.6, 1.2]} /><meshStandardMaterial color="#687a42" /></mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-7.3, 0.03, 6]}><boxGeometry args={[0.06, 0.08, 1]} /><meshStandardMaterial color="#a8a36b" /></mesh>
         </>
       ) : (
         <>
-          {[-8.6, 8.6].map(x => <mesh key={x} position={[x, 1.8, 0]}><coneGeometry args={[1.6, 4, 5]} /><meshStandardMaterial color="#555f63" /></mesh>)}
+          {STONE_FORMATIONS.map(formation => <RockFormation key={formation.position.join(',')} {...formation} />)}
           <mesh position={[0, 0.25, -8.6]}><boxGeometry args={[22, 0.5, 1.2]} /><meshStandardMaterial color="#8b8880" /></mesh>
           {[-8.3, 8.3].map(x => <mesh key={x} position={[x, 0.55, 7]}><dodecahedronGeometry args={[1.2, 0]} /><meshStandardMaterial color="#676b70" /></mesh>)}
         </>
@@ -204,8 +298,32 @@ function VillageGround({ villageId }: { villageId: VillageId }) {
   )
 }
 
-export default function VillageScene({ villageId, onNearbyChange, interactionPromptRef, onInteract, interactionNpcId, onInteractionOutOfRange }: VillageSceneProps) {
+function MerchantPlayer() {
+  return (
+    <group>
+      <mesh position={[-0.11, 0.18, 0]}><cylinderGeometry args={[0.11, 0.13, 0.36, 7]} /><meshStandardMaterial color="#40352f" /></mesh>
+      <mesh position={[0.11, 0.18, 0]}><cylinderGeometry args={[0.11, 0.13, 0.36, 7]} /><meshStandardMaterial color="#40352f" /></mesh>
+      <mesh position={[0, 0.73, 0]} castShadow><capsuleGeometry args={[0.3, 0.62, 4, 8]} /><meshStandardMaterial color="#31596a" /></mesh>
+      <mesh position={[0, 0.47, 0]}><cylinderGeometry args={[0.28, 0.35, 0.3, 8]} /><meshStandardMaterial color="#263f4b" /></mesh>
+      <mesh position={[0, 0.58, 0]}><cylinderGeometry args={[0.33, 0.34, 0.075, 8]} /><meshStandardMaterial color="#9a7040" /></mesh>
+      <mesh position={[0, 0.8, 0.27]} rotation={[0, 0, 0.45]}><boxGeometry args={[0.1, 0.85, 0.055]} /><meshStandardMaterial color="#a77543" /></mesh>
+      <mesh position={[0.27, 0.72, 0.34]} castShadow><boxGeometry args={[0.43, 0.4, 0.29]} /><meshStandardMaterial color="#93643b" /></mesh>
+      <mesh position={[0.27, 0.93, 0.36]}><boxGeometry args={[0.4, 0.1, 0.31]} /><meshStandardMaterial color="#d0a66a" /></mesh>
+      <mesh position={[0.27, 0.92, 0.525]}><boxGeometry args={[0.075, 0.075, 0.035]} /><meshStandardMaterial color="#e3c783" /></mesh>
+      <mesh position={[-0.3, 0.62, 0.24]}><boxGeometry args={[0.25, 0.25, 0.19]} /><meshStandardMaterial color="#bd8c50" /></mesh>
+      <mesh position={[0, 0.99, -0.27]} castShadow><boxGeometry args={[0.56, 0.62, 0.34]} /><meshStandardMaterial color="#8d6339" /></mesh>
+      <mesh position={[0, 1.29, -0.43]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.15, 0.15, 0.82, 8]} /><meshStandardMaterial color="#c29559" /></mesh>
+      <mesh position={[0, 1.36, 0]}><sphereGeometry args={[0.23, 10, 8]} /><meshStandardMaterial color="#e2b48b" /></mesh>
+      <mesh position={[0, 1.56, 0]}><cylinderGeometry args={[0.36, 0.36, 0.075, 8]} /><meshStandardMaterial color="#4c392d" /></mesh>
+      <mesh position={[0, 1.63, 0]}><coneGeometry args={[0.25, 0.27, 8]} /><meshStandardMaterial color="#ad8150" /></mesh>
+      <mesh position={[0, 1.57, 0]}><cylinderGeometry args={[0.26, 0.26, 0.045, 8]} /><meshStandardMaterial color="#7f4939" /></mesh>
+    </group>
+  )
+}
+
+export default function VillageScene({ villageId, onNearbyChange, interactionPromptRef, playerFacingRef, onInteract, interactionNpcId, onInteractionOutOfRange }: VillageSceneProps) {
   const playerRef = useRef<Group>(null)
+  const playerVisualRef = useRef<Group>(null)
   const promptPosition = useRef(new Vector3())
   const keys = useRef(new Set<string>())
   const nearbyId = useRef<string | undefined>(undefined)
@@ -269,8 +387,18 @@ export default function VillageScene({ villageId, onNearbyChange, interactionPro
     const length = Math.hypot(x, z)
     if (length > 0) {
       x /= length; z /= length
-      player.position.x = Math.max(-9.3, Math.min(9.3, player.position.x + x * WALK_SPEED * delta))
-      player.position.z = Math.max(-9.3, Math.min(9.3, player.position.z + z * WALK_SPEED * delta))
+      const movement = clampedMovementStep(
+        player.position.x,
+        player.position.z,
+        x * WALK_SPEED * delta,
+        z * WALK_SPEED * delta,
+      )
+      player.position.x = movement.x
+      player.position.z = movement.z
+      if (movement.yaw !== undefined) {
+        playerFacingRef.current = movement.yaw
+        if (playerVisualRef.current) playerVisualRef.current.rotation.y = movement.yaw
+      }
     }
     let closest: VillageNpc | undefined
     let closestDistance = NPC_INTERACTION_DISTANCE
@@ -300,9 +428,9 @@ export default function VillageScene({ villageId, onNearbyChange, interactionPro
       <VillageGround villageId={villageId} />
       {npcs.map(npc => <Person key={npc.id} npc={npc} active={npc.id === nearbyId.current} />)}
       <group ref={playerRef} position={[0, 0, 0]}>
-        <mesh position={[0, 0.78, 0]} castShadow><capsuleGeometry args={[0.28, 0.65, 4, 8]} /><meshStandardMaterial color="#2f6472" /></mesh>
-        <mesh position={[0, 1.35, 0]} castShadow><sphereGeometry args={[0.23, 12, 10]} /><meshStandardMaterial color="#e2b48b" /></mesh>
-        <mesh position={[0, 1.58, 0]}><coneGeometry args={[0.3, 0.34, 8]} /><meshStandardMaterial color="#b88749" /></mesh>
+        <group ref={playerVisualRef} rotation={[0, playerFacingRef.current, 0]}>
+          <MerchantPlayer />
+        </group>
       </group>
     </>
   )

@@ -39,6 +39,9 @@ kbd { min-width: 4.3rem; padding: .3rem .45rem; border: 1px solid #738272; borde
 .travel-overlay .travel-button { margin-top: .3rem; }
 .interaction-overlay { position: absolute; z-index: 2; top: .75rem; right: .75rem; width: min(32rem, calc(100% - 1.5rem)); max-height: calc(100% - 1.5rem); overflow-y: auto; overscroll-behavior: contain; background: #222e27f5; }
 .interaction-prompt { position: absolute; z-index: 3; display: flex; align-items: center; gap: .45rem; transform: translate(-50%, -100%); padding: .4rem .55rem; border: 1px solid #c39c55; border-radius: 6px; color: #fff7e2; background: #18241eed; box-shadow: 0 3px 10px #0005; font-size: .85rem; font-weight: 700; pointer-events: none; transition: opacity .12s ease, visibility .12s ease; }
+.prompt-copy { display: grid; gap: .05rem; min-width: 5.5rem; }
+.prompt-copy strong { color: #fff4d5; font-size: .84rem; line-height: 1.15; }
+.prompt-copy small { color: #d4dfd1; font-size: .7rem; font-weight: 600; }
 .interaction-prompt[aria-hidden="true"] { visibility: hidden; opacity: 0; }
 .interaction-prompt kbd { min-width: auto; padding: .2rem .35rem; border-color: #8c7140; color: #fff4d5; background: #654d2f; }
 .option-button { margin-top: .35rem; }

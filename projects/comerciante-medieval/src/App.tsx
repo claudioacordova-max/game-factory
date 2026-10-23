@@ -115,6 +115,7 @@ export default function App() {
           </Canvas>
           <div className="scene-caption">{village.name} · {village.theme === 'fields' ? 'campos y caminos de tierra' : 'canteras y casas de piedra'}</div>
           <div ref={interactionPromptRef} className="interaction-prompt" aria-live="polite" aria-hidden={!nearby}>
+            {nearby && <span className="prompt-copy"><strong>{nearby.name}</strong><small>{nearby.role}</small></span>}
             <kbd>E</kbd><span>Hablar</span>
           </div>
           <section className="panel-card travel-overlay" aria-label="Viajar">
@@ -123,7 +124,7 @@ export default function App() {
           </section>
           {interaction && npc && family && business && <aside className="panel-card interaction-card interaction-overlay" aria-live="polite">
             <button className="close-button" aria-label="Cerrar comercio" onClick={() => setInteraction(undefined)}>×</button>
-            <p className="eyebrow">Comercio · {npc.role}</p><h2>{npc.name}</h2>
+            <p className="eyebrow">{npc.role} · {village.name}</p><h2>{npc.name}</h2>
             <div className="trade-tabs" role="tablist" aria-label="Acciones comerciales">
               <button type="button" role="tab" aria-selected={tradeMode === 'buy'} className={tradeMode === 'buy' ? 'trade-tab selected' : 'trade-tab'} onClick={() => resetTrade('buy')}>🛒 Comprar</button>
               <button type="button" role="tab" aria-selected={tradeMode === 'sell'} className={tradeMode === 'sell' ? 'trade-tab selected' : 'trade-tab'} onClick={() => resetTrade('sell')}>📦 Vender</button>

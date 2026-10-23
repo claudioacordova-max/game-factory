@@ -909,6 +909,23 @@ test('mapeo 3D contiene ocho NPC vinculados una vez a las familias y negocios de
   }
 })
 
+test('identidad visible asignada sin cambiar IDs ni referencias del motor económico', () => {
+  equal(VILLAGES.map(village => `${village.id}:${village.name}`).join('|'), 'village-a:Valle de Robles|village-b:Piedra Alta', 'nombres visibles de pueblos conservan sus IDs')
+  const expected = [
+    ['npc-farmer-a', 'family-farmer-a', 'farmer-a', 'Inés', 'Agricultora', 'farmer'],
+    ['npc-woodcutter-a', 'family-woodcutter-a', 'woodcutter-a', 'Martín', 'Leñador', 'woodcutter'],
+    ['npc-blacksmith-a', 'family-blacksmith-a', 'blacksmith-a', 'Alda', 'Herrera', 'blacksmith'],
+    ['npc-tailor-a', 'family-tailor-a', 'tailor-a', 'Tomás', 'Sastre', 'tailor'],
+    ['npc-farmer-b', 'family-farmer-b', 'farmer-b', 'Mateo', 'Agricultor', 'farmer'],
+    ['npc-miner-b', 'family-miner-b', 'miner-b', 'Bruna', 'Minera', 'miner'],
+    ['npc-carpenter-b', 'family-carpenter-b', 'carpenter-b', 'Nerea', 'Carpintera', 'carpenter'],
+    ['npc-jeweler-b', 'family-jeweler-b', 'jeweler-b', 'Darío', 'Joyero', 'jeweler'],
+  ]
+  equal(VILLAGE_NPCS.map(npc => [npc.id, npc.familyId, npc.businessId, npc.name, npc.role, npc.professionKey].join(':')).join('|'), expected.map(entry => entry.join(':')).join('|'), 'identidades de NPC y relaciones económicas esperadas')
+  equal(VILLAGE_NPCS.filter(npc => npc.appearance === 'feminine').length, 4, 'la representación combina siluetas femeninas y masculinas')
+  equal(VILLAGE_NPCS.filter(npc => npc.appearance === 'masculine').length, 4, 'la representación combina siluetas femeninas y masculinas')
+})
+
 test('el menú contextual conserva el radio de interacción aprobado de 1,85 unidades', () => {
   const npc = npcForId('npc-farmer-a')!
   const [npcX, , npcZ] = npc.position

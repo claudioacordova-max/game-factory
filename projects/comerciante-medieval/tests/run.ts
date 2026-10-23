@@ -13,6 +13,7 @@ import {
   processImmediateRedPurchases,
   createInitialGameState,
   playerLoadHalfUnits,
+  familyProducesGood,
   buyFromBusiness,
   sellToNeed,
   advancePlayerDay,
@@ -20,6 +21,7 @@ import {
   quoteBuyFromBusiness,
   quoteSellToNeed,
   saleGoodsForTarget,
+  saleOffersForFamily,
   tradeQuantityStatus,
   tradeTotalTenthsForQuantity,
   createEconomicParameters,
@@ -125,7 +127,7 @@ test('venta personal usa 1,1 P, recalcula necesidad y acepta solo entero costeab
   equal(result.events[0].type, 'player-sale', 'la operación queda registrada')
 
   const partial = createInitialGameState()
-  const buyer = partial.economy.families['family-farmer-a']
+  const buyer = partial.economy.families['family-tailor-a']
   buyer.moneyTenths = 80
   buyer.household.inventory.food = 26
   partial.player.inventory.food = 2
@@ -138,6 +140,111 @@ test('venta personal usa 1,1 P, recalcula necesidad y acepta solo entero costeab
   }
 })
 
+test('una operación comercial de oferta procesa exactamente una unidad', () => {
+  const purchaseState = createInitialGameState()
+  const initialStock = purchaseState.economy.businesses['farmer-a'].commercialInventory.food
+  const bought = buyFromBusiness(purchaseState, 'farmer-a', 'food', 1)
+  ok(bought.ok, 'la tarjeta de compra puede confirmar una unidad disponible')
+  if (bought.ok) {
+    equal(bought.quantity, 1, 'la compra procesa una unidad')
+    equal(bought.state.player.inventory.food, 1, 'la carga aumenta en una comida')
+    equal(bought.state.economy.businesses['farmer-a'].commercialInventory.food, initialStock - 1, 'el stock comercial baja una unidad')
+  }
+
+  const saleState = createInitialGameState()
+  const household = saleState.economy.families['family-tailor-a']
+  household.household.inventory.food -= 1
+  saleState.player.inventory.food = 1
+  const sold = sellToNeed(saleState, { type: 'household', familyId: household.id }, 'food', 1, { requireFullAcceptance: true })
+  ok(sold.ok, 'la tarjeta de venta puede confirmar una unidad al hogar')
+  if (sold.ok) {
+    equal(sold.quantity, 1, 'la venta procesa una unidad')
+    equal(sold.state.player.inventory.food, 0, 'la carga baja una comida')
+    equal(sold.state.economy.families[household.id].household.inventory.food, household.household.inventory.food + 1, 'el hogar recibe una comida')
+  }
+})
+
+test('la familia puede comprar herramientas de repuesto en el negocio extractor', () => {
+  const game = createInitialGameState()
+  const business = game.economy.businesses['farmer-a']
+  business.tools.pop()
+  game.player.inventory.tool = 1
+  const result = sellToNeed(game, { type: 'business', businessId: business.id }, 'tool', 1, { requireFullAcceptance: true })
+  ok(result.ok, 'el extractor acepta una herramienta pertinente')
+  if (!result.ok) return
+  equal(result.state.economy.businesses[business.id].tools.length, 2, 'la herramienta entra al equipamiento profesional')
+  equal(result.state.player.inventory.tool, 0, 'la carga del jugador se descuenta')
+  equal(result.state.economy.families[business.familyId].moneyTenths, 2300, 'el precio sale del fondo familiar compartido')
+})
+
+test('bloqueo de recompra propia aplica al hogar y al negocio sastre sin mutaciones', () => {
+  const game = createInitialGameState()
+  const family = game.economy.families['family-tailor-a']
+  family.tier = 2
+  family.moneyTenths = 20000
+  family.household.inventory.clothing = 0
+  family.household.clothingDurabilityDays = []
+  game.player.inventory.clothing = 2
+  ok(familyProducesGood(game.economy, family.id, 'clothing'), 'el sastre produce ropa según su receta')
+  equal(saleGoodsForTarget(game, { type: 'household', familyId: family.id }).includes('clothing'), false, 'listado del hogar excluye la producción propia')
+  const householdQuote = quoteSellToNeed(game, { type: 'household', familyId: family.id }, 'clothing')
+  equal(householdQuote.maxQuantity, 0, 'cotización doméstica permite cero unidades')
+  ok(Boolean(householdQuote.rejection?.includes('no compra bienes que produzca')), 'cotización explica la prohibición')
+  const beforeHousehold = JSON.stringify(game)
+  const householdSale = sellToNeed(game, { type: 'household', familyId: family.id }, 'clothing', 1, { requireFullAcceptance: true })
+  ok(!householdSale.ok && householdSale.error.code === 'family-production-prohibited', 'motor rechaza la venta al hogar productor')
+  equal(JSON.stringify(game), beforeHousehold, 'rechazo al hogar no modifica estado, necesidades, dinero, inventario ni eventos')
+  equal(JSON.stringify(householdSale.state), beforeHousehold, 'el resultado rechazado conserva estado idempotente')
+
+  const beforeBusiness = JSON.stringify(game)
+  const businessQuote = quoteSellToNeed(game, { type: 'business', businessId: 'tailor-a' }, 'clothing')
+  equal(businessQuote.maxQuantity, 0, 'cotización del negocio propio permite cero unidades')
+  ok(Boolean(businessQuote.rejection?.includes('no compra bienes que produzca')), 'cotización del negocio explica la prohibición')
+  const businessSale = sellToNeed(game, { type: 'business', businessId: 'tailor-a' }, 'clothing', 1, { requireFullAcceptance: true })
+  ok(!businessSale.ok && businessSale.error.code === 'family-production-prohibited', 'motor rechaza la venta al negocio de la familia productora')
+  equal(JSON.stringify(game), beforeBusiness, 'rechazo al negocio no modifica estado')
+  const purchaseFromProducer = buyFromBusiness(game, 'tailor-a', 'clothing', 1)
+  ok(purchaseFromProducer.ok, 'el jugador sí puede comprar ropa al negocio productor')
+})
+
+test('producción de cualquier empresa familiar bloquea ventas en el hogar y otros negocios, sin afectar otras familias', () => {
+  const game = createInitialGameState(createInitialState(createEconomicParameters()))
+  const tailorFamily = game.economy.families['family-tailor-a']
+  tailorFamily.businessIds.push('farmer-a')
+  game.economy.businesses['farmer-a'].familyId = tailorFamily.id
+  game.player.inventory.food = 1
+  game.economy.parameters!.recipes.tailor = { ...game.economy.parameters!.recipes.tailor, inputs: { food: 1 }, outputs: { clothing: 1 } }
+  ok(familyProducesGood(game.economy, tailorFamily.id, 'food'), 'la segunda empresa familiar aporta su salida de producción')
+  equal(saleGoodsForTarget(game, { type: 'household', familyId: tailorFamily.id }).includes('food'), false, 'listado del hogar aplica las salidas de todas las empresas')
+  const before = JSON.stringify(game)
+  const home = sellToNeed(game, { type: 'household', familyId: tailorFamily.id }, 'food', 1)
+  ok(!home.ok && home.error.code === 'family-production-prohibited', 'el hogar rechaza el bien producido por la segunda empresa')
+  const ownedBusiness = sellToNeed(game, { type: 'business', businessId: 'tailor-a' }, 'food', 1)
+  ok(!ownedBusiness.ok && ownedBusiness.error.code === 'family-production-prohibited', 'otro negocio de esa familia también rechaza el bien')
+  equal(JSON.stringify(game), before, 'rechazos cruzados en una familia con varias empresas son atómicos')
+
+  const otherGame = createInitialGameState()
+  otherGame.player.inventory.food = 1
+  const otherBuyer = otherGame.economy.families['family-tailor-a']
+  otherBuyer.household.inventory.food = 26
+  const externalSale = sellToNeed(otherGame, { type: 'household', familyId: otherBuyer.id }, 'food', 1)
+  ok(externalSale.ok, 'otra familia que no produce comida sí puede comprarla')
+})
+
+test('la oferta conserva compradores de hogar y negocio como operaciones separadas', () => {
+  const game = createInitialGameState(createInitialState(createEconomicParameters()))
+  const family = game.economy.families['family-tailor-a']
+  family.household.inventory.clothing = 0
+  family.household.clothingDurabilityDays = []
+  game.economy.parameters!.recipes.tailor = { ...game.economy.parameters!.recipes.tailor, outputs: {}, inputs: { clothing: 1 } }
+  game.player.inventory.clothing = 4
+  const offers = saleOffersForFamily(game, family.id).filter(offer => offer.good === 'clothing')
+  equal(offers.length, 2, 'una misma mercancía produce dos ofertas diferenciadas')
+  equal(offers.filter(offer => offer.target.type === 'household').length, 1, 'la oferta identifica el hogar')
+  equal(offers.filter(offer => offer.target.type === 'business').length, 1, 'la oferta identifica el negocio')
+  ok(offers[0].quote.maxQuantity !== offers[1].quote.maxQuantity, 'cada destinatario conserva su propio máximo')
+})
+
 test('venta personal revalida carga, necesidad, pertinencia, negocio reservado y progreso diario', () => {
   const game = createInitialGameState()
   const before = JSON.stringify(game)
@@ -146,7 +253,7 @@ test('venta personal revalida carga, necesidad, pertinencia, negocio reservado y
   equal(JSON.stringify(game), before, 'rechazo de carga no muta')
 
   game.player.inventory.food = 1
-  const fullHouse = sellToNeed(game, { type: 'household', familyId: 'family-farmer-a' }, 'food', 1)
+  const fullHouse = sellToNeed(game, { type: 'household', familyId: 'family-tailor-a' }, 'food', 1)
   ok(!fullHouse.ok && fullHouse.error.code === 'not-needed', 'rechaza hogar con objetivo cubierto')
   const irrelevant = sellToNeed(game, { type: 'business', businessId: 'tailor-a' }, 'food', 1)
   ok(!irrelevant.ok && irrelevant.error.code === 'not-relevant', 'rechaza insumo ajeno al oficio')
@@ -163,7 +270,7 @@ test('venta personal revalida carga, necesidad, pertinencia, negocio reservado y
   ok(!secondProgress.ok && secondProgress.error.code === 'daily-progress-limit', 'segunda oferta de progreso el mismo día se rechaza')
 
   const mixedNeeds = createInitialGameState()
-  const mixedFamily = mixedNeeds.economy.families['family-tailor-a']
+  const mixedFamily = mixedNeeds.economy.families['family-farmer-a']
   mixedFamily.tier = 2
   mixedFamily.moneyTenths = 20000
   mixedFamily.household.inventory.clothing = 0
@@ -265,8 +372,8 @@ test('cotizaciones UI exponen máximos actuales de compra y venta y se refrescan
   game = bought.state
   equal(quoteBuyFromBusiness(game, 'farmer-a', 'food').maxQuantity, 18, 'stock comercial refrescado luego de compra')
   game.player.inventory.food = 4
-  game.economy.families['family-farmer-a'].household.inventory.food = 24
-  const householdTarget = { type: 'household' as const, familyId: 'family-farmer-a' }
+  game.economy.families['family-tailor-a'].household.inventory.food = 24
+  const householdTarget = { type: 'household' as const, familyId: 'family-tailor-a' }
   equal(saleGoodsForTarget(game, householdTarget).includes('food'), true, 'menú Hogar ofrece necesidad actual')
   const foodSale = quoteSellToNeed(game, householdTarget, 'food')
   equal(foodSale.maxQuantity, 4, 'máximo doméstico limitado por necesidad, carga y fondos')
@@ -279,7 +386,7 @@ test('cotizaciones UI exponen máximos actuales de compra y venta y se refrescan
 
 test('confirmación explícita sobre el máximo por fondos rechaza la venta completa sin transferencias', () => {
   const state = createInitialGameState()
-  const buyer = state.economy.families['family-farmer-a']
+  const buyer = state.economy.families['family-tailor-a']
   buyer.moneyTenths = 80
   buyer.household.inventory.food = 26
   state.player.inventory.food = 2
@@ -306,8 +413,8 @@ test('recorrido compra, viaje de un día y venta sincroniza estado integrado y r
   game = travel.state
   equal(game.player.villageId, 'village-b', 'destino B sincronizado')
   equal(game.economy.day, 2, 'viaje procesa un solo día global')
-  const householdTarget = { type: 'household' as const, familyId: 'family-farmer-b' }
-  game.economy.families['family-farmer-b'].household.inventory.food = 24
+  const householdTarget = { type: 'household' as const, familyId: 'family-miner-b' }
+  game.economy.families['family-miner-b'].household.inventory.food = 24
   const quote = quoteSellToNeed(game, householdTarget, 'food')
   equal(quote.maxQuantity, 4, 'demanda disponible al llegar')
   const sale = sellToNeed(game, householdTarget, 'food', 4, { requireFullAcceptance: true })
@@ -383,9 +490,9 @@ test('oferta explícita mayor que necesidad actual se rechaza completa y no alte
 
   const household = createInitialGameState()
   household.player.inventory.food = 3
-  household.economy.families['family-farmer-a'].household.inventory.food = 26
+  household.economy.families['family-tailor-a'].household.inventory.food = 26
   const householdBefore = JSON.stringify(household)
-  const householdTooMany = sellToNeed(household, { type: 'household', familyId: 'family-farmer-a' }, 'food', 3)
+  const householdTooMany = sellToNeed(household, { type: 'household', familyId: 'family-tailor-a' }, 'food', 3)
   ok(!householdTooMany.ok && householdTooMany.error.code === 'not-needed', 'rechaza oferta mayor a la necesidad del hogar')
   equal(JSON.stringify(household), householdBefore, 'el rechazo del hogar también es atómico')
 })

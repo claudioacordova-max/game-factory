@@ -4,7 +4,7 @@ import { reevaluateTier } from './needs.js'
 import { assertValidState } from './simulation.js'
 import { createInitialState } from './scenario.js'
 
-export type PlayerActionErrorCode = 'invalid-quantity' | 'unknown-business' | 'unknown-family' | 'wrong-village' | 'insufficient-funds' | 'insufficient-stock' | 'over-capacity' | 'not-carried' | 'not-needed' | 'not-relevant' | 'daily-progress-limit' | 'invalid-destination'
+export type PlayerActionErrorCode = 'invalid-quantity' | 'unknown-business' | 'unknown-family' | 'wrong-village' | 'insufficient-funds' | 'insufficient-stock' | 'over-capacity' | 'not-carried' | 'not-needed' | 'not-relevant' | 'family-production-prohibited' | 'daily-progress-limit' | 'invalid-destination'
 
 export type PlayerActionResult =
   | { ok: true; state: GameState; events: EconomicEvent[]; quantity: number; moneyTenths: number }
@@ -91,6 +91,13 @@ export function buyFromBusiness(state: GameState, businessId: string, good: Good
 
 export type PlayerSaleTarget = { type: 'household'; familyId: string } | { type: 'business'; businessId: string }
 
+export interface PlayerSaleOffer {
+  target: PlayerSaleTarget
+  good: Good
+  quote: PlayerTradeQuote
+  recipient: string
+}
+
 export interface PlayerTradeQuote {
   good: Good
   unitPriceTenths: number
@@ -171,16 +178,46 @@ function businessNeed(economy: EconomicState, businessId: string, good: Good): N
   return { maxQuantity: missing, basicQuantity: missing, destination: `business:${business.id}:productive`, progressUnits: 0, familyId: family.id }
 }
 
+/** True when any business owned by this family produces the good. */
+export function familyProducesGood(economy: EconomicState, familyId: string, good: Good): boolean {
+  const family = economy.families[familyId]
+  if (!family) return false
+  const parameters = parametersFor(economy)
+  return family.businessIds.some(id => {
+    const business = economy.businesses[id]
+    return Boolean(business && parameters.recipes[business.profession].outputs[good])
+  })
+}
+
 /** Returns only goods currently relevant to the selected recipient. */
 export function saleGoodsForTarget(state: GameState, target: PlayerSaleTarget): Good[] {
   if (target.type === 'household') {
     const family = state.economy.families[target.familyId]
     if (!family || family.villageId !== state.player.villageId) return []
-    return GOODS.filter(good => (householdNeed(state.economy, target.familyId, good)?.maxQuantity ?? 0) > 0)
+    return GOODS.filter(good => !familyProducesGood(state.economy, family.id, good) && (householdNeed(state.economy, target.familyId, good)?.maxQuantity ?? 0) > 0)
   }
   const business = state.economy.businesses[target.businessId]
   if (!business || business.villageId !== state.player.villageId) return []
-  return GOODS.filter(good => (businessNeed(state.economy, target.businessId, good)?.maxQuantity ?? 0) > 0)
+  return GOODS.filter(good => !familyProducesGood(state.economy, business.familyId, good) && (businessNeed(state.economy, target.businessId, good)?.maxQuantity ?? 0) > 0)
+}
+
+/** Lists each carried good and recipient separately; offers from different destinations are not merged. */
+export function saleOffersForFamily(state: GameState, familyId: string): PlayerSaleOffer[] {
+  const family = state.economy.families[familyId]
+  if (!family || family.villageId !== state.player.villageId) return []
+  const targets: { target: PlayerSaleTarget; recipient: string }[] = [
+    { target: { type: 'household', familyId }, recipient: `Hogar de ${family.name}` },
+    ...family.businessIds.flatMap(businessId => {
+      const business = state.economy.businesses[businessId]
+      return business && business.villageId === state.player.villageId
+        ? [{ target: { type: 'business' as const, businessId }, recipient: `Negocio ${business.id}` }]
+        : []
+    }),
+  ]
+  return targets.flatMap(({ target, recipient }) => saleGoodsForTarget(state, target)
+    .filter(good => state.player.inventory[good] > 0)
+    .map(good => ({ target, good, quote: quoteSellToNeed(state, target, good), recipient }))
+    .filter(offer => offer.quote.maxQuantity > 0))
 }
 
 /** Calculates a current purchase maximum for display; buyFromBusiness remains the authority at confirmation. */
@@ -212,11 +249,19 @@ export function quoteSellToNeed(state: GameState, target: PlayerSaleTarget, good
   let family: EconomicState['families'][string] | undefined
   if (target.type === 'household') {
     family = state.economy.families[target.familyId]
-    if (family?.villageId === state.player.villageId) need = householdNeed(state.economy, target.familyId, good)
+    if (family?.villageId === state.player.villageId) {
+      if (familyProducesGood(state.economy, family.id, good)) {
+        return { good, unitPriceTenths, maxQuantity: 0, totalTenths: 0, moneyAfterTenths: state.player.moneyTenths, loadAfterHalfUnits: loadNow, rejection: 'Esta familia no compra bienes que produzca cualquiera de sus negocios.' }
+      }
+      need = householdNeed(state.economy, target.familyId, good)
+    }
   } else {
     const business = state.economy.businesses[target.businessId]
     if (business?.villageId === state.player.villageId) {
       family = state.economy.families[business.familyId]
+      if (family && familyProducesGood(state.economy, family.id, good)) {
+        return { good, unitPriceTenths, maxQuantity: 0, totalTenths: 0, moneyAfterTenths: state.player.moneyTenths, loadAfterHalfUnits: loadNow, rejection: 'Esta familia no compra bienes que produzca cualquiera de sus negocios.' }
+      }
       need = businessNeed(state.economy, target.businessId, good)
     }
   }
@@ -252,11 +297,13 @@ export function sellToNeed(state: GameState, target: PlayerSaleTarget, good: Goo
     const family = state.economy.families[target.familyId]
     if (!family) return reject(state, 'unknown-family', `No existe la familia ${target.familyId}.`)
     if (family.villageId !== state.player.villageId) return reject(state, 'wrong-village', 'La familia está en otro pueblo.')
+    if (familyProducesGood(state.economy, family.id, good)) return reject(state, 'family-production-prohibited', 'Esta familia no compra bienes que produzca cualquiera de sus negocios.')
     need = householdNeed(state.economy, target.familyId, good)
   } else {
     const business = state.economy.businesses[target.businessId]
     if (!business) return reject(state, 'unknown-business', `No existe el negocio ${target.businessId}.`)
     if (business.villageId !== state.player.villageId) return reject(state, 'wrong-village', 'El negocio está en otro pueblo.')
+    if (familyProducesGood(state.economy, business.familyId, good)) return reject(state, 'family-production-prohibited', 'Esta familia no compra bienes que produzca cualquiera de sus negocios.')
     need = businessNeed(state.economy, target.businessId, good)
   }
   if (!need) return reject(state, 'not-relevant', 'Ese bien no corresponde a una necesidad del destinatario.')

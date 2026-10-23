@@ -1,20 +1,37 @@
 import { useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { advancePlayerDay, buyFromBusiness, createInitialGameState, GOODS, GOODS_CATALOG, playerLoadHalfUnits, quoteBuyFromBusiness, quoteSellToNeed, saleGoodsForTarget, sellToNeed, tradeQuantityStatus, tradeTotalTenthsForQuantity, travelToVillage, type GameState, type Good, type PlayerSaleTarget, type VillageId } from './engine/index.js'
+import { advancePlayerDay, buyFromBusiness, createInitialGameState, GOODS, GOODS_CATALOG, playerLoadHalfUnits, quoteBuyFromBusiness, saleOffersForFamily, sellToNeed, travelToVillage, type GameState, type Good, type PlayerSaleOffer, type VillageId } from './engine/index.js'
 import VillageScene from './scene/VillageScene.js'
 import { npcForId, VILLAGES, type VillageNpc } from './scene/world.js'
 import ExperimentPanel from './ui/ExperimentPanel.js'
 
-type InteractionOption = 'home' | 'business'
+type TradeMode = 'buy' | 'sell'
+type BuyOffer = { key: string; good: Good; businessId: string; recipient: string; quote: ReturnType<typeof quoteBuyFromBusiness> }
+type TradeOffer = BuyOffer | (PlayerSaleOffer & { key: string })
+
 const money = (tenths: number) => `${(tenths / 10).toFixed(1).replace('.', ',')} monedas`
 const load = (halfUnits: number) => `${(halfUnits / 2).toLocaleString('es-ES', { maximumFractionDigits: 1 })}`
+const GOOD_ICONS: Record<Good, string> = {
+  food: '🍎', firewood: '🪵', wood: '🪚', metal: '⛓️', cloth: '🧵', tool: '🔨', clothing: '🧥', furniture: '🪑', jewelry: '💎',
+}
+const PROFESSION_NAMES: Record<string, string> = {
+  farmer: 'Agricultor', woodcutter: 'Leñador', blacksmith: 'Herrero', tailor: 'Sastre', miner: 'Minero', carpenter: 'Carpintero', jeweler: 'Joyero',
+}
+
+function isBuyOffer(offer: TradeOffer): offer is BuyOffer { return 'businessId' in offer }
+
+function offerRecipient(offer: TradeOffer, state: GameState): string {
+  if (isBuyOffer(offer)) return offer.recipient
+  if (offer.target.type === 'household') return `Hogar de ${state.economy.families[offer.target.familyId].name}`
+  const business = state.economy.businesses[offer.target.businessId]
+  return `Negocio · ${PROFESSION_NAMES[business.profession] ?? business.profession}`
+}
 
 export default function App() {
   const [game, setGame] = useState<GameState>(() => createInitialGameState())
   const [nearby, setNearby] = useState<VillageNpc>()
-  const [interaction, setInteraction] = useState<{ npcId: string; option?: InteractionOption }>()
-  const [selectedGood, setSelectedGood] = useState<Good>()
-  const [quantity, setQuantity] = useState(1)
+  const [interaction, setInteraction] = useState<{ npcId: string }>()
+  const [tradeMode, setTradeMode] = useState<TradeMode>('buy')
   const [tradeMessage, setTradeMessage] = useState<{ text: string; success: boolean }>()
   const [showExperiments, setShowExperiments] = useState(false)
   const interactionPromptRef = useRef<HTMLDivElement>(null)
@@ -24,27 +41,23 @@ export default function App() {
   const business = npc ? game.economy.businesses[npc.businessId] : undefined
   const villageOptions = useMemo(() => VILLAGES.filter(candidate => candidate.id !== game.player.villageId), [game.player.villageId])
   const carriedWeight = playerLoadHalfUnits(game.player.inventory)
-  const saleTarget: PlayerSaleTarget | undefined = npc && interaction?.option === 'home'
-    ? { type: 'household', familyId: npc.familyId }
-    : npc && interaction?.option === 'business' ? { type: 'business', businessId: npc.businessId } : undefined
-  const purchaseGoods = business ? GOODS.filter(good => business.commercialInventory[good] > 0) : []
-  const sellGoods = saleTarget ? saleGoodsForTarget(game, saleTarget) : []
-  const activeGoods = interaction?.option === 'business' ? [...new Set([...purchaseGoods, ...sellGoods])] : sellGoods
-  const activeGood = selectedGood && activeGoods.includes(selectedGood) ? selectedGood : activeGoods[0]
-  const isBuying = Boolean(activeGood && interaction?.option === 'business' && purchaseGoods.includes(activeGood))
-  const quote = activeGood
-    ? isBuying
-      ? quoteBuyFromBusiness(game, npc!.businessId, activeGood)
-      : saleTarget ? quoteSellToNeed(game, saleTarget, activeGood) : undefined
-    : undefined
-  const requestedTotal = quote ? tradeTotalTenthsForQuantity(quantity, quote.unitPriceTenths) : undefined
-  const quantityStatus = quote ? tradeQuantityStatus(quantity, quote.maxQuantity) : 'invalid'
+  const buyOffers: BuyOffer[] = business
+    ? GOODS.filter(good => business.commercialInventory[good] > 0).map(good => ({
+      key: `buy:${business.id}:${good}`,
+      good,
+      businessId: business.id,
+      recipient: `Negocio · ${PROFESSION_NAMES[business.profession] ?? business.profession}`,
+      quote: quoteBuyFromBusiness(game, business.id, good),
+    }))
+    : []
+  const sellOffers: (PlayerSaleOffer & { key: string })[] = family
+    ? saleOffersForFamily(game, family.id).map((offer, index) => ({ ...offer, key: `sell:${index}:${offer.good}` }))
+    : []
+  const offers: TradeOffer[] = tradeMode === 'buy' ? buyOffers : sellOffers
 
-  const chooseInteraction = (option: InteractionOption) => {
-    setSelectedGood(undefined)
-    setQuantity(1)
+  const resetTrade = (mode: TradeMode) => {
+    setTradeMode(mode)
     setTradeMessage(undefined)
-    setInteraction(current => current ? { ...current, option } : current)
   }
   const travel = (destination: VillageId) => {
     const result = travelToVillage(game, destination)
@@ -62,20 +75,22 @@ export default function App() {
       setTradeMessage(undefined)
     }
   }
-  const transact = () => {
-    if (!npc || !activeGood || !saleTarget || !quote) return
-    const amount = Number.isInteger(quantity) && quantity > 0 ? quantity : 0
-    const buying = interaction?.option === 'business' && purchaseGoods.includes(activeGood)
+  const transact = (offer: TradeOffer) => {
+    if (!npc) return
+    const buying = isBuyOffer(offer)
     const result = buying
-      ? buyFromBusiness(game, npc.businessId, activeGood, amount)
-      : sellToNeed(game, saleTarget, activeGood, amount, { requireFullAcceptance: true })
+      ? buyFromBusiness(game, offer.businessId, offer.good, 1)
+      : sellToNeed(game, offer.target, offer.good, 1, { requireFullAcceptance: true })
     if (!result.ok) {
-      setTradeMessage({ text: `Operación rechazada: ${result.error.message}`, success: false })
+      const reason = result.error.code === 'family-production-prohibited'
+        ? 'Esta familia no compra esa mercancía.'
+        : result.error.message
+      setTradeMessage({ text: `No se pudo completar: ${reason}`, success: false })
       return
     }
     setGame(result.state)
-    setTradeMessage({ text: `Operación aceptada: ${result.quantity} × ${GOODS_CATALOG[activeGood].name}, ${money(result.moneyTenths)}. Dinero: ${money(result.state.player.moneyTenths)}; carga: ${load(playerLoadHalfUnits(result.state.player.inventory))}/${load(result.state.player.capacityHalfUnits)}.`, success: true })
-    setQuantity(1)
+    const recipient = buying ? '' : ` · ${offerRecipient(offer, result.state)}`
+    setTradeMessage({ text: `${buying ? 'Compraste' : 'Vendiste'} ${GOODS_CATALOG[offer.good].name}${recipient}.`, success: true })
   }
 
   return (
@@ -96,7 +111,7 @@ export default function App() {
             <color attach="background" args={[game.player.villageId === 'village-a' ? '#b9d2db' : '#b8c5cd']} />
             <ambientLight intensity={1.15} />
             <directionalLight position={[-6, 12, 6]} intensity={2.1} castShadow />
-            <VillageScene key={game.player.villageId} villageId={game.player.villageId} onNearbyChange={setNearby} interactionPromptRef={interactionPromptRef} interactionNpcId={interaction?.npcId} onInteractionOutOfRange={() => setInteraction(undefined)} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setSelectedGood(undefined); setQuantity(1) }} />
+            <VillageScene key={game.player.villageId} villageId={game.player.villageId} onNearbyChange={setNearby} interactionPromptRef={interactionPromptRef} interactionNpcId={interaction?.npcId} onInteractionOutOfRange={() => setInteraction(undefined)} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setTradeMode('buy') }} />
           </Canvas>
           <div className="scene-caption">{village.name} · {village.theme === 'fields' ? 'campos y caminos de tierra' : 'canteras y casas de piedra'}</div>
           <div ref={interactionPromptRef} className="interaction-prompt" aria-live="polite" aria-hidden={!nearby}>
@@ -107,43 +122,31 @@ export default function App() {
             {villageOptions.map(destination => <button className="travel-button" key={destination.id} onClick={() => travel(destination.id)}>Viajar a {destination.name} · 1 día</button>)}
           </section>
           {interaction && npc && family && business && <aside className="panel-card interaction-card interaction-overlay" aria-live="polite">
-            <button className="close-button" aria-label="Cerrar interacción" onClick={() => setInteraction(undefined)}>×</button>
-            <p className="eyebrow">Habitante · {npc.role}</p><h2>{npc.name}</h2>
-            {!interaction.option ? <>
-              <p>Familia: {family.name} · fondo compartido {money(family.moneyTenths)}.</p>
-              <button className="option-button" onClick={() => chooseInteraction('home')}>Hogar</button>
-              <button className="option-button" onClick={() => chooseInteraction('business')}>Negocio</button>
-            </> : <>
-              <h3>{interaction.option === 'home' ? 'Hogar' : 'Negocio'}</h3>
-              <p>Fondo familiar compartido: {money(family.moneyTenths)}.</p>
-              {activeGoods.length === 0 ? <p>{interaction.option === 'home' ? 'No hay necesidades domésticas disponibles para comerciar ahora.' : 'No hay existencias comerciales ni insumos pertinentes disponibles ahora.'}</p> : <>
-                <label className="field-label" htmlFor="trade-good">Mercancía</label>
-                <select id="trade-good" value={activeGood} onChange={event => { setSelectedGood(event.target.value as Good); setQuantity(1); setTradeMessage(undefined) }}>
-                  {activeGoods.map(good => <option key={good} value={good}>{GOODS_CATALOG[good].name}{purchaseGoods.includes(good) ? ` · stock ${business.commercialInventory[good]}` : ''}</option>)}
-                </select>
-                {quote && <>
-                  <div className="quote-box">
-                    <span>{purchaseGoods.includes(activeGood!) ? 'El negocio vende' : 'El destinatario compra'} a precio fijo</span>
-                    <strong>{money(quote.unitPriceTenths)} por unidad</strong>
-                    <span>Máximo disponible/aceptado: {quote.maxQuantity}</span>
-                    <span>Total al máximo: {money(quote.totalTenths)}</span>
-                  </div>
-                  <label className="field-label" htmlFor="trade-quantity">Cantidad</label>
-                  <input id="trade-quantity" type="number" min="1" max={quote.maxQuantity} step="1" value={quantity} onChange={event => setQuantity(Number(event.target.value))} />
-                  {requestedTotal === undefined || quantityStatus === 'invalid'
-                    ? <p className="rejection-note" role="status">Indica una cantidad entera positiva para calcular el importe.</p>
-                    : <>
-                      <p className="trade-result">Total de esta cantidad: {money(requestedTotal)}</p>
-                      {quantityStatus === 'exceeds-maximum'
-                        ? <p className="rejection-note" role="status">La cantidad supera el máximo actual de {quote.maxQuantity}. Si intentas confirmarla, el motor la rechazará; dinero e inventario no cambiarán.</p>
-                        : <p className="trade-result">Resultado previsto: dinero {money(game.player.moneyTenths + (isBuying ? -1 : 1) * requestedTotal)} · carga {load(carriedWeight + (isBuying ? 1 : -1) * quantity * GOODS_CATALOG[activeGood!].weightHalfUnits)}/{load(game.player.capacityHalfUnits)}</p>}
-                    </>}
-                  {quote.rejection && quote.maxQuantity === 0 && <p className="rejection-note">{quote.rejection}</p>}
-                  <button className="primary-button trade-button" disabled={quote.maxQuantity === 0} onClick={transact}>{purchaseGoods.includes(activeGood!) ? 'Comprar' : 'Vender'}</button>
-                </>}
-              </>}
+            <button className="close-button" aria-label="Cerrar comercio" onClick={() => setInteraction(undefined)}>×</button>
+            <p className="eyebrow">Comercio · {npc.role}</p><h2>{npc.name}</h2>
+            <div className="trade-tabs" role="tablist" aria-label="Acciones comerciales">
+              <button type="button" role="tab" aria-selected={tradeMode === 'buy'} className={tradeMode === 'buy' ? 'trade-tab selected' : 'trade-tab'} onClick={() => resetTrade('buy')}>🛒 Comprar</button>
+              <button type="button" role="tab" aria-selected={tradeMode === 'sell'} className={tradeMode === 'sell' ? 'trade-tab selected' : 'trade-tab'} onClick={() => resetTrade('sell')}>📦 Vender</button>
+            </div>
+            <div className="trade-content">
+              <div className="offer-grid" aria-label={tradeMode === 'buy' ? 'Mercancías disponibles para comprar' : 'Ofertas para tus mercancías'}>
+                {offers.map(offer => {
+                  const buying = isBuyOffer(offer)
+                  const available = offer.quote.maxQuantity > 0
+                  return <button type="button" key={offer.key} className={`good-card${available ? '' : ' unavailable'}`} aria-label={`${buying ? 'Comprar' : 'Vender'} ${GOODS_CATALOG[offer.good].name} ${buying ? 'al' : 'a'} ${offerRecipient(offer, game)} · ${available ? 'Disponible' : 'No disponible'}`} onClick={() => transact(offer)}>
+                    <span className="good-icon" aria-hidden="true">{GOOD_ICONS[offer.good]}</span>
+                    <span className="good-card-copy"><strong>{GOODS_CATALOG[offer.good].name}</strong>
+                      {!buying && <small>{offerRecipient(offer, game)}</small>}
+                      <small>{buying ? `Compra ${money(offer.quote.unitPriceTenths)}/u` : `Venta ${money(offer.quote.unitPriceTenths)}/u`}</small>
+                      <small>{buying ? `Stock ${business.commercialInventory[offer.good]}` : `Máx. ${offer.quote.maxQuantity}`}</small>
+                      <small>{available ? 'Disponible' : 'No disponible'}</small>
+                    </span>
+                  </button>
+                })}
+              </div>
+              {offers.length === 0 && <p className="empty-trade">{tradeMode === 'buy' ? 'Este negocio no tiene mercancías disponibles ahora.' : 'No hay ofertas para las mercancías que llevas ahora.'}</p>}
               {tradeMessage && <p className={tradeMessage.success ? 'trade-message success' : 'trade-message error'} role="status">{tradeMessage.text}</p>}
-            </>}
+            </div>
           </aside>}
         </div>
       </section>

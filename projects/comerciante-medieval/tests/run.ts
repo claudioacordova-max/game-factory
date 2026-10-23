@@ -21,6 +21,7 @@ import {
   type Family,
   type VillageId,
 } from '../src/engine/index.js'
+import { npcForId, npcsForVillage, VILLAGE_NPCS, VILLAGES } from '../src/scene/world.js'
 
 let passed = 0
 function equal<T>(actual: T, expected: T, label: string): void {
@@ -646,4 +647,36 @@ test('simulaciones de 9, 36 y 90 días reproducen estados, informes y eventos', 
   }
 })
 
-console.log(`\n${passed} pruebas del motor económico aprobadas.`)
+test('mapeo 3D contiene ocho NPC vinculados una vez a las familias y negocios del motor', () => {
+  const state = createInitialGameState()
+  equal(VILLAGES.length, 2, 'solo existen los dos pueblos jugables')
+  equal(VILLAGES.map(village => village.id).sort().join(','), 'village-a,village-b', 'no hay puerto como destino de escena')
+  equal(VILLAGE_NPCS.length, 8, 'hay ocho NPC exteriores')
+  for (const villageId of ['village-a', 'village-b'] as const) equal(npcsForVillage(villageId).length, 4, `${villageId} tiene cuatro NPC`)
+  equal(new Set(VILLAGE_NPCS.map(npc => npc.id)).size, 8, 'todos los NPC tienen identificador único')
+  for (const npc of VILLAGE_NPCS) {
+    ok(Boolean(state.economy.families[npc.familyId]), `${npc.id} conecta una familia del motor`)
+    const business = state.economy.businesses[npc.businessId]
+    ok(Boolean(business), `${npc.id} conecta un negocio del motor`)
+    equal(business.villageId, npc.villageId, `${npc.id} está en el pueblo de su negocio`)
+    equal(state.economy.families[npc.familyId].businessIds.includes(npc.businessId), true, `${npc.id} conecta negocio y familia`)
+    ok(npcForId(npc.id) === npc, `${npc.id} se puede resolver para interactuar`)
+    for (const coordinate of [...npc.position, ...npc.homePosition, ...npc.businessPosition]) ok(Number.isFinite(coordinate), `${npc.id} tiene posición válida`)
+  }
+})
+
+test('los destinos 3D corresponden a travelToVillage y cada viaje avanza un día global', () => {
+  const state = createInitialGameState()
+  equal(VILLAGES.filter(village => village.id !== state.player.villageId).length, 1, 'el selector ofrece únicamente el otro pueblo')
+  const result = travelToVillage(state, 'village-b')
+  ok(result.ok, 'viaje al pueblo B aceptado')
+  if (result.ok) {
+    equal(result.state.player.villageId, 'village-b', 'GameState registra el pueblo de destino')
+    equal(result.state.economy.day, state.economy.day + 1, 'el viaje ejecuta un único día económico')
+    equal(result.events.filter(event => event.type === 'player-travel').length, 1, 'el viaje queda registrado una vez')
+  }
+  const portResult = travelToVillage(state, 'port' as never)
+  equal(portResult.ok, false, 'el puerto no puede seleccionarse como destino')
+})
+
+console.log(`\n${passed} pruebas del motor y la integración 3D aprobadas.`)

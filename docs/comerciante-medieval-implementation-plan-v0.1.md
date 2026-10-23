@@ -107,6 +107,16 @@ Las pruebas automáticas cubrirán reglas individuales, conservación de inventa
 - Si aparece una contradicción material o decisión creativa no resuelta, detener solo el trabajo afectado y consultar al diseñador.
 - El runner propio evita una dependencia de testing nueva; dependencias adicionales requerirían justificación y aprobación conforme a la gobernanza del repositorio.
 
+## Registro de ejecución
+
+| Hito | Estado y verificación | Commit local |
+|---|---|---|
+| 1 | Proyecto generado desde `template/`; motor vacío, pruebas y build aprobados. | `9371c67` |
+| 2 | Modelo y reglas económicas base aprobados; aclaración D9 aplicada. | `4a74e0d` |
+| 3 | Economía autónoma y simulaciones reproducibles 9/36/90; 21 pruebas, build y revisión aprobados. | `7c9d0f0` |
+| 4 | Jugador, transacciones personales y tiempo; 29 pruebas, build y revisión aprobados. | `11bfaaf` |
+| 5 | Playtesting humano aprobado por el diseñador (23-10-2026): movimiento, exploración de ambos pueblos e interacciones con NPC confirmados; 31 pruebas, build y revisión aprobados. | Cierre local en este commit |
+
 ## Ejecución posterior con Game Factory v1
 
 Antes de cada hito, el coordinador relee especificación, plan e instrucciones; registra `HEAD` y estado Git completo e identifica cambios preexistentes. Delega solo el alcance aprobado al `implementer`; inspecciona diff, pruebas, build y alcance; luego solicita revisión independiente al `reviewer`, sin compartir razonamiento interno del implementador. Se permiten hasta dos ciclos de corrección de defectos técnicos reproducibles, repitiendo verificaciones y revisión tras cada ciclo.

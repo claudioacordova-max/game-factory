@@ -12,6 +12,15 @@ export interface VillageNpc {
   businessPosition: readonly [number, number, number]
 }
 
+export const NPC_INTERACTION_DISTANCE = 1.85
+
+export function isBeyondNpcInteractionDistance(
+  playerPosition: readonly [number, number, number],
+  npc: VillageNpc,
+): boolean {
+  return Math.hypot(playerPosition[0] - npc.position[0], playerPosition[2] - npc.position[2]) > NPC_INTERACTION_DISTANCE
+}
+
 export const VILLAGES: readonly { id: VillageId; name: string; theme: 'fields' | 'mountain' }[] = [
   { id: 'village-a', name: 'Pueblo A', theme: 'fields' },
   { id: 'village-b', name: 'Pueblo B', theme: 'mountain' },

@@ -126,3 +126,18 @@ Las pruebas automáticas cubrirán reglas individuales, conservación de inventa
 Antes de cada hito, el coordinador relee especificación, plan e instrucciones; registra `HEAD` y estado Git completo e identifica cambios preexistentes. Delega solo el alcance aprobado al `implementer`; inspecciona diff, pruebas, build y alcance; luego solicita revisión independiente al `reviewer`, sin compartir razonamiento interno del implementador. Se permiten hasta dos ciclos de corrección de defectos técnicos reproducibles, repitiendo verificaciones y revisión tras cada ciclo.
 
 El coordinador solo crea commit local al pasar verificaciones, recibir revisión sin bloqueos, mantener alcance y cumplir el playtesting requerido. Stagea rutas explícitas, inspecciona diff preparado y no incluye cambios preexistentes, `experiments/`, secretos ni archivos generados. No hace push. Continúa únicamente con hitos ya autorizados; se detiene ante playtesting pendiente, decisiones creativas, expansión de alcance, bloqueos persistentes o fallos no resueltos.
+
+## Iteraciones post-hito (Game Factory v1.1)
+
+### ITER-2026-10-23-01 — Cierre del menú contextual al alejarse del NPC
+
+- **Clasificación:** corrección pequeña.
+- **Comportamiento actual:** el menú contextual permanece abierto aunque el jugador se aleje del NPC que originó la interacción.
+- **Cambio aprobado:** cerrar automáticamente ese menú cuando la distancia horizontal al NPC activo supere 1,85 unidades; el menú permanece operativo hasta el límite incluido y se conserva la apertura normal de interacción. Aprobación expresa del diseñador en la solicitud de iteración post-hito.
+- **Alcance y restricciones:** reutilizar el radio de proximidad existente y el `npcId` activo. Sin cambios a Hogar/Negocio, reglas de comercio, controles de viaje u otras mecánicas; sin dependencias nuevas.
+- **Criterios verificables:** (1) interacción normal abre el menú; (2) distancia de hasta 1,85 mantiene el menú; (3) superar 1,85 respecto al NPC de esa interacción lo cierra; (4) la comprobación corresponde al NPC activo aunque cambie el NPC cercano.
+- **Playtesting humano requerido:** sí, por afectar directamente a la interacción del jugador. Aprobado por el diseñador: confirmó que probó el juego y que la corrección funciona correctamente; autorizó el cierre y el commit local.
+- **Cambios de esta iteración:** `projects/comerciante-medieval/src/App.tsx`, `projects/comerciante-medieval/src/scene/VillageScene.tsx`, `projects/comerciante-medieval/src/scene/world.ts`, `projects/comerciante-medieval/tests/run.ts` y este registro.
+- **Comprobaciones técnicas:** `npm test` — 38 pruebas aprobadas; `npm run build` — build de producción aprobado (Vite informa el aviso de chunk minificado mayor a 500 kB). Ambos comandos terminaron con código 0.
+- **Revisión independiente:** aprobada, sin hallazgos bloqueantes. Observación no bloqueante: la prueba automatizada verifica el umbral, pero no cubre de extremo a extremo que el cambio cierre el estado del menú para el NPC activo; el código sí consulta el `npcId` de esa interacción. Se recomienda confirmarlo durante el playtesting.
+- **Estado:** iteración cerrada tras playtesting humano aprobado, implementación y comprobaciones técnicas completadas, y revisión independiente sin bloqueos.

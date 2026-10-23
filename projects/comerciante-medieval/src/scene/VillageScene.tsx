@@ -1,16 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { Group } from 'three'
-import { npcsForVillage, type VillageNpc } from './world.js'
+import { isBeyondNpcInteractionDistance, NPC_INTERACTION_DISTANCE, npcsForVillage, type VillageNpc } from './world.js'
 import type { VillageId } from '../engine/model.js'
 
 interface VillageSceneProps {
   villageId: VillageId
   onNearbyChange: (npc: VillageNpc | undefined) => void
   onInteract: (npc: VillageNpc) => void
+  interactionNpcId?: string
+  onInteractionOutOfRange: () => void
 }
 
-const INTERACTION_DISTANCE = 1.85
 const WALK_SPEED = 4.5
 
 function House({ position, roofColor, business = false }: { position: readonly [number, number, number]; roofColor: string; business?: boolean }) {
@@ -91,14 +92,19 @@ function VillageGround({ villageId }: { villageId: VillageId }) {
   )
 }
 
-export default function VillageScene({ villageId, onNearbyChange, onInteract }: VillageSceneProps) {
+export default function VillageScene({ villageId, onNearbyChange, onInteract, interactionNpcId, onInteractionOutOfRange }: VillageSceneProps) {
   const playerRef = useRef<Group>(null)
   const keys = useRef(new Set<string>())
   const nearbyId = useRef<string | undefined>(undefined)
   const nearbyCallback = useRef(onNearbyChange)
   const interactCallback = useRef(onInteract)
+  const outOfRangeCallback = useRef(onInteractionOutOfRange)
+  const interactionNpcIdRef = useRef(interactionNpcId)
+  const closedInteractionNpcId = useRef<string | undefined>(undefined)
   nearbyCallback.current = onNearbyChange
   interactCallback.current = onInteract
+  outOfRangeCallback.current = onInteractionOutOfRange
+  interactionNpcIdRef.current = interactionNpcId
   const npcs = npcsForVillage(villageId)
 
   useEffect(() => {
@@ -120,6 +126,15 @@ export default function VillageScene({ villageId, onNearbyChange, onInteract }: 
   useFrame((_, delta) => {
     const player = playerRef.current
     if (!player) return
+    const activeInteractionNpcId = interactionNpcIdRef.current
+    if (closedInteractionNpcId.current !== activeInteractionNpcId) closedInteractionNpcId.current = undefined
+    if (activeInteractionNpcId && closedInteractionNpcId.current !== activeInteractionNpcId) {
+      const interactionNpc = npcs.find(candidate => candidate.id === activeInteractionNpcId)
+      if (interactionNpc && isBeyondNpcInteractionDistance([player.position.x, player.position.y, player.position.z], interactionNpc)) {
+        closedInteractionNpcId.current = activeInteractionNpcId
+        outOfRangeCallback.current()
+      }
+    }
     let x = Number(keys.current.has('d') || keys.current.has('arrowright')) - Number(keys.current.has('a') || keys.current.has('arrowleft'))
     let z = Number(keys.current.has('s') || keys.current.has('arrowdown')) - Number(keys.current.has('w') || keys.current.has('arrowup'))
     const length = Math.hypot(x, z)
@@ -129,7 +144,7 @@ export default function VillageScene({ villageId, onNearbyChange, onInteract }: 
       player.position.z = Math.max(-9.3, Math.min(9.3, player.position.z + z * WALK_SPEED * delta))
     }
     let closest: VillageNpc | undefined
-    let closestDistance = INTERACTION_DISTANCE
+    let closestDistance = NPC_INTERACTION_DISTANCE
     for (const npc of npcs) {
       const distance = Math.hypot(player.position.x - npc.position[0], player.position.z - npc.position[2])
       if (distance <= closestDistance) { closest = npc; closestDistance = distance }

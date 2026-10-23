@@ -95,7 +95,7 @@ export default function App() {
             <color attach="background" args={[game.player.villageId === 'village-a' ? '#b9d2db' : '#b8c5cd']} />
             <ambientLight intensity={1.15} />
             <directionalLight position={[-6, 12, 6]} intensity={2.1} castShadow />
-            <VillageScene key={game.player.villageId} villageId={game.player.villageId} onNearbyChange={setNearby} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setSelectedGood(undefined); setQuantity(1) }} />
+            <VillageScene key={game.player.villageId} villageId={game.player.villageId} onNearbyChange={setNearby} interactionNpcId={interaction?.npcId} onInteractionOutOfRange={() => setInteraction(undefined)} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setSelectedGood(undefined); setQuantity(1) }} />
           </Canvas>
           <div className="scene-caption">{village.name} · {village.theme === 'fields' ? 'campos y caminos de tierra' : 'canteras y casas de piedra'}</div>
         </div>

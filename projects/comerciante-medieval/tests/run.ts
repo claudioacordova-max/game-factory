@@ -30,7 +30,7 @@ import {
   type Family,
   type VillageId,
 } from '../src/engine/index.js'
-import { npcForId, npcsForVillage, VILLAGE_NPCS, VILLAGES } from '../src/scene/world.js'
+import { isBeyondNpcInteractionDistance, npcForId, npcsForVillage, NPC_INTERACTION_DISTANCE, VILLAGE_NPCS, VILLAGES } from '../src/scene/world.js'
 
 let passed = 0
 function equal<T>(actual: T, expected: T, label: string): void {
@@ -800,6 +800,15 @@ test('mapeo 3D contiene ocho NPC vinculados una vez a las familias y negocios de
     ok(npcForId(npc.id) === npc, `${npc.id} se puede resolver para interactuar`)
     for (const coordinate of [...npc.position, ...npc.homePosition, ...npc.businessPosition]) ok(Number.isFinite(coordinate), `${npc.id} tiene posición válida`)
   }
+})
+
+test('el menú contextual conserva el radio de interacción aprobado de 1,85 unidades', () => {
+  const npc = npcForId('npc-farmer-a')!
+  const [npcX, , npcZ] = npc.position
+  equal(NPC_INTERACTION_DISTANCE, 1.85, 'la constante compartida conserva el radio aprobado')
+  equal(isBeyondNpcInteractionDistance([npcX + 1.85, 0, npcZ], npc), false, 'la interacción sigue dentro del radio en el límite')
+  equal(isBeyondNpcInteractionDistance([npcX + 1.8501, 0, npcZ], npc), true, 'se supera el radio al alejarse más de 1,85')
+  equal(isBeyondNpcInteractionDistance([npcX, 0, npcZ + 1.85], npc), false, 'el radio usa la misma distancia horizontal que la proximidad')
 })
 
 test('los destinos 3D corresponden a travelToVillage y cada viaje avanza un día global', () => {

@@ -117,7 +117,7 @@ Las pruebas automáticas cubrirán reglas individuales, conservación de inventa
 | 4 | Jugador, transacciones personales y tiempo; 29 pruebas, build y revisión aprobados. | `11bfaaf` |
 | 5 | Playtesting humano aprobado por el diseñador (23-10-2026): movimiento, exploración de ambos pueblos e interacciones con NPC confirmados; 31 pruebas, build y revisión aprobados. | Cierre local en este commit |
 | 6 | Playtesting humano aprobado por el diseñador (23-10-2026): compras, ventas, límites, rechazos y actualización de dinero/inventario confirmados. 34 pruebas y build aprobados; revisión independiente aprobada. Observación baja pendiente: agregar aserción de reintento tras rechazo. | `fd7bf3f` |
-| 7 | Playtesting humano aprobado por el diseñador (23-10-2026): herramientas de inspección, escenarios y resultados aceptados. Dos ciclos de corrección; 37 pruebas, build, simulaciones de 1/9/36/90 y los ocho escenarios a 9 días/semilla 42 aprobados; revisión independiente sin bloqueos. | Cierre local en este commit |
+| 7 | Playtesting humano aprobado por el diseñador (23-10-2026): herramientas de inspección, escenarios y resultados aceptados. Dos ciclos de corrección; 37 pruebas, build, simulaciones de 1/9/36/90 y los ocho escenarios a 9 días/semilla 42 aprobados; revisión independiente sin bloqueos. | `51e90c6` |
 
 **Estado de la demo:** los siete hitos técnicos están completados y aprobados; no se modificó el balance a partir de los resultados observados.
 

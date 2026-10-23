@@ -51,6 +51,39 @@ select, input[type="number"] { width: 100%; min-height: 2.45rem; padding: .45rem
 .interaction-card .eyebrow { margin-top: .2rem; }
 .close-button { position: absolute; top: .45rem; right: .5rem; width: 2rem; height: 2rem; border: 0; border-radius: 5px; color: #eee; background: transparent; font-size: 1.4rem; cursor: pointer; }
 .footer-note { margin: .8rem 0 0; color: #aeb9ad; font-size: .82rem; }
+.tools-toggle-area { margin-top: 1rem; }
+.tools-toggle { width: auto; }
+.experiment-panel { display: grid; gap: .85rem; margin-top: .75rem; padding: 1rem; border: 1px solid #917748; border-radius: 12px; background: #1d2922; }
+.experiment-heading, .report-section > header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.experiment-heading h2, .report-section h3 { margin: 0; }
+.experiment-note, .parameter-defaults { margin: 0; color: #bfc9bd; font-size: .85rem; line-height: 1.45; }
+.inspection-grid, .family-grid, .parameter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .65rem; }
+.inspection-card, .family-card, .inspection-details, .scenario-details, .report-section { padding: .75rem; border: 1px solid #46564a; border-radius: 8px; background: #222e27; }
+.inspection-card h3, .family-card h4, .report-section h4 { margin: .25rem 0 .5rem; color: #f6e6b7; }
+.inspection-card p, .family-card p, .report-section p { margin: .3rem 0; color: #c9d1c8; font-size: .82rem; line-height: 1.45; overflow-wrap: anywhere; }
+.inspection-card pre, .family-card pre, .report-section pre { max-height: 260px; overflow: auto; margin: .45rem 0; padding: .55rem; border-radius: 5px; color: #d7e4d5; background: #17221c; font-size: .72rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.inspection-details > summary, .scenario-details > summary, details > summary { cursor: pointer; color: #f6e6b7; font-weight: 700; }
+.family-card { align-self: start; }
+.family-card h4 { font-size: .85rem; }
+.business-inspection { padding: .5rem 0; border-top: 1px solid #46564a; }
+.scenario-controls, .parameter-grid { margin-top: .75rem; }
+.scenario-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .6rem; align-items: end; }
+.scenario-controls label, .parameter-grid label { display: grid; gap: .25rem; color: #dce3da; font-size: .78rem; font-weight: 700; }
+.duration-buttons { display: flex; flex-wrap: wrap; gap: .3rem; }
+.duration-buttons button, .report-actions button { padding: .45rem .55rem; border: 1px solid #657565; border-radius: 5px; color: #f0eadc; background: #26352c; cursor: pointer; }
+.scenario-actions, .report-actions { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
+.scenario-actions .option-button { width: auto; }
+.experiment-feedback { margin: 0; color: #f6e6b7; font-size: .84rem; }
+.report-section { display: grid; gap: .55rem; }
+.report-section > header p { margin: .25rem 0; }
+.report-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .45rem; }
+.report-metrics span { padding: .5rem; border-radius: 5px; color: #d9e2d7; background: #17221c; font-size: .8rem; }
+.assertion-pass { color: #d8f0ce !important; }
+.assertion-fail { color: #ffe0d8 !important; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .76rem; }
+th, td { padding: .4rem; border-bottom: 1px solid #46564a; text-align: left; white-space: nowrap; }
+th { color: #f6e6b7; }
 @media (max-width: 900px) {
   .hud-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .time-button { min-height: 3rem; }
@@ -64,4 +97,6 @@ select, input[type="number"] { width: 100%; min-height: 2.45rem; padding: .45rem
   .hud-grid { gap: .4rem; }
   .hud-card { padding: .5rem; }
   .hud-card strong { font-size: .8rem; }
+  .experiment-panel { padding: .6rem; }
+  .experiment-heading, .report-section > header { align-items: flex-start; flex-direction: column; }
 }

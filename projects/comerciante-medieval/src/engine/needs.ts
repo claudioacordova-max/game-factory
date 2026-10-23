@@ -1,8 +1,8 @@
-import { INITIAL_CONFIG, RECIPES, type EconomicState, type Family, type Status, type Tier } from './model.js'
+import { INITIAL_CONFIG, parametersFor, type EconomicParameters, type EconomicState, type Family, type Status, type Tier } from './model.js'
 
-function coverageStatus(days: number): Status {
-  if (days < INITIAL_CONFIG.redCoverageDays) return 'red'
-  if (days < INITIAL_CONFIG.greenCoverageDays) return 'yellow'
+function coverageStatus(days: number, config: EconomicParameters['config'] = INITIAL_CONFIG): Status {
+  if (days < config.redCoverageDays) return 'red'
+  if (days < config.greenCoverageDays) return 'yellow'
   return 'green'
 }
 
@@ -11,19 +11,19 @@ function proportionStatus(current: number, target: number): Status {
   return current * 2 >= target ? 'yellow' : 'red'
 }
 
-function businessNeeds(state: EconomicState, family: Family) {
+function businessNeeds(state: EconomicState, family: Family, parameters = parametersFor(state)) {
   const businesses = family.businessIds.map(id => state.businesses[id]).filter(Boolean)
   const toolStatuses: Status[] = []
   const inputStatuses: Status[] = []
   for (const business of businesses) {
-    const recipe = RECIPES[business.profession]
+    const recipe = parameters.recipes[business.profession]
     if (recipe.requiresTools) {
       toolStatuses.push(business.tools.length === 0 ? 'red' : business.tools.length === 1 ? 'yellow' : 'green')
     }
     const inputEntries = Object.entries(recipe.inputs)
     if (inputEntries.length > 0) {
       const lots = Math.min(...inputEntries.map(([good, count]) => Math.floor(business.productiveInventory[good as keyof typeof business.productiveInventory] / (count ?? 1))))
-      const reserve = INITIAL_CONFIG.inputReserveLots[business.profession as keyof typeof INITIAL_CONFIG.inputReserveLots]
+      const reserve = parameters.config.inputReserveLots[business.profession as keyof typeof parameters.config.inputReserveLots] ?? 0
       inputStatuses.push(lots === 0 ? 'red' : lots < reserve ? 'yellow' : 'green')
     }
   }
@@ -31,18 +31,18 @@ function businessNeeds(state: EconomicState, family: Family) {
   return { tools: worst(toolStatuses), inputs: worst(inputStatuses) }
 }
 
-function currentTierEntryMoney(tier: Tier, family: Family): number {
-  return tier === 1 || tier === 2 ? (200 + 100 * family.members) * 10 : INITIAL_CONFIG.tierThreeMoneyTenths
+function currentTierEntryMoney(tier: Tier, family: Family, parameters: EconomicParameters): number {
+  return tier === 1 || tier === 2 ? (200 + 100 * family.members) * 10 : parameters.config.tierTwoMoneyTenths
 }
 
-export function evaluateNeeds(state: EconomicState, family: Family): void {
+export function evaluateNeeds(state: EconomicState, family: Family, parameters = parametersFor(state)): void {
   const inv = family.household.inventory
-  const business = businessNeeds(state, family)
+  const business = businessNeeds(state, family, parameters)
   const foodDays = family.members === 0 ? 0 : inv.food / family.members
   const firewoodDays = inv.firewood
   const essentials: Family['needs']['essentials'] = {
-    food: coverageStatus(foodDays),
-    firewood: coverageStatus(firewoodDays),
+    food: coverageStatus(foodDays, parameters.config),
+    firewood: coverageStatus(firewoodDays, parameters.config),
     clothing: proportionStatus(family.household.clothingDurabilityDays.length, family.members),
   }
   if (business.tools) essentials.tools = business.tools
@@ -57,11 +57,11 @@ export function evaluateNeeds(state: EconomicState, family: Family): void {
   family.needs = {
     essentials,
     progression,
-    tierOneUpgradeMoneyMet: family.moneyTenths >= (200 + 100 * family.members) * 10,
-    tierThreeUpgradeMoneyMet: family.moneyTenths >= INITIAL_CONFIG.tierTwoMoneyTenths,
+    tierOneUpgradeMoneyMet: family.moneyTenths >= currentTierEntryMoney(1, family, parameters),
+    tierThreeUpgradeMoneyMet: family.moneyTenths >= parameters.config.tierTwoMoneyTenths,
     prosperityGoalsMet: family.tier === 3
       && tierThreeGoals(family).every(status => status === 'green')
-      && family.moneyTenths >= INITIAL_CONFIG.tierThreeMoneyTenths,
+      && family.moneyTenths >= parameters.config.tierThreeMoneyTenths,
   }
 }
 
@@ -94,21 +94,21 @@ function tierThreeGoals(family: Family): Status[] {
 }
 
 /** Re-evaluates down before up and permits at most one upward tier change. */
-export function reevaluateTier(state: EconomicState, family: Family): void {
-  evaluateNeeds(state, family)
+export function reevaluateTier(state: EconomicState, family: Family, parameters = parametersFor(state)): void {
+  evaluateNeeds(state, family, parameters)
   const essentialStatuses = family.needs.essentials
   if (family.tier === 3) {
     const tierTwoSustained = tierTwoGoals(family).every(status => status !== 'red')
-    if (family.moneyTenths < INITIAL_CONFIG.tierTwoMoneyTenths || !tierTwoSustained || anyRed(essentialStatuses)) family.tier = 2
+    if (family.moneyTenths < parameters.config.tierTwoMoneyTenths || !tierTwoSustained || anyRed(essentialStatuses)) family.tier = 2
   }
   if (family.tier === 2) {
-    if (family.moneyTenths < currentTierEntryMoney(2, family) || anyRed(essentialStatuses)) family.tier = 1
+    if (family.moneyTenths < currentTierEntryMoney(2, family, parameters) || anyRed(essentialStatuses)) family.tier = 1
   }
-  evaluateNeeds(state, family)
+  evaluateNeeds(state, family, parameters)
   if (family.tier === 1 && allGreen(family.needs.essentials) && family.needs.tierOneUpgradeMoneyMet) {
     family.tier = 2
   } else if (family.tier === 2 && allGreen(family.needs.essentials) && tierTwoGoals(family).every(status => status === 'green') && family.needs.tierThreeUpgradeMoneyMet) {
     family.tier = 3
   }
-  evaluateNeeds(state, family)
+  evaluateNeeds(state, family, parameters)
 }

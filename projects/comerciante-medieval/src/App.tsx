@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { advancePlayerDay, buyFromBusiness, createInitialGameState, GOODS, GOODS_CATALOG, playerLoadHalfUnits, quoteBuyFromBusiness, quoteSellToNeed, saleGoodsForTarget, sellToNeed, tradeQuantityStatus, tradeTotalTenthsForQuantity, travelToVillage, type GameState, type Good, type PlayerSaleTarget, type VillageId } from './engine/index.js'
 import VillageScene from './scene/VillageScene.js'
 import { npcForId, VILLAGES, type VillageNpc } from './scene/world.js'
+import ExperimentPanel from './ui/ExperimentPanel.js'
 
 type InteractionOption = 'home' | 'business'
 const money = (tenths: number) => `${(tenths / 10).toFixed(1).replace('.', ',')} monedas`
@@ -15,6 +16,7 @@ export default function App() {
   const [selectedGood, setSelectedGood] = useState<Good>()
   const [quantity, setQuantity] = useState(1)
   const [tradeMessage, setTradeMessage] = useState<{ text: string; success: boolean }>()
+  const [showExperiments, setShowExperiments] = useState(false)
   const village = VILLAGES.find(candidate => candidate.id === game.player.villageId)!
   const npc = interaction ? npcForId(interaction.npcId) : undefined
   const family = npc ? game.economy.families[npc.familyId] : undefined
@@ -152,6 +154,10 @@ export default function App() {
           </section>}
         </aside>
       </section>
+      <section className="tools-toggle-area">
+        <button className="option-button tools-toggle" aria-expanded={showExperiments} onClick={() => setShowExperiments(open => !open)}>{showExperiments ? 'Cerrar herramientas de prueba' : 'Abrir herramientas de inspección y prueba'}</button>
+      </section>
+      {showExperiments && <ExperimentPanel game={game} />}
       <footer className="footer-note">Comerciar no avanza el día. Viajar y avanzar procesan una vez la economía de ambos pueblos.</footer>
     </main>
   )

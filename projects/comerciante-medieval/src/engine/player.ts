@@ -1,4 +1,4 @@
-import { GOODS, GOODS_CATALOG, INITIAL_CONFIG, RECIPES, emptyInventory, type EconomicEvent, type EconomicState, type GameState, type Good, type Inventory, type VillageId } from './model.js'
+import { GOODS, GOODS_CATALOG, parametersFor, emptyInventory, type EconomicEvent, type EconomicState, type GameState, type Good, type Inventory, type VillageId } from './model.js'
 import { processImmediateRedPurchases, stepAutonomousDay } from './autonomous.js'
 import { reevaluateTier } from './needs.js'
 import { assertValidState } from './simulation.js'
@@ -12,6 +12,7 @@ export type PlayerActionResult =
 
 function cloneInventory(inventory: Inventory): Inventory { return { ...inventory } }
 function cloneEconomicState(state: EconomicState): EconomicState {
+  const parameters = parametersFor(state)
   return {
     day: state.day,
     families: Object.fromEntries(Object.entries(state.families).map(([id, family]) => [id, {
@@ -27,6 +28,7 @@ function cloneEconomicState(state: EconomicState): EconomicState {
       tools: business.tools.map(tool => ({ ...tool })),
     }])),
     ...(state.waitAvailabilityDays ? { waitAvailabilityDays: { ...state.waitAvailabilityDays } } : {}),
+    parameters,
   }
 }
 
@@ -62,12 +64,13 @@ function commitTrade(state: GameState, economy: EconomicState, playerInventory: 
 /** Buy only from a business's commercial inventory. Checks all constraints before applying any transfer. */
 export function buyFromBusiness(state: GameState, businessId: string, good: Good, quantity: number): PlayerActionResult {
   const economy = state.economy
+  const parameters = parametersFor(economy)
   const business = economy.businesses[businessId]
   if (!business) return reject(state, 'unknown-business', `No existe el negocio ${businessId}.`)
   if (business.villageId !== state.player.villageId) return reject(state, 'wrong-village', 'El negocio está en otro pueblo.')
   if (!validQuantity(quantity)) return reject(state, 'invalid-quantity', 'La cantidad debe ser un entero positivo.')
   if (business.commercialInventory[good] < quantity) return reject(state, 'insufficient-stock', 'El negocio no tiene suficiente mercancía comercial.')
-  const unitPrice = GOODS_CATALOG[good].playerBuyPriceTenths
+  const unitPrice = parameters.catalog[good].playerBuyPriceTenths
   const cost = unitPrice * quantity
   if (state.player.moneyTenths < cost) return reject(state, 'insufficient-funds', 'No tienes dinero suficiente.')
   if (playerLoadHalfUnits(state.player.inventory) + quantity * GOODS_CATALOG[good].weightHalfUnits > state.player.capacityHalfUnits) {
@@ -79,7 +82,7 @@ export function buyFromBusiness(state: GameState, businessId: string, good: Good
   nextBusiness.commercialInventory[good] -= quantity
   const sellerFamily = nextEconomy.families[nextBusiness.familyId]
   sellerFamily.moneyTenths += cost
-  reevaluateTier(nextEconomy, sellerFamily)
+  reevaluateTier(nextEconomy, sellerFamily, parameters)
   const inventory = cloneInventory(state.player.inventory)
   inventory[good] += quantity
   const event: EconomicEvent = { day: economy.day, type: 'player-purchase', familyId: nextBusiness.familyId, businessId, good, quantity, moneyTenths: cost, from: businessId, to: 'player', detail: `Compra del jugador a ${unitPrice / 10} monedas por unidad` }
@@ -149,18 +152,19 @@ function householdNeed(economy: EconomicState, familyId: string, good: Good): Ne
 }
 
 function businessNeed(economy: EconomicState, businessId: string, good: Good): NeedTarget | undefined {
+  const parameters = parametersFor(economy)
   const business = economy.businesses[businessId]
   if (!business) return undefined
   const family = economy.families[business.familyId]
   if (!family) return undefined
   if (good === 'tool') {
-    if (!RECIPES[business.profession].requiresTools) return undefined
+    if (!parameters.recipes[business.profession].requiresTools) return undefined
     const missing = Math.max(0, 2 - business.tools.length)
     return { maxQuantity: missing, basicQuantity: missing, destination: `business:${business.id}:tools`, progressUnits: 0, familyId: family.id }
   }
-  const input = RECIPES[business.profession].inputs[good]
+  const input = parameters.recipes[business.profession].inputs[good]
   if (!input) return undefined
-  const reserveLots = INITIAL_CONFIG.inputReserveLots[business.profession as keyof typeof INITIAL_CONFIG.inputReserveLots]
+  const reserveLots = parameters.config.inputReserveLots[business.profession as keyof typeof parameters.config.inputReserveLots]
   if (reserveLots === undefined) return undefined
   const target = reserveLots * input
   const missing = Math.max(0, target - business.productiveInventory[good])
@@ -181,12 +185,13 @@ export function saleGoodsForTarget(state: GameState, target: PlayerSaleTarget): 
 
 /** Calculates a current purchase maximum for display; buyFromBusiness remains the authority at confirmation. */
 export function quoteBuyFromBusiness(state: GameState, businessId: string, good: Good): PlayerTradeQuote {
+  const parameters = parametersFor(state.economy)
   const business = state.economy.businesses[businessId]
-  const unitPriceTenths = GOODS_CATALOG[good].playerBuyPriceTenths
+  const unitPriceTenths = parameters.catalog[good].playerBuyPriceTenths
   const loadNow = playerLoadHalfUnits(state.player.inventory)
   const maxByStock = business?.villageId === state.player.villageId ? business.commercialInventory[good] : 0
   const maxByMoney = Math.floor(state.player.moneyTenths / unitPriceTenths)
-  const maxByLoad = Math.floor((state.player.capacityHalfUnits - loadNow) / GOODS_CATALOG[good].weightHalfUnits)
+  const maxByLoad = Math.floor((state.player.capacityHalfUnits - loadNow) / parameters.catalog[good].weightHalfUnits)
   const maxQuantity = Math.max(0, Math.min(maxByStock, maxByMoney, maxByLoad))
   const totalTenths = maxQuantity * unitPriceTenths
   let rejection: string | undefined
@@ -195,12 +200,13 @@ export function quoteBuyFromBusiness(state: GameState, businessId: string, good:
   else if (maxByStock <= 0) rejection = 'No hay existencias comerciales disponibles.'
   else if (maxByMoney <= 0) rejection = 'No tienes dinero suficiente.'
   else if (maxByLoad <= 0) rejection = 'No tienes capacidad de carga disponible.'
-  return { good, unitPriceTenths, maxQuantity, totalTenths, moneyAfterTenths: state.player.moneyTenths - totalTenths, loadAfterHalfUnits: loadNow + maxQuantity * GOODS_CATALOG[good].weightHalfUnits, ...(rejection ? { rejection } : {}) }
+  return { good, unitPriceTenths, maxQuantity, totalTenths, moneyAfterTenths: state.player.moneyTenths - totalTenths, loadAfterHalfUnits: loadNow + maxQuantity * parameters.catalog[good].weightHalfUnits, ...(rejection ? { rejection } : {}) }
 }
 
 /** Calculates the currently acceptable sale maximum, including carried stock and family funds. */
 export function quoteSellToNeed(state: GameState, target: PlayerSaleTarget, good: Good): PlayerTradeQuote {
-  const unitPriceTenths = GOODS_CATALOG[good].playerSellPriceTenths
+  const parameters = parametersFor(state.economy)
+  const unitPriceTenths = parameters.catalog[good].playerSellPriceTenths
   const loadNow = playerLoadHalfUnits(state.player.inventory)
   let need: NeedTarget | undefined
   let family: EconomicState['families'][string] | undefined
@@ -227,11 +233,12 @@ export function quoteSellToNeed(state: GameState, target: PlayerSaleTarget, good
   else if (state.player.inventory[good] <= 0) rejection = 'No llevas este bien.'
   else if (acceptable <= 0) rejection = need.progressUnits > 0 && progressRemaining === 0 ? 'La familia ya recibió su bien de progreso de hoy.' : 'La necesidad ya está cubierta.'
   else if (family.moneyTenths < unitPriceTenths) rejection = 'La familia no tiene dinero suficiente.'
-  return { good, unitPriceTenths, maxQuantity, totalTenths, moneyAfterTenths: state.player.moneyTenths + totalTenths, loadAfterHalfUnits: loadNow - maxQuantity * GOODS_CATALOG[good].weightHalfUnits, ...(rejection ? { rejection } : {}) }
+  return { good, unitPriceTenths, maxQuantity, totalTenths, moneyAfterTenths: state.player.moneyTenths + totalTenths, loadAfterHalfUnits: loadNow - maxQuantity * parameters.catalog[good].weightHalfUnits, ...(rejection ? { rejection } : {}) }
 }
 
 /** Offer carried goods directly to one household or the relevant business. Legacy callers may accept an affordable partial quantity. */
 export function sellToNeed(state: GameState, target: PlayerSaleTarget, good: Good, quantity: number, options: { requireFullAcceptance?: boolean } = {}): PlayerActionResult {
+  const parameters = parametersFor(state.economy)
   if (!validQuantity(quantity)) return reject(state, 'invalid-quantity', 'La cantidad debe ser un entero positivo.')
   if (state.player.inventory[good] < quantity) {
     if (options.requireFullAcceptance) {
@@ -276,7 +283,7 @@ export function sellToNeed(state: GameState, target: PlayerSaleTarget, good: Goo
     }
     return reject(state, 'not-needed', 'La cantidad ofrecida supera la necesidad aceptable actual.')
   }
-  const unitPrice = GOODS_CATALOG[good].playerSellPriceTenths
+  const unitPrice = parameters.catalog[good].playerSellPriceTenths
   const family = state.economy.families[need.familyId]
   const accepted = Math.min(quantity, Math.floor(family.moneyTenths / unitPrice))
   if (options.requireFullAcceptance && accepted < quantity) {
@@ -294,14 +301,14 @@ export function sellToNeed(state: GameState, target: PlayerSaleTarget, good: Goo
   nextFamily.moneyTenths -= cost
   if (target.type === 'household') {
     nextFamily.household.inventory[good] += accepted
-    if (good === 'clothing') nextFamily.household.clothingDurabilityDays.push(...Array.from({ length: accepted }, () => INITIAL_CONFIG.clothingDurabilityDays))
+      if (good === 'clothing') nextFamily.household.clothingDurabilityDays.push(...Array.from({ length: accepted }, () => parameters.config.clothingDurabilityDays))
   } else if (good === 'tool') {
     const nextBusiness = nextEconomy.businesses[target.businessId]
-    nextBusiness.tools.push(...Array.from({ length: accepted }, () => ({ remainingWorkDays: INITIAL_CONFIG.toolWorkDays })))
+    nextBusiness.tools.push(...Array.from({ length: accepted }, () => ({ remainingWorkDays: parameters.config.toolWorkDays })))
   } else {
     nextEconomy.businesses[target.businessId].productiveInventory[good] += accepted
   }
-  reevaluateTier(nextEconomy, nextFamily)
+  reevaluateTier(nextEconomy, nextFamily, parameters)
   const nextPlayerInventory = cloneInventory(state.player.inventory)
   nextPlayerInventory[good] -= accepted
   const progress = { ...state.progressBoughtToday }

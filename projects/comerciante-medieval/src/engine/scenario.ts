@@ -1,4 +1,4 @@
-import { emptyInventory, INITIAL_CONFIG, type Business, type EconomicState, type Family, type Profession, type VillageId } from './model.js'
+import { DEFAULT_ECONOMIC_PARAMETERS, emptyInventory, parametersFor, type Business, type EconomicParameters, type EconomicState, type Family, type Profession, type VillageId } from './model.js'
 import { evaluateNeeds } from './needs.js'
 
 interface BusinessStart {
@@ -31,40 +31,40 @@ const PROFESSION_NAMES: Record<Profession, string> = {
   jeweler: 'Joyero',
 }
 
-function makeFamily(id: string, name: string, villageId: VillageId, businessId: string): Family {
+function makeFamily(id: string, name: string, villageId: VillageId, businessId: string, parameters: EconomicParameters): Family {
   const household = emptyInventory()
-  household.food = INITIAL_CONFIG.householdFood
-  household.firewood = INITIAL_CONFIG.householdFirewood
-  household.clothing = INITIAL_CONFIG.householdClothing
+  household.food = parameters.config.householdFood
+  household.firewood = parameters.config.householdFirewood
+  household.clothing = parameters.config.householdClothing
   return {
     id,
     name,
     villageId,
     members: 2,
     adults: 2,
-    moneyTenths: INITIAL_CONFIG.familyMoneyTenths,
+    moneyTenths: parameters.config.familyMoneyTenths,
     tier: 1,
     household: {
       inventory: household,
-      clothingDurabilityDays: Array.from({ length: INITIAL_CONFIG.householdClothing }, () => INITIAL_CONFIG.clothingDurabilityDays),
+      clothingDurabilityDays: Array.from({ length: parameters.config.householdClothing }, () => parameters.config.clothingDurabilityDays),
     },
     businessIds: [businessId],
     needs: { essentials: {}, progression: {}, tierOneUpgradeMoneyMet: false, tierThreeUpgradeMoneyMet: false, prosperityGoalsMet: false },
   }
 }
 
-export function createInitialState(): EconomicState {
+export function createInitialState(parameters: EconomicParameters = DEFAULT_ECONOMIC_PARAMETERS): EconomicState {
   const families: Record<string, Family> = {}
   const businesses: Record<string, Business> = {}
   for (const start of BUSINESS_STARTS) {
     const familyId = `family-${start.id}`
     const commercialInventory = Object.assign(emptyInventory(), start.commercial)
     const productiveInventory = Object.assign(emptyInventory(), start.productive)
-    const tools = Array.from({ length: start.tools ?? 0 }, () => ({ remainingWorkDays: INITIAL_CONFIG.toolWorkDays }))
+    const tools = Array.from({ length: start.tools ?? 0 }, () => ({ remainingWorkDays: parameters.config.toolWorkDays }))
     businesses[start.id] = { id: start.id, familyId, villageId: start.villageId, profession: start.profession, commercialInventory, productiveInventory, tools }
-    families[familyId] = makeFamily(familyId, `${PROFESSION_NAMES[start.profession]} ${start.villageId === 'village-a' ? 'A' : 'B'}`, start.villageId, start.id)
+    families[familyId] = makeFamily(familyId, `${PROFESSION_NAMES[start.profession]} ${start.villageId === 'village-a' ? 'A' : 'B'}`, start.villageId, start.id, parameters)
   }
-  const state: EconomicState = { day: INITIAL_CONFIG.startingDay, families, businesses }
-  for (const family of Object.values(families)) evaluateNeeds(state, family)
+  const state: EconomicState = { day: parameters.config.startingDay, families, businesses, parameters }
+  for (const family of Object.values(families)) evaluateNeeds(state, family, parametersFor(state))
   return state
 }

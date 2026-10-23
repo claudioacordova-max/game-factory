@@ -59,6 +59,44 @@ export interface NeedReport {
   prosperityGoalsMet: boolean
 }
 
+export interface ExperimentParameterOverrides {
+  playerBuyTariffPermille: number
+  playerSellTariffPermille: number
+  productionOutputPermille: number
+  productionFrequencyPermille: number
+  clothingDurabilityDays: number
+  toolWorkDays: number
+  redCoverageDays: number
+  greenCoverageDays: number
+  yellowPurchaseWaitDays: number
+  tierThreeEntryMoneyTenths: number
+  tierThreeProsperityMoneyTenths: number
+}
+
+export interface EconomicParameters {
+  config: {
+    startingDay: number
+    familyMoneyTenths: number
+    householdFood: number
+    householdFirewood: number
+    householdClothing: number
+    clothingDurabilityDays: number
+    toolWorkDays: number
+    foodPerMemberPerDay: number
+    firewoodPerFamilyPerDay: number
+    redCoverageDays: number
+    greenCoverageDays: number
+    inputReserveLots: Partial<Record<Profession, number>>
+    toolGreenCount: number
+    tierTwoMoneyTenths: number
+    tierThreeMoneyTenths: number
+    yellowPurchaseWaitDays: number
+  }
+  catalog: Record<Good, GoodDefinition>
+  recipes: Record<Profession, Recipe>
+  experiment: ExperimentParameterOverrides
+}
+
 export interface Family {
   id: string
   name: string
@@ -79,6 +117,8 @@ export interface EconomicState {
   businesses: Record<string, Business>
   /** Consecutive economic days a required good has been available to a family. */
   waitAvailabilityDays?: Record<string, number>
+  /** Optional isolated overrides used only by reproducible experiment scenarios. */
+  parameters?: EconomicParameters
 }
 
 export type EconomicEventType = 'consumption' | 'clothing-wear' | 'production' | 'production-input' | 'tool-wear' | 'purchase' | 'internal-transfer' | 'caravan-sale' | 'caravan-supply' | 'tier-change' | 'player-purchase' | 'player-sale' | 'manual-day' | 'player-travel'
@@ -150,7 +190,53 @@ export const INITIAL_CONFIG = {
   toolGreenCount: 2,
   tierTwoMoneyTenths: 10000,
   tierThreeMoneyTenths: 20000,
+  yellowPurchaseWaitDays: 2,
 } as const
+
+export const DEFAULT_EXPERIMENT_PARAMETERS: ExperimentParameterOverrides = {
+  playerBuyTariffPermille: 900,
+  playerSellTariffPermille: 1100,
+  productionOutputPermille: 1000,
+  productionFrequencyPermille: 1000,
+  clothingDurabilityDays: INITIAL_CONFIG.clothingDurabilityDays,
+  toolWorkDays: INITIAL_CONFIG.toolWorkDays,
+  redCoverageDays: INITIAL_CONFIG.redCoverageDays,
+  greenCoverageDays: INITIAL_CONFIG.greenCoverageDays,
+  yellowPurchaseWaitDays: INITIAL_CONFIG.yellowPurchaseWaitDays,
+  tierThreeEntryMoneyTenths: INITIAL_CONFIG.tierTwoMoneyTenths,
+  tierThreeProsperityMoneyTenths: INITIAL_CONFIG.tierThreeMoneyTenths,
+}
+
+export function createEconomicParameters(overrides: Partial<ExperimentParameterOverrides> = {}): EconomicParameters {
+  const experiment = { ...DEFAULT_EXPERIMENT_PARAMETERS, ...overrides }
+  const config: EconomicParameters['config'] = {
+    ...INITIAL_CONFIG,
+    clothingDurabilityDays: experiment.clothingDurabilityDays,
+    toolWorkDays: experiment.toolWorkDays,
+    redCoverageDays: experiment.redCoverageDays,
+    greenCoverageDays: experiment.greenCoverageDays,
+    yellowPurchaseWaitDays: experiment.yellowPurchaseWaitDays,
+    tierTwoMoneyTenths: experiment.tierThreeEntryMoneyTenths,
+    tierThreeMoneyTenths: experiment.tierThreeProsperityMoneyTenths,
+  }
+  const catalog = Object.fromEntries(GOODS.map(good => [good, {
+    ...GOODS_CATALOG[good],
+    playerBuyPriceTenths: Math.round(GOODS_CATALOG[good].referencePriceTenths * experiment.playerBuyTariffPermille / 1000),
+    playerSellPriceTenths: Math.round(GOODS_CATALOG[good].referencePriceTenths * experiment.playerSellTariffPermille / 1000),
+  }])) as Record<Good, GoodDefinition>
+  const recipes = Object.fromEntries(Object.entries(RECIPES).map(([profession, recipe]) => [profession, {
+    ...recipe,
+    periodDays: Math.max(1, Math.round(recipe.periodDays * 1000 / experiment.productionFrequencyPermille)),
+    outputs: Object.fromEntries(Object.entries(recipe.outputs).map(([good, amount]) => [good, Math.max(1, Math.round((amount ?? 0) * experiment.productionOutputPermille / 1000))])),
+  }])) as Record<Profession, Recipe>
+  return { config, catalog, recipes, experiment }
+}
+
+export const DEFAULT_ECONOMIC_PARAMETERS = createEconomicParameters()
+
+export function parametersFor(state: EconomicState): EconomicParameters {
+  return state.parameters ?? DEFAULT_ECONOMIC_PARAMETERS
+}
 
 export function emptyInventory(): Inventory {
   return { food: 0, firewood: 0, wood: 0, metal: 0, cloth: 0, tool: 0, clothing: 0, furniture: 0, jewelry: 0 }

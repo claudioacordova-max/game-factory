@@ -1,4 +1,4 @@
-import { GOODS, RECIPES, INITIAL_CONFIG, type Business, type EconomicState, type Family, type Good, type Inventory, type ToolDurability } from './model.js'
+import { GOODS, parametersFor, type Business, type EconomicState, type Family, type Good, type Inventory, type ToolDurability } from './model.js'
 import { reevaluateTier } from './needs.js'
 
 function cloneInventory(inventory: Inventory): Inventory {
@@ -24,6 +24,7 @@ function cloneFamily(family: Family): Family {
 }
 
 export function assertValidState(state: EconomicState): void {
+  const parameters = parametersFor(state)
   if (!Number.isInteger(state.day) || state.day < 1) throw new Error('El día debe ser un entero positivo.')
   for (const family of Object.values(state.families)) {
     if (!Number.isInteger(family.moneyTenths) || family.moneyTenths < 0) throw new Error(`Saldo inválido en ${family.id}.`)
@@ -37,7 +38,7 @@ export function assertValidState(state: EconomicState): void {
     if (family.household.inventory.clothing !== family.household.clothingDurabilityDays.length) {
       throw new Error(`La ropa utilizable debe coincidir con su durabilidad en ${family.id}.`)
     }
-    if (family.household.clothingDurabilityDays.some(days => !Number.isInteger(days) || days < 1 || days > INITIAL_CONFIG.clothingDurabilityDays)) {
+    if (family.household.clothingDurabilityDays.some(days => !Number.isInteger(days) || days < 1 || days > parameters.config.clothingDurabilityDays)) {
       throw new Error(`Durabilidad de ropa inválida en ${family.id}.`)
     }
   }
@@ -45,32 +46,32 @@ export function assertValidState(state: EconomicState): void {
     for (const inventory of [business.commercialInventory, business.productiveInventory]) {
       for (const good of GOODS) if (!Number.isInteger(inventory[good]) || inventory[good] < 0) throw new Error(`Inventario inválido: ${business.id}/${good}.`)
     }
-    if (business.tools.some(tool => !Number.isInteger(tool.remainingWorkDays) || tool.remainingWorkDays < 1 || tool.remainingWorkDays > INITIAL_CONFIG.toolWorkDays)) {
+    if (business.tools.some(tool => !Number.isInteger(tool.remainingWorkDays) || tool.remainingWorkDays < 1 || tool.remainingWorkDays > parameters.config.toolWorkDays)) {
       throw new Error(`Durabilidad de herramienta inválida en ${business.id}.`)
     }
   }
 }
 
-function consumeHouseholdNeeds(family: Family): void {
-  const foodNeeded = family.members * INITIAL_CONFIG.foodPerMemberPerDay
+function consumeHouseholdNeeds(family: Family, parameters: ReturnType<typeof parametersFor>): void {
+  const foodNeeded = family.members * parameters.config.foodPerMemberPerDay
   family.household.inventory.food = Math.max(0, family.household.inventory.food - foodNeeded)
-  family.household.inventory.firewood = Math.max(0, family.household.inventory.firewood - INITIAL_CONFIG.firewoodPerFamilyPerDay)
+  family.household.inventory.firewood = Math.max(0, family.household.inventory.firewood - parameters.config.firewoodPerFamilyPerDay)
   family.household.clothingDurabilityDays = family.household.clothingDurabilityDays
     .map(days => days - 1)
     .filter(days => days > 0)
   family.household.inventory.clothing = family.household.clothingDurabilityDays.length
 }
 
-function hasIngredients(business: Business): boolean {
-  const recipe = RECIPES[business.profession]
+function hasIngredients(business: Business, parameters: ReturnType<typeof parametersFor>): boolean {
+  const recipe = parameters.recipes[business.profession]
   return Object.entries(recipe.inputs).every(([good, amount]) => business.productiveInventory[good as Good] >= (amount ?? 0))
 }
 
-function produce(business: Business, day: number): void {
-  const recipe = RECIPES[business.profession]
+function produce(business: Business, day: number, parameters: ReturnType<typeof parametersFor>): void {
+  const recipe = parameters.recipes[business.profession]
   if (day % recipe.periodDays !== 0) return
   if (recipe.requiresTools && business.tools.length === 0) return
-  if (!hasIngredients(business)) return
+  if (!hasIngredients(business, parameters)) return
 
   for (const [good, amount] of Object.entries(recipe.inputs)) {
     business.productiveInventory[good as Good] -= amount ?? 0
@@ -90,16 +91,18 @@ function produce(business: Business, day: number): void {
  * number; a missed recipe does not accrue debt and retries only on its next multiple.
  */
 export function stepEconomicDay(previous: EconomicState): EconomicState {
+  const parameters = parametersFor(previous)
   assertValidState(previous)
   const state: EconomicState = {
     day: previous.day + 1,
     families: Object.fromEntries(Object.entries(previous.families).map(([id, family]) => [id, cloneFamily(family)])),
     businesses: Object.fromEntries(Object.entries(previous.businesses).map(([id, business]) => [id, cloneBusiness(business)])),
     ...(previous.waitAvailabilityDays ? { waitAvailabilityDays: { ...previous.waitAvailabilityDays } } : {}),
+    ...(previous.parameters ? { parameters: previous.parameters } : {}),
   }
-  for (const family of Object.values(state.families)) consumeHouseholdNeeds(family)
-  for (const business of Object.values(state.businesses)) produce(business, state.day)
-  for (const family of Object.values(state.families)) reevaluateTier(state, family)
+  for (const family of Object.values(state.families)) consumeHouseholdNeeds(family, parameters)
+  for (const business of Object.values(state.businesses)) produce(business, state.day, parameters)
+  for (const family of Object.values(state.families)) reevaluateTier(state, family, parameters)
   assertValidState(state)
   return state
 }

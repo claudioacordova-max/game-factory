@@ -39,4 +39,13 @@ npm run simulate
 
 También se puede indicar otra duración entera, por ejemplo `npm run simulate -- 18`.
 
+El panel **Herramientas de inspección y prueba** está separado de la partida normal y empieza cerrado. Permite inspeccionar hogares, estados de necesidad, inventarios separados, durabilidad, negocios, jugador y calendario/operaciones de la caravana; ejecutar los escenarios del §12 con 1, 9, 36, 90 o cualquier duración; y consultar, copiar o exportar informes diarios y por ciclo. Cada ejecución reinicia al escenario elegido. Los controles de tarifas, producción, frecuencia, durabilidades y umbrales se aplican solo a esa ejecución y parten de los valores predeterminados aprobados; restaurarlos no cambia la partida abierta.
+
+Ejecutar todos los escenarios por nueve días con semilla registrada, o uno específico:
+
+```sh
+npm run simulate -- --scenario all --days 9 --seed 42
+npm run simulate -- --scenario trade-opportunity --days 9 --seed 42
+```
+
 Modifica la escena según la especificación aprobada para este juego.

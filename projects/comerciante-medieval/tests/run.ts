@@ -22,6 +22,10 @@ import {
   saleGoodsForTarget,
   tradeQuantityStatus,
   tradeTotalTenthsForQuantity,
+  createEconomicParameters,
+  DEFAULT_EXPERIMENT_PARAMETERS,
+  EXPERIMENT_SCENARIOS,
+  runExperimentScenario,
   type EconomicState,
   type Family,
   type VillageId,
@@ -315,6 +319,56 @@ test('recorrido compra, viaje de un día y venta sincroniza estado integrado y r
   equal(rejected.state.player.moneyTenths, sale.state.player.moneyTenths, 'rechazo conserva dinero')
   equal(rejected.state.player.inventory.food, sale.state.player.inventory.food, 'rechazo conserva carga')
   equal(sale.state.economy.day, 2, 'ventas tampoco avanzan día')
+})
+
+test('panel Hito 7 reproduce asserts de los ocho escenarios sin cambiar el motor normal', () => {
+  for (const scenario of EXPERIMENT_SCENARIOS) {
+    const first = runExperimentScenario(scenario.id, 1, DEFAULT_EXPERIMENT_PARAMETERS, 41)
+    const second = runExperimentScenario(scenario.id, 1, DEFAULT_EXPERIMENT_PARAMETERS, 41)
+    ok(first.assertions.length > 0 && first.assertions.every(item => item.passed), `${scenario.id}: todos los asserts pasan`)
+    equal(JSON.stringify(first), JSON.stringify(second), `${scenario.id}: mismo escenario/semilla produce mismo informe`)
+    equal(first.daily.length, 1, `${scenario.id}: resumen diario consultable`)
+  }
+})
+
+test('el escenario de regresión valida pago, descenso, conservación y compras posteriores de tramo 2', () => {
+  const report = runExperimentScenario('tier-regression', 1, DEFAULT_EXPERIMENT_PARAMETERS, 41)
+  equal(report.assertions.length, 3, 'aserciones funcionales del escenario')
+  ok(report.assertions.every(check => check.passed), `el flujo de regresión falla alguna aserción: ${JSON.stringify(report.assertions)}`)
+  const saleRegression = report.assertions.find(check => check.label.startsWith('Venta exacta en tramo 3'))
+  ok(saleRegression?.passed === true, `la transacción no causó descenso con conservación exacta: ${JSON.stringify(saleRegression)}`)
+  const tierTwoDemand = report.assertions.find(check => check.label.startsWith('Las ofertas posteriores'))
+  ok(tierTwoDemand?.passed === true, `las necesidades posteriores no corresponden a tramo 2: ${JSON.stringify(tierTwoDemand)}`)
+  const subsequentPurchase = report.assertions.find(check => check.label.startsWith('Compra posterior'))
+  ok(subsequentPurchase?.passed === true, `la compra posterior no fue válida según tramo 2: ${JSON.stringify(subsequentPurchase)}`)
+  equal(report.setupActions.length, 6, 'operaciones comerciales reales del escenario')
+  ok(report.setupActions.every(action => action.accepted), `alguna operación del flujo no se completó: ${JSON.stringify(report.setupActions)}`)
+  ok(report.setupActions.some(action => action.label.includes('Venta posterior de joya') && action.accepted), 'la familia acepta una compra posterior conforme a su tramo actual')
+})
+
+test('parámetros experimentales aislados afectan tarifas, producción, durabilidades y umbrales', () => {
+  const parameters = createEconomicParameters({ playerBuyTariffPermille: 800, playerSellTariffPermille: 1200, productionOutputPermille: 1500, clothingDurabilityDays: 40, toolWorkDays: 30, redCoverageDays: 5, greenCoverageDays: 12, yellowPurchaseWaitDays: 3, tierThreeEntryMoneyTenths: 12000, tierThreeProsperityMoneyTenths: 24000 })
+  const economy = createInitialState(parameters)
+  equal(economy.families['family-farmer-a'].household.clothingDurabilityDays[0], 40, 'duración de ropa de escenario')
+  equal(economy.businesses['miner-b'].tools[0].remainingWorkDays, 30, 'duración de herramienta de escenario')
+  economy.families['family-farmer-a'].household.inventory.firewood = 4
+  evaluateNeeds(economy, economy.families['family-farmer-a'])
+  equal(economy.families['family-farmer-a'].needs.essentials.firewood, 'red', 'umbral rojo experimental')
+  const game = createInitialGameState(economy)
+  equal(quoteBuyFromBusiness(game, 'farmer-a', 'food').unitPriceTenths, 40, 'tarifa de compra de prueba')
+  equal(quoteSellToNeed(game, { type: 'household', familyId: 'family-farmer-a' }, 'food').unitPriceTenths, 60, 'tarifa de venta de prueba')
+  const report = simulateDays(1, createInitialState(parameters))
+  equal(report.events.find(event => event.type === 'production' && event.businessId === 'farmer-a' && event.good === 'food')?.quantity, 15, 'producción configurable aplicada al ciclo')
+  const shortWait = createEconomicParameters({ yellowPurchaseWaitDays: 1 })
+  const defaultWait = simulateDays(1, createInitialState())
+  const shortWaitRun = simulateDays(1, createInitialState(shortWait))
+  equal(defaultWait.events.some(event => event.type === 'internal-transfer' && event.familyId === 'family-farmer-a' && event.good === 'food'), false, 'espera amarilla predeterminada no compra antes del segundo día disponible')
+  equal(shortWaitRun.events.some(event => event.type === 'internal-transfer' && event.familyId === 'family-farmer-a' && event.good === 'food'), true, 'frecuencia amarilla configurable procesa en la primera oportunidad')
+  const fasterProduction = createEconomicParameters({ productionFrequencyPermille: 2000 })
+  equal(fasterProduction.recipes.blacksmith.periodDays, 2, 'frecuencia de receta configurable')
+  equal(simulateDays(1, createInitialState(fasterProduction)).events.some(event => event.type === 'production' && event.businessId === 'blacksmith-a' && event.good === 'tool'), true, 'frecuencia nueva aplicada al día de producción')
+  equal(createInitialState().parameters?.experiment.playerBuyTariffPermille, 900, 'partida normal conserva tarifa predeterminada')
+  equal(createInitialState().parameters?.experiment.productionOutputPermille, 1000, 'partida normal conserva producción predeterminada')
 })
 
 test('oferta explícita mayor que necesidad actual se rechaza completa y no altera el estado', () => {

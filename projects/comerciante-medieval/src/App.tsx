@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { advancePlayerDay, buyFromBusiness, createInitialGameState, GOODS, GOODS_CATALOG, playerLoadHalfUnits, quoteBuyFromBusiness, saleOffersForFamily, sellToNeed, travelToVillage, type GameState, type Good, type PlayerSaleOffer, type VillageId } from './engine/index.js'
 import VillageScene from './scene/VillageScene.js'
-import { npcForId, VILLAGES, type VillageNpc } from './scene/world.js'
+import { npcForId, VILLAGES } from './scene/world.js'
+import type { ContextInteractionTarget } from './scene/contextInteraction.js'
 import ExperimentPanel from './ui/ExperimentPanel.js'
 
 type TradeMode = 'buy' | 'sell'
@@ -29,8 +30,9 @@ function offerRecipient(offer: TradeOffer, state: GameState): string {
 
 export default function App() {
   const [game, setGame] = useState<GameState>(() => createInitialGameState())
-  const [nearby, setNearby] = useState<VillageNpc>()
+  const [nearby, setNearby] = useState<ContextInteractionTarget>()
   const [interaction, setInteraction] = useState<{ npcId: string }>()
+  const [travelMenuOpen, setTravelMenuOpen] = useState(false)
   const [tradeMode, setTradeMode] = useState<TradeMode>('buy')
   const [tradeMessage, setTradeMessage] = useState<{ text: string; success: boolean }>()
   const [showExperiments, setShowExperiments] = useState(false)
@@ -66,6 +68,7 @@ export default function App() {
       setGame(result.state)
       setNearby(undefined)
       setInteraction(undefined)
+      setTravelMenuOpen(false)
       setTradeMessage(undefined)
     }
   }
@@ -112,17 +115,20 @@ export default function App() {
             <color attach="background" args={[game.player.villageId === 'village-a' ? '#b9d2db' : '#b8c5cd']} />
             <ambientLight intensity={1.15} />
             <directionalLight position={[-6, 12, 6]} intensity={2.1} castShadow />
-            <VillageScene key={game.player.villageId} villageId={game.player.villageId} onNearbyChange={setNearby} interactionPromptRef={interactionPromptRef} playerFacingRef={playerFacingRef} interactionNpcId={interaction?.npcId} onInteractionOutOfRange={() => setInteraction(undefined)} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setTradeMode('buy') }} />
+            <VillageScene key={game.player.villageId} villageId={game.player.villageId} day={game.economy.day} onNearbyChange={setNearby} interactionPromptRef={interactionPromptRef} playerFacingRef={playerFacingRef} interactionNpcId={interaction?.npcId} contextMenuOpen={travelMenuOpen || Boolean(interaction)} onOpenTravelMenu={() => setTravelMenuOpen(true)} onCloseContextMenu={() => { setTravelMenuOpen(false); setInteraction(undefined) }} onInteractionOutOfRange={() => setInteraction(undefined)} onInteract={target => { setTradeMessage(undefined); setInteraction({ npcId: target.id }); setTravelMenuOpen(false); setTradeMode('buy') }} />
           </Canvas>
           <div className="scene-caption">{village.name} · {village.theme === 'fields' ? 'campos y caminos de tierra' : 'canteras y casas de piedra'}</div>
-          <div ref={interactionPromptRef} className="interaction-prompt" aria-live="polite" aria-hidden={!nearby}>
-            {nearby && <span className="prompt-copy"><strong>{nearby.name}</strong><small>{nearby.role}</small></span>}
-            <kbd>E</kbd><span>Hablar</span>
+          <div ref={interactionPromptRef} className="interaction-prompt" aria-live="polite" aria-hidden={!nearby || travelMenuOpen || Boolean(interaction)}>
+            {nearby?.kind === 'npc'
+              ? <span className="prompt-copy"><strong>{nearby.npc.name}</strong><small>{nearby.npc.role}</small></span>
+              : nearby?.kind === 'exit' && <span className="prompt-copy"><strong>Salida del pueblo</strong><small>Viajar a otro pueblo</small></span>}
+            <kbd>E</kbd><span>{nearby?.kind === 'exit' ? 'Viajar' : 'Hablar'}</span>
           </div>
-          <section className="panel-card travel-overlay" aria-label="Viajar">
-            <h2>Viajar</h2><p>El viaje cambia de pueblo y avanza un día económico.</p>
+          {travelMenuOpen && <section className="panel-card travel-overlay" aria-label="Destinos de viaje" role="dialog" aria-modal="false">
+            <button className="close-button" aria-label="Cerrar destinos" onClick={() => setTravelMenuOpen(false)}>×</button>
+            <p className="eyebrow">Salida del pueblo</p><h2>Elegir destino</h2><p>El viaje cambia de pueblo y avanza un día económico.</p>
             {villageOptions.map(destination => <button className="travel-button" key={destination.id} onClick={() => travel(destination.id)}>Viajar a {destination.name} · 1 día</button>)}
-          </section>
+          </section>}
           {interaction && npc && family && business && <aside className="panel-card interaction-card interaction-overlay" aria-live="polite">
             <button className="close-button" aria-label="Cerrar comercio" onClick={() => setInteraction(undefined)}>×</button>
             <p className="eyebrow">{npc.role} · {village.name}</p><h2>{npc.name}</h2>

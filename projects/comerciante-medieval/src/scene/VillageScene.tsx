@@ -1,18 +1,23 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Vector3, type Group } from 'three'
-import { isBeyondNpcInteractionDistance, NPC_INTERACTION_DISTANCE, npcsForVillage, type ProfessionKey, type VillageNpc } from './world.js'
+import { isBeyondNpcInteractionDistance, npcsForVillage, type ProfessionKey, type VillageNpc } from './world.js'
 import { clampedMovementStep } from './playerOrientation.js'
+import { closestContextInteraction, isCaravanPresentInVillage, type ContextInteractionTarget } from './contextInteraction.js'
 import type { VillageId } from '../engine/model.js'
 
 interface VillageSceneProps {
   villageId: VillageId
-  onNearbyChange: (npc: VillageNpc | undefined) => void
+  onNearbyChange: (target: ContextInteractionTarget | undefined) => void
   interactionPromptRef: { current: HTMLDivElement | null }
   playerFacingRef: { current: number }
   onInteract: (npc: VillageNpc) => void
+  onOpenTravelMenu: () => void
+  onCloseContextMenu: () => void
+  contextMenuOpen: boolean
   interactionNpcId?: string
   onInteractionOutOfRange: () => void
+  day: number
 }
 
 const WALK_SPEED = 4.5
@@ -21,6 +26,42 @@ const MOVEMENT_KEYS = ['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 
 function isEditableTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (
     target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+  )
+}
+
+function VillageExit({ villageId }: { villageId: VillageId }) {
+  const stone = villageId === 'village-b'
+  const support = stone ? '#88877e' : '#745239'
+  const lintel = stone ? '#706f68' : '#62442f'
+  return (
+    <group position={[0, 0, -8.9]}>
+      <mesh position={[-2.05, 1.25, 0]} castShadow><boxGeometry args={[0.62, 2.5, 0.72]} /><meshStandardMaterial color={support} /></mesh>
+      <mesh position={[2.05, 1.25, 0]} castShadow><boxGeometry args={[0.62, 2.5, 0.72]} /><meshStandardMaterial color={support} /></mesh>
+      <mesh position={[0, 2.55, 0]} castShadow><boxGeometry args={[4.7, 0.55, 0.82]} /><meshStandardMaterial color={lintel} /></mesh>
+      <mesh position={[0, 2.9, 0]} castShadow>
+        {stone ? <coneGeometry args={[2.35, 0.48, 4]} /> : <boxGeometry args={[4.35, 0.16, 0.75]} />}
+        <meshStandardMaterial color={stone ? '#a49d8b' : '#a77c49'} />
+      </mesh>
+      <mesh position={[0, 1.95, 0.44]}><boxGeometry args={[1.5, 0.36, 0.08]} /><meshStandardMaterial color={stone ? '#d5c8a7' : '#e1c585'} /></mesh>
+      <mesh position={[0, 1.95, 0.49]}><boxGeometry args={[0.12, 0.22, 0.035]} /><meshStandardMaterial color={stone ? '#58636b' : '#536942'} /></mesh>
+    </group>
+  )
+}
+
+function MerchantCaravan() {
+  return (
+    <group position={[-4.35, 0, -8.1]} rotation={[0, -Math.PI / 2, 0]}>
+      <mesh position={[0, 0.78, 0]} castShadow><boxGeometry args={[1.9, 0.38, 1.15]} /><meshStandardMaterial color="#66452e" /></mesh>
+      <mesh position={[0, 1.05, -0.04]} castShadow><boxGeometry args={[1.7, 0.35, 1.02]} /><meshStandardMaterial color="#987044" /></mesh>
+      <mesh position={[-0.48, 1.38, -0.12]} castShadow><boxGeometry args={[0.52, 0.48, 0.48]} /><meshStandardMaterial color="#b28750" /></mesh>
+      <mesh position={[0.38, 1.34, 0.15]} castShadow><boxGeometry args={[0.55, 0.4, 0.52]} /><meshStandardMaterial color="#805d3d" /></mesh>
+      <mesh position={[0.36, 1.57, 0.15]}><boxGeometry args={[0.4, 0.08, 0.39]} /><meshStandardMaterial color="#d0aa69" /></mesh>
+      {[-0.72, 0.72].map(z => <mesh key={z} position={[0, 0.49, z]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.43, 0.43, 0.14, 8]} /><meshStandardMaterial color="#49382c" />
+      </mesh>)}
+      <mesh position={[0.9, 0.44, 0]} rotation={[0, 0, -0.08]}><cylinderGeometry args={[0.06, 0.06, 2.05, 6]} /><meshStandardMaterial color="#6b4a31" /></mesh>
+      <mesh position={[1.35, 0.2, 0]} rotation={[0, 0, -0.04]}><cylinderGeometry args={[0.045, 0.045, 1.2, 6]} /><meshStandardMaterial color="#795839" /></mesh>
+    </group>
   )
 }
 
@@ -275,6 +316,7 @@ function VillageGround({ villageId }: { villageId: VillageId }) {
         <planeGeometry args={[22, 3.2]} />
         <meshStandardMaterial color={fieldVillage ? '#bba77c' : '#aaa397'} />
       </mesh>
+      <VillageExit villageId={villageId} />
       {fieldVillage ? (
         <>
           {VALLEY_TREE_POSITIONS.map(tree => <LowPolyTree key={tree.position.join(',')} {...tree} />)}
@@ -286,7 +328,7 @@ function VillageGround({ villageId }: { villageId: VillageId }) {
       ) : (
         <>
           {STONE_FORMATIONS.map(formation => <RockFormation key={formation.position.join(',')} {...formation} />)}
-          <mesh position={[0, 0.25, -8.6]}><boxGeometry args={[22, 0.5, 1.2]} /><meshStandardMaterial color="#8b8880" /></mesh>
+          {[-6.775, 6.775].map(x => <mesh key={x} position={[x, 0.25, -8.6]}><boxGeometry args={[8.45, 0.5, 1.2]} /><meshStandardMaterial color="#8b8880" /></mesh>)}
           {[-8.3, 8.3].map(x => <mesh key={x} position={[x, 0.55, 7]}><dodecahedronGeometry args={[1.2, 0]} /><meshStandardMaterial color="#676b70" /></mesh>)}
         </>
       )}
@@ -321,12 +363,12 @@ function MerchantPlayer() {
   )
 }
 
-export default function VillageScene({ villageId, onNearbyChange, interactionPromptRef, playerFacingRef, onInteract, interactionNpcId, onInteractionOutOfRange }: VillageSceneProps) {
+export default function VillageScene({ villageId, onNearbyChange, interactionPromptRef, playerFacingRef, onInteract, onOpenTravelMenu, onCloseContextMenu, contextMenuOpen, interactionNpcId, onInteractionOutOfRange, day }: VillageSceneProps) {
   const playerRef = useRef<Group>(null)
   const playerVisualRef = useRef<Group>(null)
   const promptPosition = useRef(new Vector3())
   const keys = useRef(new Set<string>())
-  const nearbyId = useRef<string | undefined>(undefined)
+  const nearbyTarget = useRef<ContextInteractionTarget | undefined>(undefined)
   const nearbyCallback = useRef(onNearbyChange)
   const interactCallback = useRef(onInteract)
   const outOfRangeCallback = useRef(onInteractionOutOfRange)
@@ -348,9 +390,13 @@ export default function VillageScene({ villageId, onNearbyChange, interactionPro
       }
       if (MOVEMENT_KEYS.includes(key)) event.preventDefault()
       keys.current.add(key)
-      if (key === 'e' && nearbyId.current) {
-        const npc = npcs.find(candidate => candidate.id === nearbyId.current)
-        if (npc) interactCallback.current(npc)
+      if (key === 'escape' && contextMenuOpen) {
+        onCloseContextMenu()
+        return
+      }
+      if (key === 'e' && !event.repeat && !contextMenuOpen && nearbyTarget.current) {
+        if (nearbyTarget.current.kind === 'exit') onOpenTravelMenu()
+        else interactCallback.current(nearbyTarget.current.npc)
       }
     }
     const up = (event: KeyboardEvent) => keys.current.delete(event.key.toLowerCase())
@@ -368,7 +414,7 @@ export default function VillageScene({ villageId, onNearbyChange, interactionPro
       window.removeEventListener('blur', clearOnWindowBlur)
       document.removeEventListener('focusin', clearOnEditableFocus)
     }
-  }, [npcs])
+  }, [contextMenuOpen, npcs, onCloseContextMenu, onOpenTravelMenu])
 
   useFrame((_, delta) => {
     const player = playerRef.current
@@ -400,19 +446,16 @@ export default function VillageScene({ villageId, onNearbyChange, interactionPro
         if (playerVisualRef.current) playerVisualRef.current.rotation.y = movement.yaw
       }
     }
-    let closest: VillageNpc | undefined
-    let closestDistance = NPC_INTERACTION_DISTANCE
-    for (const npc of npcs) {
-      const distance = Math.hypot(player.position.x - npc.position[0], player.position.z - npc.position[2])
-      if (distance <= closestDistance) { closest = npc; closestDistance = distance }
-    }
-    if (closest?.id !== nearbyId.current) {
-      nearbyId.current = closest?.id
-      nearbyCallback.current(closest)
+    const target = closestContextInteraction([player.position.x, player.position.y, player.position.z], npcs)
+    const previousKey = nearbyTarget.current?.kind === 'npc' ? nearbyTarget.current.npc.id : nearbyTarget.current?.kind
+    const targetKey = target?.kind === 'npc' ? target.npc.id : target?.kind
+    if (targetKey !== previousKey) {
+      nearbyTarget.current = target
+      nearbyCallback.current(target)
     }
 
     const prompt = interactionPromptRef.current
-    if (prompt && nearbyId.current) {
+    if (prompt && nearbyTarget.current && !contextMenuOpen) {
       const position = promptPosition.current
         .set(player.position.x, player.position.y + 2.05, player.position.z)
         .project(camera)
@@ -426,7 +469,8 @@ export default function VillageScene({ villageId, onNearbyChange, interactionPro
   return (
     <>
       <VillageGround villageId={villageId} />
-      {npcs.map(npc => <Person key={npc.id} npc={npc} active={npc.id === nearbyId.current} />)}
+      {isCaravanPresentInVillage(villageId, day) && <MerchantCaravan />}
+      {npcs.map(npc => <Person key={npc.id} npc={npc} active={nearbyTarget.current?.kind === 'npc' && npc.id === nearbyTarget.current.npc.id} />)}
       <group ref={playerRef} position={[0, 0, 0]}>
         <group ref={playerVisualRef} rotation={[0, playerFacingRef.current, 0]}>
           <MerchantPlayer />

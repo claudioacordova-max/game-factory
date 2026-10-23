@@ -34,6 +34,7 @@ import {
 } from '../src/engine/index.js'
 import { isBeyondNpcInteractionDistance, npcForId, npcsForVillage, NPC_INTERACTION_DISTANCE, VILLAGE_NPCS, VILLAGES } from '../src/scene/world.js'
 import { clampedMovementStep, yawFromMovementDirection } from '../src/scene/playerOrientation.js'
+import { closestContextInteraction, isCaravanPresentInVillage, VILLAGE_EXIT_INTERACTION_DISTANCE, VILLAGE_EXIT_POSITION } from '../src/scene/contextInteraction.js'
 
 let passed = 0
 function equal<T>(actual: T, expected: T, label: string): void {
@@ -934,6 +935,28 @@ test('el menú contextual conserva el radio de interacción aprobado de 1,85 uni
   equal(isBeyondNpcInteractionDistance([npcX + 1.85, 0, npcZ], npc), false, 'la interacción sigue dentro del radio en el límite')
   equal(isBeyondNpcInteractionDistance([npcX + 1.8501, 0, npcZ], npc), true, 'se supera el radio al alejarse más de 1,85')
   equal(isBeyondNpcInteractionDistance([npcX, 0, npcZ + 1.85], npc), false, 'el radio usa la misma distancia horizontal que la proximidad')
+})
+
+test('la salida comparte una única interacción contextual con los NPC cercanos', () => {
+  const npc = npcForId('npc-farmer-a')!
+  const atExit = closestContextInteraction(VILLAGE_EXIT_POSITION, [npc])
+  equal(atExit?.kind, 'exit', 'la salida gana al estar claramente más cerca que un NPC')
+  equal(VILLAGE_EXIT_INTERACTION_DISTANCE, 2.25, 'la salida tiene un radio contextual acotado')
+
+  const nearbyNpc = { ...npc, position: [1, 0, -8.9] as const }
+  const atNpc = closestContextInteraction([1, 0, -8.9], [nearbyNpc])
+  equal(atNpc?.kind, 'npc', 'el NPC gana si está más cerca que la salida')
+  if (atNpc?.kind === 'npc') equal(atNpc.npc.id, npc.id, 'se conserva el NPC contextual correcto')
+
+  equal(closestContextInteraction([0, 0, -6.65], [npc])?.kind, 'exit', 'el prompt aparece en el límite de aproximación por el camino')
+  equal(closestContextInteraction([0, 0, -6.64], [npc]), undefined, 'fuera del radio no se ofrece una interacción de salida')
+})
+
+test('la caravana visual sigue solo la localización real del calendario', () => {
+  equal(Array.from({ length: 9 }, (_, index) => isCaravanPresentInVillage('village-a', index + 1) ? 'A' : '-').join(''), '---AA----', 'A solo muestra caravana en sus dos días de visita')
+  equal(Array.from({ length: 9 }, (_, index) => isCaravanPresentInVillage('village-b', index + 1) ? 'B' : '-').join(''), '------BB-', 'B solo muestra caravana en sus dos días de visita')
+  equal(isCaravanPresentInVillage('village-a', 13), true, 'la presencia A se repite según el circuito real')
+  equal(isCaravanPresentInVillage('village-b', 13), false, 'no se representa caravana en B durante su tránsito')
 })
 
 test('los destinos 3D corresponden a travelToVillage y cada viaje avanza un día global', () => {

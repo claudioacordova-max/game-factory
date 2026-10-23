@@ -34,8 +34,11 @@ kbd { min-width: 4.3rem; padding: .3rem .45rem; border: 1px solid #738272; borde
 .primary-button:hover, .travel-button:hover, .option-button:hover { background: #80603a; }
 .travel-button { text-align: left; }
 .travel-overlay { position: absolute; z-index: 2; top: .75rem; left: .75rem; width: min(15rem, calc(100% - 1.5rem)); padding: .75rem; background: #222e27ed; }
+.travel-overlay { padding-top: 1rem; border-color: #c39c55; }
+.travel-overlay .close-button { top: .35rem; right: .35rem; }
 .travel-overlay h2 { font-size: 1rem; }
 .travel-overlay p { margin-bottom: .35rem; font-size: .8rem; }
+.travel-overlay .eyebrow { margin: 0 2rem .25rem 0; font-size: .64rem; }
 .travel-overlay .travel-button { margin-top: .3rem; }
 .interaction-overlay { position: absolute; z-index: 2; top: .75rem; right: .75rem; width: min(32rem, calc(100% - 1.5rem)); max-height: calc(100% - 1.5rem); overflow-y: auto; overscroll-behavior: contain; background: #222e27f5; }
 .interaction-prompt { position: absolute; z-index: 3; display: flex; align-items: center; gap: .45rem; transform: translate(-50%, -100%); padding: .4rem .55rem; border: 1px solid #c39c55; border-radius: 6px; color: #fff7e2; background: #18241eed; box-shadow: 0 3px 10px #0005; font-size: .85rem; font-weight: 700; pointer-events: none; transition: opacity .12s ease, visibility .12s ease; }

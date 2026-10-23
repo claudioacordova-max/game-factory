@@ -81,7 +81,7 @@ export interface EconomicState {
   waitAvailabilityDays?: Record<string, number>
 }
 
-export type EconomicEventType = 'consumption' | 'clothing-wear' | 'production' | 'production-input' | 'tool-wear' | 'purchase' | 'internal-transfer' | 'caravan-sale' | 'caravan-supply' | 'tier-change'
+export type EconomicEventType = 'consumption' | 'clothing-wear' | 'production' | 'production-input' | 'tool-wear' | 'purchase' | 'internal-transfer' | 'caravan-sale' | 'caravan-supply' | 'tier-change' | 'player-purchase' | 'player-sale' | 'manual-day' | 'player-travel'
 
 export interface EconomicEvent {
   day: number
@@ -94,6 +94,22 @@ export interface EconomicEvent {
   from?: string
   to?: string
   detail?: string
+}
+
+export interface PlayerState {
+  villageId: VillageId
+  moneyTenths: number
+  /** Carried goods use integer quantities; weight is calculated from the catalog. */
+  inventory: Inventory
+  capacityHalfUnits: number
+}
+
+export interface GameState {
+  economy: EconomicState
+  player: PlayerState
+  /** Day marker for the one-unit-per-family daily progress purchase limit. */
+  progressBoughtToday: Record<string, number>
+  eventLog: EconomicEvent[]
 }
 
 export const GOODS_CATALOG: Readonly<Record<Good, GoodDefinition>> = {

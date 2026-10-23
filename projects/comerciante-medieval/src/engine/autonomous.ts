@@ -182,24 +182,57 @@ function buyFromCaravan(state: EconomicState, family: Family, good: Good, maxQua
   return affordable
 }
 
-function processFundamentals(state: EconomicState, caravanPresent: boolean, events: EconomicEvent[]): void {
-  const families = Object.values(state.families).sort((a, b) => a.id.localeCompare(b.id))
+function processFundamentals(state: EconomicState, caravanPresent: boolean, events: EconomicEvent[], options: { redOnly?: boolean; familyId?: string } = {}): void {
+  const families = Object.values(state.families)
+    .filter(family => options.familyId === undefined || family.id === options.familyId)
+    .sort((a, b) => a.id.localeCompare(b.id))
   for (const family of families) {
     reevaluateTier(state, family)
-    for (const good of orderedFundamentals(state, family)) {
+    const ordered = orderedFundamentals(state, family).filter(good => !options.redOnly || family.needs.essentials[essentialStatusKey(good)] === 'red')
+    for (const good of ordered) {
       let needed = remainingNeed(state, family, good)
       if (!needed) continue
       const marketAvailable = available(state, family, good, caravanPresent)
       const key = waitKey(family.id, good)
       if (!marketAvailable) { delete state.waitAvailabilityDays![key]; continue }
-      state.waitAvailabilityDays![key] = (state.waitAvailabilityDays![key] ?? 0) + 1
-      const status = family.needs.essentials[essentialStatusKey(good)]
-      if (status === 'yellow' && state.waitAvailabilityDays![key] < 2) continue
+      if (!options.redOnly) {
+        state.waitAvailabilityDays![key] = (state.waitAvailabilityDays![key] ?? 0) + 1
+        const status = family.needs.essentials[essentialStatusKey(good)]
+        if (status === 'yellow' && state.waitAvailabilityDays![key] < 2) continue
+      }
       const local = takeFromLocal(state, family, good, needed, events)
       needed -= local
       if (needed > 0 && caravanPresent && caravanLocation(state.day) === family.villageId) buyFromCaravan(state, family, good, needed, events)
     }
   }
+}
+
+/** Processes only the owner's currently-red fundamental needs at the current day, without consumption or production. */
+export function processImmediateRedPurchases(previous: EconomicState, familyId: string): DailyEconomyResult {
+  const owner = previous.families[familyId]
+  if (!owner) throw new Error(`No existe la familia ${familyId}.`)
+  const state: EconomicState = {
+    day: previous.day,
+    families: Object.fromEntries(Object.entries(previous.families).map(([id, family]) => [id, {
+      ...family,
+      household: { inventory: { ...family.household.inventory }, clothingDurabilityDays: [...family.household.clothingDurabilityDays] },
+      businessIds: [...family.businessIds],
+      needs: { ...family.needs, essentials: { ...family.needs.essentials }, progression: { ...family.needs.progression } },
+    }])),
+    businesses: Object.fromEntries(Object.entries(previous.businesses).map(([id, business]) => [id, {
+      ...business,
+      commercialInventory: { ...business.commercialInventory },
+      productiveInventory: { ...business.productiveInventory },
+      tools: business.tools.map(tool => ({ ...tool })),
+    }])),
+    waitAvailabilityDays: { ...(previous.waitAvailabilityDays ?? {}) },
+  }
+  const events: EconomicEvent[] = []
+  const caravanPresent = caravanLocation(state.day) === owner.villageId
+  processFundamentals(state, caravanPresent, events, { redOnly: true, familyId })
+  reevaluateTier(state, state.families[familyId])
+  assertValidState(state)
+  return { state, events }
 }
 
 function progressionTarget(family: Family, good: Good): number {

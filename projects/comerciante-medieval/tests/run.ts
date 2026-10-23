@@ -10,8 +10,16 @@ import {
   caravanLocation,
   simulateDays,
   stepAutonomousDay,
+  processImmediateRedPurchases,
+  createInitialGameState,
+  playerLoadHalfUnits,
+  buyFromBusiness,
+  sellToNeed,
+  advancePlayerDay,
+  travelToVillage,
   type EconomicState,
   type Family,
+  type VillageId,
 } from '../src/engine/index.js'
 
 let passed = 0
@@ -38,6 +46,210 @@ test('catálogo completo, precios exactos en décimas y pesos de media unidad', 
   equal(GOODS_CATALOG.firewood.caravanBuyPriceTenths, 64, 'precio decimal de leña')
   equal(GOODS_CATALOG.jewelry.weightHalfUnits, 1, 'peso 0,5 de joya en medias unidades')
   equal(GOODS_CATALOG.tool.referencePriceTenths, 2000, 'precio de herramienta')
+})
+
+test('jugador inicia en Pueblo A con 300 monedas, inventario vacío y carga 20', () => {
+  const game = createInitialGameState()
+  equal(game.economy.day, 1, 'día inicial del juego')
+  equal(game.player.villageId, 'village-a', 'pueblo inicial')
+  equal(game.player.moneyTenths, 3000, 'saldo del jugador')
+  equal(game.player.capacityHalfUnits, 40, 'capacidad de veinte unidades')
+  equal(GOODS.reduce((sum, good) => sum + game.player.inventory[good], 0), 0, 'inventario vacío')
+})
+
+test('compra personal usa 0,9 P exacto, inventario comercial y peso entero/fraccional', () => {
+  const game = createInitialGameState()
+  const result = buyFromBusiness(game, 'tailor-a', 'clothing', 2)
+  ok(result.ok, 'se acepta la compra disponible')
+  if (!result.ok) return
+  equal(result.moneyTenths, 1620, 'dos prendas a 81 monedas')
+  equal(result.state.player.moneyTenths, 1380, 'saldo del jugador tras la compra')
+  equal(result.state.economy.businesses['tailor-a'].commercialInventory.clothing, 0, 'bajan existencias comerciales')
+  equal(result.state.economy.families['family-tailor-a'].moneyTenths, 6120, 'ingreso va al fondo compartido')
+  equal(playerLoadHalfUnits(result.state.player.inventory), 4, 'dos prendas ocupan dos unidades de peso')
+
+  const jewels = createInitialGameState()
+  jewels.player.villageId = 'village-b'
+  jewels.player.moneyTenths = 5000
+  jewels.player.capacityHalfUnits = 1
+  const jewelsBeforeOverflow = JSON.stringify(jewels)
+  const fractional = buyFromBusiness(jewels, 'jeweler-b', 'jewelry', 1)
+  ok(fractional.ok, 'una joya cabe en media unidad')
+  if (fractional.ok) equal(playerLoadHalfUnits(fractional.state.player.inventory), 1, 'peso de joya expresado en medias unidades')
+  const tooHeavy = buyFromBusiness(jewels, 'jeweler-b', 'jewelry', 2)
+  ok(!tooHeavy.ok && tooHeavy.error.code === 'over-capacity', 'dos joyas no caben en media unidad')
+  equal(JSON.stringify(jewels), jewelsBeforeOverflow, 'rechazo por carga no muta estado')
+})
+
+test('compra personal rechaza sin mutar saldo, stock o carga; excluye insumos productivos', () => {
+  const game = createInitialGameState()
+  game.economy.businesses['farmer-a'].commercialInventory.food = 100
+  const before = JSON.stringify(game)
+  const noFunds = buyFromBusiness(game, 'farmer-a', 'food', 67)
+  ok(!noFunds.ok && noFunds.error.code === 'insufficient-funds', 'saldo insuficiente rechaza')
+  equal(JSON.stringify(game), before, 'rechazo por fondos no muta')
+  const noStock = buyFromBusiness(game, 'blacksmith-a', 'metal', 1)
+  ok(!noStock.ok && noStock.error.code === 'insufficient-stock', 'metal productivo no es stock comercial')
+  equal(JSON.stringify(game), before, 'rechazo por stock no muta')
+  game.player.villageId = 'village-b'
+  const beforeB = JSON.stringify(game)
+  const noCapacity = buyFromBusiness(game, 'carpenter-b', 'furniture', 3)
+  ok(!noCapacity.ok && noCapacity.error.code === 'insufficient-stock', 'se revalida el stock antes de cargar')
+  equal(JSON.stringify(game), beforeB, 'rechazo por stock no muta inventario')
+  const invalid = buyFromBusiness(game, 'farmer-b', 'food', 0)
+  ok(!invalid.ok && invalid.error.code === 'invalid-quantity', 'no acepta cantidades no positivas')
+})
+
+test('venta personal usa 1,1 P, recalcula necesidad y acepta solo entero costeable', () => {
+  const game = createInitialGameState()
+  game.player.inventory.metal = 4
+  const business = game.economy.businesses['blacksmith-a']
+  business.productiveInventory.metal = 2
+  const result = sellToNeed(game, { type: 'business', businessId: business.id }, 'metal', 4)
+  ok(result.ok, 'herrero acepta insumo pertinente')
+  if (!result.ok) return
+  equal(result.moneyTenths, 968, 'cuatro metales se venden por 96,8 monedas')
+  equal(result.state.player.inventory.metal, 0, 'mercancía sale de la carga')
+  equal(result.state.economy.businesses[business.id].productiveInventory.metal, 6, 'insumo pasa a reserva productiva')
+  equal(result.state.economy.families[business.familyId].moneyTenths, 3532, 'pago descuenta el fondo familiar')
+  equal(result.events[0].type, 'player-sale', 'la operación queda registrada')
+
+  const partial = createInitialGameState()
+  const buyer = partial.economy.families['family-farmer-a']
+  buyer.moneyTenths = 80
+  buyer.household.inventory.food = 26
+  partial.player.inventory.food = 2
+  const accepted = sellToNeed(partial, { type: 'household', familyId: buyer.id }, 'food', 2)
+  ok(accepted.ok, 'el hogar acepta una parte que puede pagar')
+  if (accepted.ok) {
+    equal(accepted.quantity, 1, 'cantidad parcial entera')
+    equal(accepted.moneyTenths, 55, 'precio de una comida a 1,1 P')
+    equal(accepted.state.economy.families[buyer.id].household.inventory.food, 27, 'una comida pasa al hogar')
+  }
+})
+
+test('venta personal revalida carga, necesidad, pertinencia, negocio reservado y progreso diario', () => {
+  const game = createInitialGameState()
+  const before = JSON.stringify(game)
+  const empty = sellToNeed(game, { type: 'household', familyId: 'family-farmer-a' }, 'food', 1)
+  ok(!empty.ok && empty.error.code === 'not-carried', 'no puede ofrecer mercancía que no lleva')
+  equal(JSON.stringify(game), before, 'rechazo de carga no muta')
+
+  game.player.inventory.food = 1
+  const fullHouse = sellToNeed(game, { type: 'household', familyId: 'family-farmer-a' }, 'food', 1)
+  ok(!fullHouse.ok && fullHouse.error.code === 'not-needed', 'rechaza hogar con objetivo cubierto')
+  const irrelevant = sellToNeed(game, { type: 'business', businessId: 'tailor-a' }, 'food', 1)
+  ok(!irrelevant.ok && irrelevant.error.code === 'not-relevant', 'rechaza insumo ajeno al oficio')
+
+  game.player.inventory.furniture = 2
+  const family = game.economy.families['family-tailor-a']
+  family.tier = 2
+  family.moneyTenths = 20000
+  family.household.inventory.furniture = 0
+  const firstProgress = sellToNeed(game, { type: 'household', familyId: family.id }, 'furniture', 1)
+  ok(firstProgress.ok, 'familia acepta una unidad pertinente de progreso')
+  if (firstProgress.ok) equal(firstProgress.quantity, 1, 'tope de una unidad de progreso por día')
+  const secondProgress = sellToNeed(firstProgress.state, { type: 'household', familyId: family.id }, 'furniture', 1)
+  ok(!secondProgress.ok && secondProgress.error.code === 'daily-progress-limit', 'segunda oferta de progreso el mismo día se rechaza')
+
+  const mixedNeeds = createInitialGameState()
+  const mixedFamily = mixedNeeds.economy.families['family-tailor-a']
+  mixedFamily.tier = 2
+  mixedFamily.moneyTenths = 20000
+  mixedFamily.household.inventory.clothing = 0
+  mixedFamily.household.clothingDurabilityDays = []
+  mixedNeeds.player.inventory.clothing = 3
+  const mixedClothing = sellToNeed(mixedNeeds, { type: 'household', familyId: mixedFamily.id }, 'clothing', 3)
+  ok(mixedClothing.ok, 'la ropa puede cubrir varias unidades básicas y una de progreso')
+  if (mixedClothing.ok) {
+    equal(mixedClothing.quantity, 3, 'dos unidades básicas y solo una unidad de progreso')
+    mixedClothing.state.player.inventory.furniture = 1
+    const blockedFurniture = sellToNeed(mixedClothing.state, { type: 'household', familyId: mixedFamily.id }, 'furniture', 1)
+    ok(!blockedFurniture.ok && blockedFurniture.error.code === 'daily-progress-limit', 'el límite de progreso es global entre categorías')
+  }
+
+  const reserved = createInitialGameState()
+  reserved.player.inventory.metal = 1
+  const stockReserved = sellToNeed(reserved, { type: 'business', businessId: 'blacksmith-a' }, 'metal', 1)
+  ok(!stockReserved.ok && stockReserved.error.code === 'not-needed', 'no acepta metal más allá de la reserva de oficio')
+})
+
+test('comprar no avanza tiempo; avance manual y viaje procesan una sola economía global', () => {
+  const game = createInitialGameState()
+  const bought = buyFromBusiness(game, 'farmer-a', 'food', 1)
+  ok(bought.ok, 'compra de mercancía permitida')
+  if (!bought.ok) return
+  equal(bought.state.economy.day, 1, 'comerciar no avanza el día')
+
+  const manual = advancePlayerDay(bought.state)
+  ok(manual.ok, 'avance manual aceptado')
+  equal(manual.state.economy.day, 2, 'avance manual consume exactamente un día')
+  const travelled = travelToVillage(manual.state, 'village-b')
+  ok(travelled.ok, 'viaje entre pueblos aceptado')
+  equal(travelled.state.economy.day, 3, 'viaje consume exactamente un día')
+  equal(travelled.state.player.villageId, 'village-b', 'llega al destino tras procesar el día')
+  equal(travelled.events.filter(event => event.type === 'consumption' && event.familyId === 'family-farmer-a' && event.good === 'food' && event.day === 3).length, 1, 'la familia consume comida una sola vez durante el viaje')
+  const invalidDestination = travelToVillage(travelled.state, 'port' as VillageId)
+  ok(!invalidDestination.ok && invalidDestination.error.code === 'invalid-destination', 'el puerto no es destino del jugador')
+  const sameVillage = travelToVillage(travelled.state, 'village-b')
+  ok(!sameVillage.ok && sameVillage.error.code === 'invalid-destination', 'no permite viaje al pueblo actual')
+})
+
+test('venta a negocio procesa compras rojas inmediatas una vez, sin avanzar calendario ni producir', () => {
+  const game = createInitialGameState()
+  const blacksmith = game.economy.businesses['blacksmith-a']
+  const family = game.economy.families[blacksmith.familyId]
+  const unrelatedFamily = game.economy.families['family-tailor-a']
+  game.economy.day = 4 // La caravana está visitando Pueblo A.
+  blacksmith.productiveInventory.metal = 2
+  family.household.inventory.food = 0
+  family.household.inventory.firewood = 0
+  unrelatedFamily.household.inventory.firewood = 0
+  evaluateNeeds(game.economy, family)
+  evaluateNeeds(game.economy, unrelatedFamily)
+  const unrelatedMoney = unrelatedFamily.moneyTenths
+  game.player.inventory.metal = 1
+
+  const sale = sellToNeed(game, { type: 'business', businessId: blacksmith.id }, 'metal', 1)
+  ok(sale.ok, 'el negocio recibe el insumo del jugador')
+  if (!sale.ok) return
+  equal(sale.state.economy.day, 4, 'paso inmediato conserva el día')
+  equal(sale.state.economy.families[family.id].household.inventory.food, 28, 'la necesidad roja cubre stock local y caravana')
+  equal(sale.state.economy.families[family.id].household.inventory.firewood, 14, 'la segunda necesidad roja también se atiende')
+  equal(sale.state.economy.businesses['farmer-a'].commercialInventory.food, 0, 'el stock local se transfiere una vez')
+  equal(sale.state.economy.businesses['woodcutter-a'].commercialInventory.firewood, 0, 'el stock local de leña se transfiere una vez')
+  equal(sale.state.economy.families[unrelatedFamily.id].household.inventory.firewood, 0, 'otra familia roja no se procesa por la venta')
+  equal(sale.state.economy.families[unrelatedFamily.id].moneyTenths, unrelatedMoney, 'otra familia conserva su fondo')
+  equal(sale.events[0].type, 'player-sale', 'primero se registra la oferta directa')
+  ok(sale.events.some(event => event.type === 'purchase' && event.familyId === family.id && event.good === 'food'), 'queda registrada la compra local roja inmediata')
+  ok(sale.events.some(event => event.type === 'caravan-supply' && event.familyId === family.id && event.good === 'firewood'), 'queda registrada la compra roja a la caravana')
+  ok(sale.events.every(event => event.familyId === family.id), 'la operación solo genera eventos de la familia destinataria')
+  equal(sale.events.filter(event => event.type === 'consumption' || event.type === 'production').length, 0, 'no repite consumo ni producción del día')
+
+  const repeatPass = processImmediateRedPurchases(sale.state.economy, family.id)
+  equal(repeatPass.state.day, 4, 'repetir inspección no avanza el día')
+  equal(repeatPass.events.length, 0, 'la misma oferta no vuelve a transferirse')
+  equal(repeatPass.state.families[family.id].household.inventory.food, 28, 'inventario no se duplica al reabrir menú')
+  equal(repeatPass.state.families[unrelatedFamily.id].household.inventory.firewood, 0, 'repetir la evaluación no procesa a otra familia')
+})
+
+test('oferta explícita mayor que necesidad actual se rechaza completa y no altera el estado', () => {
+  const game = createInitialGameState()
+  const blacksmith = game.economy.businesses['blacksmith-a']
+  blacksmith.productiveInventory.metal = 2
+  game.player.inventory.metal = 5
+  const before = JSON.stringify(game)
+  const tooMany = sellToNeed(game, { type: 'business', businessId: blacksmith.id }, 'metal', 5)
+  ok(!tooMany.ok && tooMany.error.code === 'not-needed', 'rechaza cantidad superior al máximo de reserva')
+  equal(JSON.stringify(game), before, 'la oferta excesiva no descuenta carga ni fondos')
+
+  const household = createInitialGameState()
+  household.player.inventory.food = 3
+  household.economy.families['family-farmer-a'].household.inventory.food = 26
+  const householdBefore = JSON.stringify(household)
+  const householdTooMany = sellToNeed(household, { type: 'household', familyId: 'family-farmer-a' }, 'food', 3)
+  ok(!householdTooMany.ok && householdTooMany.error.code === 'not-needed', 'rechaza oferta mayor a la necesidad del hogar')
+  equal(JSON.stringify(household), householdBefore, 'el rechazo del hogar también es atómico')
 })
 
 test('escenario inicial tiene ocho familias/negocios, fondos compartidos e inventarios separados', () => {

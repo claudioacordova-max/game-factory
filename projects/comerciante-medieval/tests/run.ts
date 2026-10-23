@@ -6,6 +6,10 @@ import {
   INITIAL_CONFIG,
   reevaluateTier,
   stepEconomicDay,
+  caravanCircuitDay,
+  caravanLocation,
+  simulateDays,
+  stepAutonomousDay,
   type EconomicState,
   type Family,
 } from '../src/engine/index.js'
@@ -227,6 +231,207 @@ test('estado inicial y avances no contienen cantidades ni saldos negativos', () 
     }
   }
   equal(INITIAL_CONFIG.familyMoneyTenths, 4500, 'saldo inicial expresado en décimas')
+})
+
+test('circuito de caravana de nueve días y ubicaciones repetidas', () => {
+  equal(Array.from({ length: 9 }, (_, index) => caravanLocation(index + 1)).join(','), 'port,port,travel-to-a,village-a,village-a,travel-to-b,village-b,village-b,travel-to-port', 'circuito autorizado')
+  equal(caravanCircuitDay(10), 1, 'reinicio del circuito')
+})
+
+test('compras locales amarillas esperan un día disponible; dinero va al vendedor', () => {
+  const state = createInitialState()
+  const buyer = state.families['family-tailor-a']
+  const seller = state.families['family-farmer-a']
+  buyer.household.inventory.food = 29
+  const sellerBefore = seller.moneyTenths
+  const day2 = stepAutonomousDay(state)
+  equal(day2.state.families[buyer.id].household.inventory.food, 27, 'primer día amarillo no compra')
+  const day3 = stepAutonomousDay(day2.state)
+  equal(day3.state.families[buyer.id].household.inventory.food, 28, 'compra para cubrir a 14 días')
+  const buyerTransactions = day3.events.filter(event => event.type === 'purchase')
+  const spent = buyerTransactions.filter(event => event.familyId === buyer.id).reduce((sum, event) => sum + (event.moneyTenths ?? 0), 0)
+  const earned = buyerTransactions.filter(event => event.businessId && day3.state.businesses[event.businessId]?.familyId === buyer.id && event.familyId !== buyer.id).reduce((sum, event) => sum + (event.moneyTenths ?? 0), 0)
+  equal(day3.state.families[buyer.id].moneyTenths, buyer.moneyTenths - spent + earned, 'compras y ventas modifican el fondo compartido')
+  const sellerIncome = buyerTransactions.filter(event => event.businessId === 'farmer-a' && event.familyId !== seller.id).reduce((sum, event) => sum + (event.moneyTenths ?? 0), 0)
+  const sellerSpending = buyerTransactions.filter(event => event.familyId === seller.id).reduce((sum, event) => sum + (event.moneyTenths ?? 0), 0)
+  equal(day3.state.families[seller.id].moneyTenths, sellerBefore + sellerIncome - sellerSpending, 'el fondo compartido registra cobros y compras del vendedor')
+  ok(day3.events.some(event => event.type === 'purchase' && event.familyId === buyer.id && event.good === 'food'), 'queda evento de compra auditable')
+})
+
+test('transferencia interna no crea pago y la compra solo mueve bienes una vez', () => {
+  const state = createInitialState()
+  const farmer = state.families['family-farmer-a']
+  farmer.household.inventory.food = 0
+  const balance = farmer.moneyTenths
+  const result = stepAutonomousDay(state)
+  const internal = result.events.filter(event => event.type === 'internal-transfer' && event.familyId === farmer.id && event.good === 'food')
+  equal(internal.length, 1, 'una transferencia interna de comida')
+  equal(internal[0].quantity, 28, 'transferencia cubre la necesidad roja hasta el objetivo doméstico')
+  equal(internal[0].moneyTenths, 0, 'sin transferencia ficticia de dinero')
+  equal(result.state.families[farmer.id].moneyTenths, balance, 'el fondo no cambia por producción propia')
+  equal(result.state.families[farmer.id].household.inventory.food, 28, 'el bien se transfiere una sola vez')
+})
+
+test('caravana abastece necesidad roja solo durante visita y el stock externo es ilimitado', () => {
+  const state = createInitialState()
+  const family = state.families['family-miner-b']
+  family.household.inventory.firewood = 0
+  let current = state
+  for (let day = 0; day < 5; day += 1) current = stepAutonomousDay(current).state // día 6: viaje
+  equal(current.families[family.id].household.inventory.firewood, 0, 'sin abastecimiento en tránsito')
+  const day7 = stepAutonomousDay(current)
+  equal(day7.state.day, 7, 'día de llegada al pueblo B')
+  equal(day7.state.families[family.id].household.inventory.firewood, 14, 'compra roja el mismo día de visita')
+  ok(day7.events.some(event => event.type === 'caravan-supply' && event.familyId === family.id && event.good === 'firewood' && event.quantity === 14), 'abastecimiento de caravana registrado')
+})
+
+test('stock local escaso se asigna por orden familiar estable y nunca compra sin fondos', () => {
+  const state = createInitialState()
+  for (const family of Object.values(state.families).filter(candidate => candidate.villageId === 'village-a')) {
+    family.household.inventory.food = 0
+    family.moneyTenths = 0
+  }
+  state.families['family-farmer-a'].household.inventory.food = 28 // evita autoabastecimiento interno en la prueba de saldo
+  state.businesses['farmer-a'].commercialInventory.food = 3
+  state.businesses['farmer-a'].tools = [] // no production refill on the next tick
+  const result = stepAutonomousDay(state)
+  equal(result.state.businesses['farmer-a'].commercialInventory.food, 3, 'sin fondos el stock queda en tienda')
+  equal(result.events.filter(event => event.good === 'food' && event.type === 'purchase').length, 0, 'no se acepta una compra impagable')
+  for (const family of Object.values(result.state.families)) ok(family.moneyTenths >= 0, `${family.id} conserva saldo no negativo`)
+
+  for (const family of Object.values(state.families).filter(candidate => candidate.villageId === 'village-a')) family.moneyTenths = 4500
+  const competing = stepAutonomousDay(state)
+  const first = competing.state.families['family-blacksmith-a']
+  equal(first.household.inventory.food, 3, 'primera familia del orden estable obtiene el stock escaso')
+  equal(competing.events.filter(event => event.businessId === 'farmer-a' && event.good === 'food' && event.type === 'purchase').reduce((sum, event) => sum + (event.quantity ?? 0), 0), 3, 'stock se vende una sola vez')
+})
+
+test('cada avance genera como máximo un consumo diario por familia y no duplica el día', () => {
+  let state = createInitialState()
+  const events = [] as ReturnType<typeof stepAutonomousDay>['events']
+  for (let i = 0; i < 9; i += 1) {
+    const result = stepAutonomousDay(state)
+    state = result.state
+    events.push(...result.events)
+  }
+  equal(state.day, 10, 'nueve saltos producen nueve días únicos')
+  for (const familyId of ['family-farmer-a', 'family-tailor-a']) {
+    const foodConsumptionDays = events.filter(event => event.type === 'consumption' && event.good === 'food' && event.familyId === familyId).map(event => event.day)
+    equal(new Set(foodConsumptionDays).size, foodConsumptionDays.length, `${familyId} no tiene consumo de comida duplicado en un día`)
+  }
+})
+
+test('espera se reinicia sin oferta y una necesidad amarilla que pasa a roja compra de inmediato', () => {
+  const state = createInitialState()
+  const buyer = state.families['family-tailor-a']
+  buyer.household.inventory.food = 29
+  state.businesses['farmer-a'].commercialInventory.food = 1
+  state.businesses['farmer-a'].tools = []
+  const firstAvailableDay = stepAutonomousDay(state)
+  equal(firstAvailableDay.state.waitAvailabilityDays?.[`${buyer.id}:food`], 1, 'espera inicia el primer día de oferta')
+  firstAvailableDay.state.businesses['farmer-a'].commercialInventory.food = 0
+  const unavailableDay = stepAutonomousDay(firstAvailableDay.state)
+  equal(unavailableDay.state.waitAvailabilityDays?.[`${buyer.id}:food`], undefined, 'al desaparecer la oferta se borra la espera')
+  unavailableDay.state.businesses['farmer-a'].commercialInventory.food = 1
+  unavailableDay.state.families[buyer.id].household.inventory.food = 12
+  const redNeedDay = stepAutonomousDay(unavailableDay.state)
+  ok(redNeedDay.events.some(event => event.type === 'purchase' && event.familyId === buyer.id && event.good === 'food'), 'al pasar a rojo compra en la primera oferta sin esperar otro día')
+})
+
+test('la compra autónoma de progreso tiene un máximo global de una unidad por familia y día', () => {
+  const state = createInitialState()
+  const family = state.families['family-tailor-a']
+  family.tier = 2
+  family.moneyTenths = 50000
+  family.household.inventory.furniture = 0
+  family.household.inventory.jewelry = 0
+  family.household.inventory.clothing = 2
+  family.household.clothingDurabilityDays = [80, 80]
+  state.businesses['farmer-a'].commercialInventory.furniture = 1
+  state.businesses['woodcutter-a'].commercialInventory.jewelry = 1
+  const result = stepAutonomousDay(state)
+  const progress = result.events.filter(event => event.familyId === family.id && event.detail === 'Compra de progreso')
+  equal(progress.length, 1, 'aunque hay varias metas y ofertas, compra solo un bien')
+  equal(progress[0].quantity, 1, 'el contador cubre una unidad total')
+})
+
+test('el stock propio de progreso se transfiere gratis aunque el fondo no cubra su precio', () => {
+  const state = createInitialState()
+  const family = state.families['family-tailor-a']
+  const business = state.businesses['tailor-a']
+  family.tier = 2
+  family.moneyTenths = 5000 // 500 monedas: saldo positivo, bajo el precio local de la ropa (900).
+  family.household.inventory.clothing = 2
+  family.household.clothingDurabilityDays = [80, 80]
+  family.household.inventory.furniture = 1
+  family.household.inventory.jewelry = 1
+  business.commercialInventory.clothing = 1
+  const balance = family.moneyTenths
+  const result = stepAutonomousDay(state)
+  const transfer = result.events.find(event => event.type === 'internal-transfer' && event.familyId === family.id && event.good === 'clothing' && event.detail === 'Compra de progreso')
+  if (!transfer) throw new Error('el producto propio es elegible sin exigir saldo de compra')
+  equal(transfer.quantity, 1, 'avanza exactamente una unidad de la meta')
+  equal(transfer.moneyTenths, 0, 'la transferencia propia no cobra dinero')
+  equal(result.state.families[family.id].household.inventory.clothing, 3, 'la ropa pasa al inventario doméstico')
+  equal(result.state.families[family.id].moneyTenths, balance, 'el saldo permanece intacto')
+  equal(result.state.businesses[business.id].commercialInventory.clothing, 1, 'solo consume una unidad del stock disponible tras producción')
+})
+
+function inventoryTotal(state: EconomicState, good: typeof GOODS[number]): number {
+  return Object.values(state.families).reduce((sum, family) => sum + family.household.inventory[good], 0)
+    + Object.values(state.businesses).reduce((sum, business) => sum + business.commercialInventory[good] + business.productiveInventory[good], 0)
+}
+
+test('conserva dinero y bienes en ventas locales, suministro e importación/exportación de caravana', () => {
+  let state = createInitialState()
+  for (let day = 0; day < 9; day += 1) {
+    const before = state
+    const beforeMoney = Object.values(before.families).reduce((sum, family) => sum + family.moneyTenths, 0)
+    const beforeGoods = Object.fromEntries(GOODS.map(good => [good, inventoryTotal(before, good)])) as Record<typeof GOODS[number], number>
+    const { state: after, events } = stepAutonomousDay(before)
+    const externalMoney = events.filter(event => event.type === 'caravan-sale').reduce((sum, event) => sum + (event.moneyTenths ?? 0), 0)
+      - events.filter(event => event.type === 'caravan-supply').reduce((sum, event) => sum + (event.moneyTenths ?? 0), 0)
+    equal(Object.values(after.families).reduce((sum, family) => sum + family.moneyTenths, 0), beforeMoney + externalMoney, `dinero familiar conserva flujos locales en día ${after.day}`)
+    for (const good of GOODS) {
+      const delta = events.filter(event => event.good === good && event.type === 'production').reduce((sum, event) => sum + (event.quantity ?? 0), 0)
+        - events.filter(event => event.good === good && event.type === 'production-input').reduce((sum, event) => sum + (event.quantity ?? 0), 0)
+        - events.filter(event => event.good === good && event.type === 'consumption').reduce((sum, event) => sum + (event.quantity ?? 0), 0)
+        + events.filter(event => event.good === good && event.type === 'caravan-supply').reduce((sum, event) => sum + (event.quantity ?? 0), 0)
+        - events.filter(event => event.good === good && event.type === 'caravan-sale').reduce((sum, event) => sum + (event.quantity ?? 0), 0)
+      equal(inventoryTotal(after, good), beforeGoods[good] + delta, `${good} conserva unidades tras transferencias y flujos externos en día ${after.day}`)
+    }
+    state = after
+  }
+})
+
+test('exportación respeta reserva comercial derivada de dos días de producción', () => {
+  const state = createInitialState()
+  let result = stepAutonomousDay(state)
+  result = stepAutonomousDay(result.state)
+  result = stepAutonomousDay(result.state) // día 4, caravana en A
+  const farmer = result.state.businesses['farmer-a']
+  ok(farmer.commercialInventory.food >= 20, 'agricultor conserva reserva de 20 comidas')
+  const exported = result.events.filter(event => event.type === 'caravan-sale')
+  ok(exported.every(event => event.quantity !== undefined && event.quantity > 0), 'solo excedentes positivos se exportan')
+  const woodcutterSales = exported.filter(event => event.businessId === 'woodcutter-a')
+  ok(woodcutterSales.every(event => (event.detail ?? '').includes('reserva 10') || (event.detail ?? '').includes('reserva 4')), 'reserva del leñador conserva 10 leñas y 4 maderas')
+})
+
+test('simulaciones de 9, 36 y 90 días reproducen estados, informes y eventos', () => {
+  for (const days of [9, 36, 90]) {
+    const first = simulateDays(days)
+    const second = simulateDays(days)
+    equal(JSON.stringify(first), JSON.stringify(second), `${days} días deterministas`)
+    equal(first.finalDay, days + 1, `${days} avances completos desde día 1`)
+    ok(first.events.every(event => Number.isInteger(event.day) && event.day >= 2 && event.day <= days + 1), `${days} eventos tienen día válido`)
+    if (days === 9) {
+      ok(Object.keys(first.householdGoods).length === 8, 'informe incluye ocho inventarios domésticos')
+      ok(Object.keys(first.businessProductiveGoods).length === 8, 'informe incluye ocho inventarios productivos')
+      ok(first.activityByGood.produced.food! > 0 && first.activityByGood.consumed.food! > 0, 'informe presenta producción y consumo por bien')
+      ok(first.activityByGood.locallyPurchased.food! > 0 && first.activityByGood.caravanSupplied.firewood! > 0 && first.activityByGood.caravanExported.food! > 0, 'informe presenta comercio local y los dos flujos de caravana')
+      equal(JSON.stringify(first.activityByGood), JSON.stringify(second.activityByGood), 'resumen de actividad serializable y reproducible')
+    }
+  }
 })
 
 console.log(`\n${passed} pruebas del motor económico aprobadas.`)

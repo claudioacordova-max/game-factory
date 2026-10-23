@@ -95,6 +95,7 @@ export function stepEconomicDay(previous: EconomicState): EconomicState {
     day: previous.day + 1,
     families: Object.fromEntries(Object.entries(previous.families).map(([id, family]) => [id, cloneFamily(family)])),
     businesses: Object.fromEntries(Object.entries(previous.businesses).map(([id, business]) => [id, cloneBusiness(business)])),
+    ...(previous.waitAvailabilityDays ? { waitAvailabilityDays: { ...previous.waitAvailabilityDays } } : {}),
   }
   for (const family of Object.values(state.families)) consumeHouseholdNeeds(family)
   for (const business of Object.values(state.businesses)) produce(business, state.day)

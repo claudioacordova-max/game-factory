@@ -77,6 +77,23 @@ export interface EconomicState {
   day: number
   families: Record<string, Family>
   businesses: Record<string, Business>
+  /** Consecutive economic days a required good has been available to a family. */
+  waitAvailabilityDays?: Record<string, number>
+}
+
+export type EconomicEventType = 'consumption' | 'clothing-wear' | 'production' | 'production-input' | 'tool-wear' | 'purchase' | 'internal-transfer' | 'caravan-sale' | 'caravan-supply' | 'tier-change'
+
+export interface EconomicEvent {
+  day: number
+  type: EconomicEventType
+  familyId?: string
+  businessId?: string
+  good?: Good
+  quantity?: number
+  moneyTenths?: number
+  from?: string
+  to?: string
+  detail?: string
 }
 
 export const GOODS_CATALOG: Readonly<Record<Good, GoodDefinition>> = {

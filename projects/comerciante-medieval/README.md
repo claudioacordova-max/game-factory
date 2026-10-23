@@ -1,6 +1,6 @@
 # Comerciante Medieval
 
-Prototipo web 3D basado en Vite, React, TypeScript, Three.js y React Three Fiber. Incluye una escena estática de prueba; no incluye mecánicas ni sistemas de juego.
+Prototipo de Comerciante Medieval basado en Vite, React, TypeScript, Three.js y React Three Fiber. El motor económico puede ejecutarse sin interfaz gráfica.
 
 ## Requisitos
 
@@ -24,5 +24,13 @@ Para compilar y previsualizar la versión de producción:
 npm run build
 npm run preview
 ```
+
+Para ejecutar simulaciones económicas reproducibles de 9, 36 y 90 días desde Node:
+
+```sh
+npm run simulate
+```
+
+También se puede indicar otra duración entera, por ejemplo `npm run simulate -- 18`.
 
 Modifica la escena según la especificación aprobada para este juego.

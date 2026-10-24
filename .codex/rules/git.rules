@@ -1,5 +1,2 @@
-prefix_rule(
-    pattern = ["git", "add"],
-    decision = "allow",
-    justification = "Permitir preparar archivos para commits locales de Game Factory.",
-)
+# No hay permiso genérico para `git add`.
+# La preparación de commits sigue la política de rutas explícitas de AGENTS.md y workflow-v1.md.

@@ -383,3 +383,13 @@ El coordinador solo crea commit local al pasar verificaciones, recibir revisión
 - **Inspección visual/playtesting:** no se usó Playwright ni navegador automatizado. El diseñador confirma que realizó la revisión visual y el playtesting manual de ITER-10 y aprueba el resultado actual (2026-10-24).
 - **Revisión independiente:** aprobada sin hallazgos de implementación bloqueantes. Observación no bloqueante: las pruebas no ejercitan el DOM completo; la experiencia se confirmó mediante revisión visual y playtesting manual del diseñador.
 - **Estado:** ITER-10 cerrada con aprobación de revisión visual y playtesting manual del diseñador (2026-10-24). Commit local de cierre registrado en la entrega del coordinador; sin push.
+
+### Nota de reconciliación documental — ITER-07 e ITER-08
+
+Esta nota incorpora antecedentes históricos aportados por el diseñador el 24-10-2026. No reescribe las fichas ni cambia sus aprobaciones, verificaciones o estados registrados.
+
+- **ITER-07:** fue el primer intento de rediseño de la interfaz React. El diseñador consideró insuficiente el resultado porque seguía demasiado vinculado a la interfaz del prototipo técnico. La ficha conservada registra inspección visual y correcciones, pero deja pendiente el playtesting práctico; no contiene cierre ni aprobación humana final de ITER-07.
+- **ITER-08:** estuvo relacionada con explorar referencias y direcciones artísticas para superar esa limitación. La ficha registra la selección de la dirección A y su implementación/inspección, pero también deja pendiente el playtesting y no documenta un cierre formal de ITER-08.
+- **Continuidad frente a cierre formal:** la línea de trabajo de los rediseños de ITER-07/08 fue sustituida en la práctica por la implementación de la dirección artística A en ITER-09. Que una línea de trabajo sea sustituida no equivale a que cada iteración que la integró haya sido formalmente aprobada o cerrada. No se atribuye a ITER-07/08 aprobación humana, cierre ni commit de cierre.
+- **Iteraciones posteriores:** las fichas registran aprobación humana explícita y cierre de ITER-09 y de ITER-10. Esas aprobaciones corresponden a sus respectivos resultados; esta nota no las retrotrae a ITER-07/08.
+- **Referencias visuales ausentes:** la ficha de ITER-08 menciona `docs/comerciante-medieval-uiux-propuesta.md` y recursos bajo `docs/comerciante-medieval-uiux/`. Son referencias históricas consignadas en el registro; no están disponibles en el repositorio actual y no se usan aquí como evidencia verificable.

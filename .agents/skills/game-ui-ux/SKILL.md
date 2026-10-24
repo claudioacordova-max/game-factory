@@ -67,19 +67,19 @@ $visualDir = Join-Path $env:TEMP ("game-factory-visual-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Path $visualDir | Out-Null
 Push-Location $visualDir
 node --version
-npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli --version
-npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual open http://127.0.0.1:5173/ --browser=chrome --headed
-npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual snapshot
-npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual eval "() => ({ title: document.title, canvases: Array.from(document.querySelectorAll('canvas')).map(c => { const gl = c.getContext('webgl2') || c.getContext('webgl'); return { width: c.width, height: c.height, webgl: Boolean(gl) }; }) })"
-npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual resize 1440 900
-npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual screenshot --filename=desktop-1440x900.png
-npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual resize 1024 768
-npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual screenshot --filename=desktop-1024x768.png
-npm.cmd exec --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual close
+npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli --version
+npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual open http://127.0.0.1:5173/ --browser=chrome --headed
+npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual snapshot
+npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual eval "() => ({ title: document.title, canvases: Array.from(document.querySelectorAll('canvas')).map(c => { const gl = c.getContext('webgl2') || c.getContext('webgl'); return { width: c.width, height: c.height, webgl: Boolean(gl) }; }) })"
+npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual resize 1440 900
+npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual screenshot --filename=desktop-1440x900.png
+npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual resize 1024 768
+npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual screenshot --filename=desktop-1024x768.png
+npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual close
 Pop-Location
 ```
 
-Replace the example URL and sizes with those used by the project and task. The sizes are examples, not a fixed test matrix. Run the development server separately, and stop it after inspection. Run the CLI from the temporary directory so screenshots and CLI snapshots/logs stay outside source files and Git staging. This temporary npm invocation may fetch the pinned CLI into npm's cache; do not install it globally or add it to project dependencies. Do not run `playwright-cli install`, `install-browser`, or skill installation as part of this procedure. If the compatible CLI, installed Chrome, or required network access is unavailable, report the limitation instead of changing system or repository setup without authorization. Consult `playwright-cli --help` or `playwright-cli --help <command>` when command syntax differs.
+Replace the example URL and sizes with those used by the project and task. The sizes are examples, not a fixed test matrix. Run the development server separately, and stop it after inspection. Run the CLI from the temporary directory so screenshots and CLI snapshots/logs stay outside source files and Git staging. This procedure requires Node.js 18 or newer, the pinned CLI package already present in npm's cache, and Chrome installed. `--offline` prevents npm from accessing the network; it will not fetch the package. If the CLI is missing from cache, or Chrome is unavailable, report the limitation. Obtaining the package over the network requires authorization before changing the execution policy. Do not install the CLI globally or add it to project dependencies. Do not run `playwright-cli install`, `install-browser`, or skill installation as part of this procedure. Consult `playwright-cli --help` or `playwright-cli --help <command>` when command syntax differs.
 
 Confirm that the expected page loaded and that a 3D canvas has non-zero dimensions and an active WebGL context when the game uses WebGL. A canvas or DOM snapshot alone does not prove the scene rendered: open the saved PNGs in an image-capable tool and inspect the pixels. Check the relevant composition, legibility, overlap, scale, element placement, and visual feedback at the chosen sizes. For interaction changes, use CLI input commands such as `click` or `press` to reach representative states and capture those states when feasible; a complete playthrough is not required for a focused visual change.
 

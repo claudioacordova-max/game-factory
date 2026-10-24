@@ -1,0 +1,13 @@
+prefix_rule(
+    pattern = [
+        "npm.cmd",
+        "exec",
+        "--offline",
+        "--yes",
+        "--package=@playwright/cli@0.1.22",
+        "--",
+        "playwright-cli",
+    ],
+    decision = "allow",
+    justification = "Permitir inspecciones visuales con Playwright CLI en Game Factory.",
+)

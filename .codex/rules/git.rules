@@ -1,2 +1,12 @@
-# No hay permiso genérico para `git add`.
-# La preparación de commits sigue la política de rutas explícitas de AGENTS.md y workflow-v1.md.
+# Única autorización de escritura Git: ejecutor instalado fuera del workspace.
+# El ejecutor admite rutas individuales y un mensaje; git add/commit directos no están autorizados.
+prefix_rule(
+    pattern = [
+        "C:/Program Files/nodejs/node.exe",
+        "C:/Users/klaud/.codex/bin/game-factory-commit.cjs",
+    ],
+    decision = "allow",
+    justification = "Usa el ejecutor local revisado; no autoriza Git directo ni opciones de push o amend.",
+    match = ["\"C:/Program Files/nodejs/node.exe\" C:/Users/klaud/.codex/bin/game-factory-commit.cjs --message cambio --path docs/factory/workflow-v1.md"],
+    not_match = ["git add -- src/file.ts", "git commit -m mensaje", "git push"],
+)

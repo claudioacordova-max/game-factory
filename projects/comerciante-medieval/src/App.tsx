@@ -17,6 +17,7 @@ import {
   type PlayerTradeQuote,
   type VillageId,
 } from './engine/index.js'
+import { cargoBreakdown, cargoOccupancyLabel, familyBalanceTenths, inventoryShortcutTransition } from './ui/presentation.js'
 import VillageScene from './scene/VillageScene.js'
 import { npcForId, VILLAGES } from './scene/world.js'
 import type { ContextInteractionTarget } from './scene/contextInteraction.js'
@@ -53,7 +54,7 @@ function GoodIcon({ good }: { good: Good }) {
     {good === 'tool' && <g {...common}><path d="m12 31 15-15M22 9l3-3 9 9-3 3zM8 7l8 2 2 8-4 4-8-8z"/><path d="m8 7 8 8"/></g>}
     {good === 'clothing' && <g {...common}><path d="m14 8 6 4 6-4 8 6-5 7-4-3v15H15V18l-4 3-5-7zM16 8c0 5 8 5 8 0"/></g>}
     {good === 'furniture' && <g {...common}><path d="M9 7h22v25H9zM13 12h14v6H13zM13 22h14M13 18v14M27 18v14"/></g>}
-    {good === 'jewelry' && <g {...common}><path d="M9 13h22l-2 17H11zM9 13l5-7h12l5 7M14 6l6 7 6-7M9 13h22"/><path d="m20 13 4 5-4 4-4-4z"/></g>}
+    {good === 'jewelry' && <g {...common}><path d="m20 4 10 8-10 23L10 12z"/><path d="m10 12 10 3 10-3M20 4l-4 8 4 3 4-3-4-8M20 15v20" fill="none" stroke="#fff2c7" strokeWidth="1.5" strokeLinejoin="round"/></g>}
   </svg>
 }
 
@@ -68,7 +69,7 @@ function CoinIcon() {
 function BagIcon() {
   return <svg className="bag-icon" viewBox="0 0 24 24" aria-hidden="true">
     <path d="M8.3 5.2c.4-2 1.7-3.2 3.7-3.2s3.3 1.2 3.7 3.2l2.2 1.3 2 13.1c.2 1.4-.8 2.4-2.2 2.4H6.3c-1.4 0-2.4-1-2.2-2.4l2-13.1 2.2-1.3Z" fill="currentColor" />
-    <path d="M8.3 5.2h7.4M9.4 12.2c1.1-1.1 4.1-1.1 5.2 0 .9.9.2 1.9-2.6 2.7-2.8.8-3.5 1.8-2.6 2.7 1.1 1.1 4.1 1.1 5.2 0m-2.6-7v8" fill="none" stroke="#f7edd8" strokeLinecap="round" strokeWidth="1.5" />
+    <path d="M8.3 5.2h7.4M8.2 10.5l2 2m5.6-2-2 2M7.4 18.8c1.4-1.2 3-1.8 4.6-1.8s3.2.6 4.6 1.8m-6.6-6.3.5 2m4-2-.5 2" fill="none" stroke="#f7edd8" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.35" />
   </svg>
 }
 
@@ -145,6 +146,7 @@ export default function App() {
   const village = VILLAGES.find(candidate => candidate.id === game.player.villageId)!
   const npc = interaction ? npcForId(interaction.npcId) : undefined
   const family = npc ? game.economy.families[npc.familyId] : undefined
+  const familyBalance = family ? familyBalanceTenths(game, family.id) : undefined
   const business = npc ? game.economy.businesses[npc.businessId] : undefined
   const activeDialog = inventoryOpen ? 'inventory' : travelMenuOpen ? 'travel' : interaction ? 'trade' : undefined
   const villageOptions = useMemo(() => VILLAGES.filter(candidate => candidate.id !== game.player.villageId), [game.player.villageId])
@@ -162,7 +164,7 @@ export default function App() {
     ? saleOffersForFamily(game, family.id).map((offer, index) => ({ ...offer, key: `sell:${index}:${offer.good}:${offer.target.type === 'household' ? offer.target.familyId : offer.target.businessId}` }))
     : []
   const offers: TradeOffer[] = tradeMode === 'buy' ? buyOffers : sellOffers
-  const carriedGoods = GOODS.filter(good => game.player.inventory[good] > 0)
+  const carriedGoods = cargoBreakdown(game.player.inventory)
 
   useEffect(() => {
     const previousDialog = previousDialogRef.current
@@ -187,16 +189,20 @@ export default function App() {
 
   useEffect(() => {
     const openInventoryShortcut = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'i' || event.repeat || event.altKey || event.ctrlKey || event.metaKey) return
-      const target = event.target
-      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, button, a, [role="button"], [role="tab"], [role="slider"], [role="combobox"]'))) return
-      if (travelMenuOpen || interaction || showExperiments) return
+      const transition = inventoryShortcutTransition(inventoryOpen, event)
+      if (!transition) return
       event.preventDefault()
-      setInventoryOpen(open => !open)
+      if (transition.closeOtherPanels) {
+        setTravelMenuOpen(false)
+        setInteraction(undefined)
+        setTradeMessage(undefined)
+        setShowExperiments(false)
+      }
+      setInventoryOpen(transition.inventoryOpen)
     }
-    window.addEventListener('keydown', openInventoryShortcut)
-    return () => window.removeEventListener('keydown', openInventoryShortcut)
-  }, [travelMenuOpen, interaction, showExperiments])
+    window.addEventListener('keydown', openInventoryShortcut, true)
+    return () => window.removeEventListener('keydown', openInventoryShortcut, true)
+  }, [inventoryOpen])
 
   useEffect(() => {
     if (!activeDialog) return
@@ -292,9 +298,8 @@ export default function App() {
 
       <section className="atlas-hud" aria-label="Estado del comerciante">
         <div className="atlas-stat purse-stat"><span className="atlas-icon" aria-hidden="true"><CoinIcon /></span><span className="atlas-label">Bolsa</span><strong><CoinAmount tenths={game.player.moneyTenths} /></strong></div>
-        <div className="atlas-stat load-stat"><span className="atlas-icon" aria-hidden="true"><LoadIcon /></span><span className="atlas-label">Carga</span><strong>{load(carriedWeight)} <span>/ {load(game.player.capacityHalfUnits)}</span></strong><div className="load-meter" role="img" aria-label={`Carga ${load(carriedWeight)} de ${load(game.player.capacityHalfUnits)}`}><span style={{ width: `${Math.min(100, carriedWeight / game.player.capacityHalfUnits * 100)}%` }} /></div></div>
         <div className={`carried-goods${carriedGoods.length ? '' : ' carried-goods-empty'}`} aria-label={carriedGoods.length ? 'Mercancías transportadas' : 'Sin mercancías'}>
-          {carriedGoods.map(good => <span className="carried-good-icon" key={good} title={GOOD_SHORT[good]} aria-label={GOOD_SHORT[good]}><GoodIcon good={good} /></span>)}
+          {carriedGoods.map(({ good, quantity }) => <span className="carried-good-icon" key={good} title={`${GOOD_SHORT[good]}: ${quantity}`} aria-label={`${GOOD_SHORT[good]}: ${quantity}`}><GoodIcon good={good} /><small>{quantity}</small></span>)}
         </div>
         <button className="atlas-button bag-button" type="button" aria-label="Abrir inventario" title="Inventario (I)" onClick={() => setInventoryOpen(true)}><BagIcon /></button>
         <button className="atlas-button day-button" type="button" onClick={advanceDay}><span aria-hidden="true">↻</span> Avanzar día</button>
@@ -323,11 +328,16 @@ export default function App() {
                 <div><p className="eyebrow">Bolsa</p><h2 id="inventory-title" tabIndex={-1} data-dialog-initial-focus>Mercancías</h2></div>
                 <button type="button" className="atlas-close" aria-label="Cerrar inventario" onClick={() => setInventoryOpen(false)}>×</button>
               </div>
+              <div className="inventory-load-summary" aria-label={`Carga utilizada ${load(carriedWeight)} de ${load(game.player.capacityHalfUnits)}; disponible ${load(game.player.capacityHalfUnits - carriedWeight)}`}>
+                <div className="inventory-load-heading"><span className="inventory-load-icon" aria-hidden="true"><LoadIcon /></span><strong>Carga</strong><span>{load(carriedWeight)} / {load(game.player.capacityHalfUnits)}</span></div>
+                <div className="inventory-load-meter" role="img" aria-label={`Carga ${load(carriedWeight)} de ${load(game.player.capacityHalfUnits)}`}><span style={{ width: `${Math.min(100, carriedWeight / game.player.capacityHalfUnits * 100)}%` }} /></div>
+                <small>Disponible: {load(game.player.capacityHalfUnits - carriedWeight)}</small>
+              </div>
               {carriedGoods.length > 0 ? <div className="inventory-grid">
-                {carriedGoods.map(good => <div className="inventory-good" key={good}>
+                {carriedGoods.map(({ good, quantity, totalLoadHalfUnits }) => <div className="inventory-good" key={good}>
                   <span className="inventory-good-icon"><GoodIcon good={good} /></span>
-                  <span className="inventory-good-name">{GOOD_SHORT[good]}</span>
-                  <strong>{game.player.inventory[good]}</strong>
+                  <span className="inventory-good-copy"><span className="inventory-good-name">{GOOD_SHORT[good]}</span><small>{cargoOccupancyLabel(totalLoadHalfUnits)}</small></span>
+                  <strong>{quantity}</strong>
                 </div>)}
               </div> : <p className="inventory-empty">Bolsa vacía</p>}
             </section>
@@ -351,7 +361,7 @@ export default function App() {
             <button type="button" aria-label="Cerrar comercio" className="atlas-backdrop" onClick={closeTrade} />
             <section ref={activeDialogRef} className="atlas-window trade-window" aria-live="polite" role="dialog" aria-modal="true" aria-labelledby="trade-title">
               <div className="trade-heading">
-                <div><p className="eyebrow">{npc.role}</p><h2 id="trade-title" tabIndex={-1} data-dialog-initial-focus>{npc.name}</h2></div>
+                <div className="trade-person"><p className="eyebrow">{npc.role}</p><h2 id="trade-title" tabIndex={-1} data-dialog-initial-focus>{npc.name}</h2>{familyBalance !== undefined && <span className="family-balance" aria-label={`Saldo familiar: ${money(familyBalance)} monedas`}><CoinAmount tenths={familyBalance} /></span>}</div>
                 <button className="atlas-close" aria-label="Cerrar comercio" onClick={closeTrade}>×</button>
               </div>
               <div className="trade-tabs" role="tablist" aria-label="Acciones comerciales">

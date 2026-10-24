@@ -206,6 +206,7 @@ th { color: #f6e6b7; }
 body { color: var(--atlas-ink); background: #d6e0dc; }
 button { color: var(--atlas-ink); }
 button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline-color: #317f82; }
+button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:not(:focus-visible), textarea:focus:not(:focus-visible), a:focus:not(:focus-visible), [role="button"]:focus:not(:focus-visible), [role="tab"]:focus:not(:focus-visible) { outline: none; }
 .atlas-shell { display: flex; width: min(1480px, 100% - 3rem); height: 100dvh; min-height: 0; flex-direction: column; padding: .55rem 0 .45rem; overflow: hidden; }
 .atlas-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .65rem; }
 .atlas-header .brand-block { align-items: baseline; gap: .6rem; }
@@ -223,9 +224,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .atlas-stat strong { color: var(--atlas-ink); font-size: .88rem; line-height: 1.2; }
 .atlas-stat strong span { color: var(--atlas-muted); font-size: .78rem; font-weight: 500; }
 .purse-stat { flex: 0 0 13rem; }
-.load-stat { flex: 0 0 12rem; grid-template-rows: auto auto 4px; row-gap: .15rem; }
-.load-meter { height: 4px; overflow: hidden; border-radius: 99px; background: #d8cfba; }
-.load-meter span { display: block; height: 100%; border-radius: inherit; background: var(--atlas-teal); transition: width .2s ease; }
 .atlas-button { display: inline-flex; min-height: 2.9rem; align-items: center; justify-content: center; gap: .5rem; padding: .55rem .85rem; border: 1px solid var(--atlas-teal); border-radius: 4px; color: #fff9eb; background: var(--atlas-teal); box-shadow: 0 2px 6px #20364417; cursor: pointer; font-weight: 750; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
 .atlas-button:hover:not(:disabled) { border-color: var(--atlas-teal-deep); background: var(--atlas-teal-deep); }
 .atlas-button:active:not(:disabled) { transform: translateY(1px); }
@@ -233,8 +231,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .atlas-button > span[aria-hidden="true"] { font-size: 1.12rem; }
 .carried-goods { display: flex; min-width: 0; flex: 1 1 auto; align-items: center; gap: .35rem; overflow: hidden; }
 .carried-goods-empty { flex: 0 0 .25rem; }
-.carried-good-icon { display: grid; width: 2.2rem; height: 2.2rem; flex: 0 0 2.2rem; place-items: center; border: 1px solid #c7b58f; border-radius: 50%; background: #fbf5e8; }
+.carried-good-icon { position: relative; display: grid; width: 2.2rem; height: 2.2rem; flex: 0 0 2.2rem; place-items: center; border: 1px solid #c7b58f; border-radius: 50%; background: #fbf5e8; }
 .carried-good-icon .good-icon-illustration { width: 1.65rem; height: 1.65rem; }
+.carried-good-icon small { position: absolute; right: -.18rem; bottom: -.18rem; display: grid; min-width: 1rem; height: 1rem; place-items: center; padding: 0 .15rem; border: 1px solid var(--atlas-paper); border-radius: 1rem; color: white; background: var(--atlas-terracotta); font-size: .58rem; font-weight: 800; line-height: 1; }
 .bag-button { flex: 0 0 3.15rem; padding: .35rem; color: var(--atlas-teal-deep); background: transparent; }
 .bag-button > .bag-icon { width: 1.45rem; height: 1.45rem; color: var(--atlas-terracotta); }
 .bag-button:hover:not(:disabled) { color: white; }
@@ -263,10 +262,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .inventory-window[data-items="0"] { width: min(360px, calc(100% - 2rem)); }
 .inventory-window[data-items="1"] { width: min(390px, calc(100% - 2rem)); }
 .inventory-window[data-items="2"] { width: min(500px, calc(100% - 2rem)); }
+.inventory-load-summary { display: grid; gap: .3rem; margin: 0 0 .75rem; padding: .55rem .7rem; border: 1px solid #c6b792; border-radius: 3px; background: #fff9ebad; }
+.inventory-load-heading { display: flex; align-items: center; gap: .4rem; font-size: .82rem; }
+.inventory-load-heading > span:last-child { margin-left: auto; font-weight: 750; }
+.inventory-load-icon { display: grid; width: 1.4rem; height: 1.4rem; place-items: center; color: var(--atlas-teal); }
+.inventory-load-icon svg { width: 1.15rem; height: 1.15rem; }
+.inventory-load-meter { height: .38rem; overflow: hidden; border-radius: 99px; background: #d8cfba; }
+.inventory-load-meter span { display: block; height: 100%; border-radius: inherit; background: var(--atlas-teal); transition: width .2s ease; }
+.inventory-load-summary > small { color: var(--atlas-muted); font-size: .7rem; }
 .inventory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); gap: .5rem; }
 .inventory-empty { margin: .5rem 0 0; color: var(--atlas-muted); }
 .inventory-good { display: grid; min-width: 0; grid-template-columns: 2.4rem 1fr auto; align-items: center; gap: .4rem; padding: .5rem .55rem; border: 1px solid #c6b48e; border-radius: 3px; color: var(--atlas-ink); background: #fff9ebd6; }
 .inventory-good-icon, .trade-offer-icon { display: grid; place-items: center; }
+.inventory-good-copy { display: grid; min-width: 0; gap: .12rem; }
+.inventory-good-copy small { color: var(--atlas-muted); font-size: .68rem; white-space: nowrap; }
 .icon-food { color: #d85a3d; } .icon-firewood { color: #a95b2e; } .icon-wood { color: #9b6a31; }
 .icon-metal { color: #587f91; } .icon-cloth { color: #b84e77; } .icon-tool { color: #547d45; }
 .icon-clothing { color: #7359a6; } .icon-furniture { color: #80603e; } .icon-jewelry { color: #c79a25; }
@@ -292,6 +301,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .trade-window { display: flex; width: min(820px, calc(100% - 2rem)); flex-direction: column; }
 .trade-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.1rem; }
 .trade-heading > div { min-width: 0; flex: 1 1 auto; }
+.trade-person { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .05rem .7rem; }
+.trade-person .eyebrow { grid-column: 1 / -1; }
+.trade-person h2 { grid-column: 1; grid-row: 2; }
+.family-balance { grid-column: 2; grid-row: 2; }
+.family-balance .coin-amount { color: var(--atlas-ink); font-size: .86rem; font-weight: 750; }
 .trade-heading h2 { padding: 0; }
 .trade-heading .eyebrow { margin: 0 0 .18rem; }
 .trade-tabs { display: flex; gap: .3rem; margin: 1rem 0 .55rem; padding: 0 0 .3rem; border: 0; border-bottom: 1px solid var(--atlas-rule); border-radius: 0; background: transparent; }
@@ -347,7 +361,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 @media (max-width: 900px) {
   .atlas-shell { width: calc(100% - 1.5rem); }
   .atlas-hud { flex-wrap: wrap; }
-  .purse-stat, .load-stat { flex: 1 1 12rem; }
+  .purse-stat { flex: 1 1 12rem; }
   .bag-button { flex: 0 0 2.75rem; }
   .atlas-scene-frame { height: auto; min-height: 0; }
 }
@@ -362,12 +376,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .atlas-hud { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .35rem; margin-bottom: .4rem; }
   .atlas-stat { min-height: 3.15rem; grid-template-columns: 1.35rem 1fr; column-gap: .35rem; padding: .35rem .4rem; }
   .atlas-stat .atlas-icon { width: 1.3rem; height: 1.3rem; font-size: .8rem; }
-  .atlas-stat .atlas-icon .coin-icon, .atlas-stat .atlas-icon .load-icon { width: 1rem; height: 1rem; }
+  .atlas-stat .atlas-icon .coin-icon { width: 1rem; height: 1rem; }
   .atlas-label { font-size: .54rem; letter-spacing: .08em; }
   .atlas-stat strong { font-size: .74rem; }
   .purse-stat strong { overflow-wrap: normal; font-size: .68rem; white-space: nowrap; }
   .atlas-stat strong span { font-size: .68rem; }
-  .load-stat { grid-template-rows: auto auto 3px; }
   .atlas-button { min-height: 3rem; padding: .4rem .45rem; gap: .3rem; font-size: .72rem; }
   .bag-button { justify-content: center; }
   .bag-button > .bag-icon { width: 1.35rem; height: 1.35rem; }
@@ -422,7 +435,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .atlas-shell { width: calc(100% - .5rem); }
   .atlas-header h1 { max-width: 64vw; }
   .atlas-hud { grid-template-columns: 1fr 1fr; }
-  .load-stat { grid-column: 2; grid-row: 1; }
+  .purse-stat { grid-column: 1 / -1; grid-row: 1; }
   .carried-goods { grid-column: 1; grid-row: 2; }
   .carried-goods-empty { min-height: 0; }
   .bag-button { grid-column: 2; grid-row: 2; }

@@ -35,6 +35,7 @@ import {
 import { isBeyondNpcInteractionDistance, npcForId, npcsForVillage, NPC_INTERACTION_DISTANCE, VILLAGE_NPCS, VILLAGES } from '../src/scene/world.js'
 import { clampedMovementStep, yawFromMovementDirection } from '../src/scene/playerOrientation.js'
 import { closestContextInteraction, isCaravanPresentInVillage, VILLAGE_EXIT_INTERACTION_DISTANCE, VILLAGE_EXIT_POSITION } from '../src/scene/contextInteraction.js'
+import { cargoBreakdown, cargoOccupancyLabel, familyBalanceTenths, inventoryShortcutTransition } from '../src/ui/presentation.js'
 
 let passed = 0
 function equal<T>(actual: T, expected: T, label: string): void {
@@ -69,6 +70,56 @@ test('jugador inicia en Pueblo A con 300 monedas, inventario vacío y carga 20',
   equal(game.player.moneyTenths, 3000, 'saldo del jugador')
   equal(game.player.capacityHalfUnits, 40, 'capacidad de veinte unidades')
   equal(GOODS.reduce((sum, good) => sum + game.player.inventory[good], 0), 0, 'inventario vacío')
+})
+
+test('resumen de carga usa el catálogo real por mercancía y omite cantidades vacías', () => {
+  const game = createInitialGameState()
+  game.player.inventory.food = 2
+  game.player.inventory.jewelry = 1
+  const breakdown = cargoBreakdown(game.player.inventory)
+  equal(breakdown.length, 2, 'solo aparecen bienes transportados')
+  equal(breakdown[0].good, 'food', 'conserva el orden del catálogo')
+  equal(breakdown[0].quantity, 2, 'mantiene cantidad separada de la carga')
+  equal(breakdown[0].unitLoadHalfUnits, GOODS_CATALOG.food.weightHalfUnits, 'comida usa el peso configurado')
+  equal(breakdown[0].totalLoadHalfUnits, 4, 'dos comidas suman dos unidades abstractas')
+  equal(breakdown[1].unitLoadHalfUnits, GOODS_CATALOG.jewelry.weightHalfUnits, 'joya usa media unidad configurada')
+  equal(breakdown[1].totalLoadHalfUnits, 1, 'una joya ocupa media unidad')
+  equal(cargoOccupancyLabel(breakdown[0].totalLoadHalfUnits), 'Ocupa 2', 'etiqueta compacta de carga entera')
+  equal(cargoOccupancyLabel(breakdown[1].totalLoadHalfUnits), 'Ocupa 0,5', 'etiqueta compacta de carga fraccionaria')
+  equal(breakdown.reduce((sum, item) => sum + item.totalLoadHalfUnits, 0), playerLoadHalfUnits(game.player.inventory), 'las filas suman la carga real del motor')
+})
+
+test('atajo I abre y cierra sobre cualquier pantalla salvo campos y teclas reservadas', () => {
+  const event = (target: object | null, overrides: Partial<{ key: string; repeat: boolean; altKey: boolean; ctrlKey: boolean; metaKey: boolean }> = {}) => ({
+    key: 'i', repeat: false, altKey: false, ctrlKey: false, metaKey: false, target: target as unknown as EventTarget,
+    ...overrides,
+  })
+  const button = { tagName: 'BUTTON' }
+  const textInput = { tagName: 'INPUT' }
+  const textArea = { tagName: 'TEXTAREA' }
+  const editable = { isContentEditable: true }
+  equal(JSON.stringify(inventoryShortcutTransition(false, event(button))), JSON.stringify({ inventoryOpen: true, closeOtherPanels: true }), 'abre aun con foco en botón y cierra paneles incompatibles')
+  equal(JSON.stringify(inventoryShortcutTransition(true, event(null))), JSON.stringify({ inventoryOpen: false, closeOtherPanels: false }), 'cierra con foco general')
+  equal(inventoryShortcutTransition(false, event(textInput)), undefined, 'los campos de texto conservan la tecla')
+  equal(inventoryShortcutTransition(false, event(textArea)), undefined, 'las áreas de texto conservan la tecla')
+  equal(inventoryShortcutTransition(false, event(editable)), undefined, 'contenido editable conserva la tecla')
+  equal(inventoryShortcutTransition(false, event(button, { repeat: true })), undefined, 'la repetición no duplica alternancias')
+  equal(inventoryShortcutTransition(false, event(button, { ctrlKey: true })), undefined, 'atajos modificados quedan intactos')
+  equal(inventoryShortcutTransition(false, event(button, { key: 'Escape' })), undefined, 'Escape no activa el inventario')
+})
+
+test('el saldo visible por familia sigue los fondos familiares tras transacciones', () => {
+  const game = createInitialGameState()
+  const familyId = 'family-tailor-a'
+  equal(familyBalanceTenths(game, familyId), game.economy.families[familyId].moneyTenths, 'lee el fondo compartido del modelo')
+  game.economy.businesses['tailor-a'].commercialInventory.clothing = 2
+  const purchase = buyFromBusiness(game, 'tailor-a', 'clothing', 1)
+  ok(purchase.ok, 'la compra de prueba se completa')
+  if (purchase.ok) {
+    equal(purchase.state.economy.families[familyId].moneyTenths, 5310, 'el ingreso va al fondo familiar compartido')
+    equal(familyBalanceTenths(purchase.state, familyId), 5310, 'la lectura refleja el nuevo saldo al terminar la transacción')
+  }
+  equal(familyBalanceTenths(game, 'missing-family'), undefined, 'no inventa un saldo para una familia inexistente')
 })
 
 test('compra personal usa 0,9 P exacto, inventario comercial y peso entero/fraccional', () => {

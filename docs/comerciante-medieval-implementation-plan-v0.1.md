@@ -368,4 +368,4 @@ El coordinador solo crea commit local al pasar verificaciones, recibir revisión
 - **Inspección visual/navegador:** omitida por instrucción expresa del diseñador; no se usó Playwright CLI ni browser automatizado en esta corrección.
 - **Playtesting humano:** el diseñador confirma que realizó el playtesting manual y aprueba el resultado actual. La interfaz podrá seguir mejorándose en iteraciones futuras; esto no bloquea el cierre actual.
 - **Cierre:** brief aprobado, cambios de UI implementados, 49/49 tests, build correcto y revisión independiente completados. No se repitieron las verificaciones de código porque no hubo cambios desde su ejecución. Sin inspección automatizada de navegador, según instrucción del diseñador.
-- **Estado:** ITER-09 cerrada con aprobación de playtesting manual del diseñador (2026-10-24). Commit local de cierre autorizado; sin push.
+- **Estado:** ITER-09 cerrada con aprobación de playtesting manual del diseñador (2026-10-24). Commit local de cierre: `bbd8b30f901c4ba97e7934677861f03f196ea81e`; sin push.

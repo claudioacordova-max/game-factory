@@ -1,11 +1,28 @@
 ---
 name: game-ui-ux
-description: Analyze, propose, implement, and review focused UI and UX improvements for game prototypes, including 2D interfaces and interfaces connected to 3D scenes.
+description: Transform technical game prototypes into coherent playable demos, or make focused later UI/UX corrections, including interfaces connected to 3D scenes.
 ---
 
 # Game Factory: UI and UX
 
 Use this skill when a request concerns how a player sees, understands, or uses a game's interface. It supports analysis and design decisions; it does not replace the project's change brief, approval, implementation, or review workflow.
+
+## Choose the intervention
+
+Distinguish a **technical-prototype-to-demo transformation** from a **focused correction**. The first is a principal visual intervention after a playable technical prototype exists: provisional components, layout, navigation and appearance may be reconsidered completely within the authorized scope. It must produce a functional interface, not just findings or a concept. A later readability, feedback or spacing request normally receives a local correction; do not reopen the whole design without a reason and authorization.
+
+Use the existing brief and workflow for scope, authorization, roles and closure. If the designer has authorized the whole transformation and delegated conventional visual decisions, record that authorization and proceed between activities without asking again. Choose ordinary palette, typography, layout, icons and component treatments within that scope. Preserve designer authority over gameplay, balance, content and particular identity constraints; isolate unresolved material decisions while continuing independent work.
+
+## Transform a technical prototype
+
+Keep these four activities identifiable in the existing project record, with detail proportional to the game:
+
+1. **Understand and structure.** Read the specification and implementation. Map the real screens, modes, states, player actions, required information and 3D relationships. Define a structural layout before implementing the definitive interface: persistent versus contextual information, action placement and navigation. Do not assume the provisional components organize the experience well.
+2. **Make a concrete visual proposal.** Establish a suitable art direction, palette, fonts, composition/proportions, hierarchy, panels, cards or other game objects, controls, indicators, iconography and relation to the 3D scene. Use the official imagegen skill when available for aesthetic references of the main existing views/states. Store selected project references and prompts; generated names, statistics and invented elements never override real game data. If integrated generation is unavailable or fails, document an achievable visual substitute such as a standalone HTML/CSS mockup and capture; do not silently switch to a paid API/CLI, which needs explicit authorization. Reference art is not a replacement for functional components.
+3. **Implement the proposal.** Use the existing stack and real states/actions, allowing substantial composition changes. Prioritize immediate reading, distinct control states, recognizable icons, useful space, comfortable navigation and coherence across UI and 3D. Remove redundant technical text and unnecessary interaction. Preserve approved mechanics and action intent; do not add confirmation steps or new game systems for aesthetics.
+4. **Evaluate and refine.** Run the applicable tests/build, then perform the principal rendered inspection on the complete implementation when tools permit. Cover the real main views and interaction states at representative supported sizes (for example 1440×900 and 1024×768 for desktop). Check legibility, action clarity, overlap/cropping, proportions, working controls, fidelity to the proposal and unnecessary text/panels/steps. Correct evident in-scope defects, repeating only affected checks/captures. Do not inspect after every minor edit or turn each refinement into another research phase. Record exactly what was observed and what remains unverified; never claim visual inspection from source, a build or an unopened image.
+
+Reuse this procedure, not one game's palette, layout or asset style. A small 2D game and an immersive 3D game may need different structures, references and inspection coverage.
 
 ## Understand the experience
 
@@ -40,7 +57,7 @@ Describe findings in concrete terms and distinguish:
 - **Visual inconsistency:** related elements communicate different priorities or states without a clear reason.
 - **Open design decision:** more than one reasonable solution would change emphasis, player-facing behavior, or visual direction.
 
-Offer the smallest change that plausibly addresses the demonstrated problem. Explain the expected effect on the player's task and note tradeoffs or unresolved choices. Do not invent mechanics, rules, content, priorities between mechanics, or an art direction. Mark decisions that need designer approval instead of silently choosing them. A local readability or feedback issue should normally receive a local correction; propose broader restructuring only when evidence shows the problem is broad.
+For a focused correction, offer the smallest change that plausibly addresses the demonstrated problem. Explain its expected effect and relevant tradeoffs. For an authorized integral transformation, follow the four activities above and reconsider the whole provisional composition as needed. Do not invent mechanics, rules or content; use any delegated visual discretion within its stated limits. Mark material decisions that still need designer approval.
 
 For a post-closure change request, use [`game-iteration`](../game-iteration/SKILL.md) to prepare the required change brief. Follow the authorization and execution rules in [`workflow-v1.md`](../../../docs/factory/workflow-v1.md); this skill does not duplicate or replace them. Do not implement a proposal while its design or required approval is pending.
 

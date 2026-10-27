@@ -20,8 +20,7 @@ export interface ExplorationSceneProps {
 }
 
 const MOVEMENT_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright'])
-const STATUS_TEXT = { available: 'Disponible', locked: 'Bloqueado', completed: 'Completado' }
-const KIND_TEXT = { enemy: 'Encuentro', chest: 'Cofre', shrine: 'Santuario', exit: 'Puerta' }
+const ACTION_TEXT = { enemy: 'Desafiar', chest: 'Abrir cofre', shrine: 'Usar santuario', exit: 'Entrar' }
 interface Runtime {
   pose: SpatialPose
   roomId: string
@@ -167,6 +166,7 @@ export function ExplorationScene(props: ExplorationSceneProps) {
   const [nearby, setNearby] = useState<ExplorationObject[]>([])
   const nearbyKey = useRef('')
   const [focused, setFocused] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const clearInput = useCallback(() => { runtime.current.keys.clear(); runtime.current.focused = false; setFocused(false) }, [])
   const reportPose = useCallback(() => {
     if (runtime.current.dirty) {
@@ -200,6 +200,7 @@ export function ExplorationScene(props: ExplorationSceneProps) {
   useEffect(() => {
     if (disabled) { clearInput(); reportPose() }
   }, [disabled, clearInput, reportPose])
+  useEffect(() => { viewport.current?.focus({ preventScroll: true }) }, [])
   useEffect(() => {
     const blur = () => { clearInput(); reportPose() }
     const visibility = () => { if (document.hidden) blur() }
@@ -229,11 +230,11 @@ export function ExplorationScene(props: ExplorationSceneProps) {
     time.current = 0
     reportPose()
     const close = objects.filter((object) => Math.hypot(object.position.x - runtime.current.pose.x, object.position.z - runtime.current.pose.z) <= INTERACTION_RANGE)
-    const key = `${room.id}:` + close.map((object) => `${object.id}:${object.status}:${object.label}`).join('|')
+    const key = `${room.id}:${closestInteractable(runtime.current.pose, close)?.id ?? ''}:` + close.map((object) => `${object.id}:${object.status}:${object.label}`).join('|')
     if (key !== nearbyKey.current) { nearbyKey.current = key; setNearby(close) }
   }
+  const contextualObject = closestInteractable(runtime.current.pose, nearby)
   return <section className="exploration-scene" aria-label={`Exploración: ${room.name}`}>
-    <div className="exploration-heading"><strong>{room.name}</strong><span>Acércate para interactuar</span></div>
     <div className={`exploration-viewport${focused ? ' exploration-focused' : ''}`} ref={viewport} tabIndex={disabled ? -1 : 0}
       role="group" aria-label="Control del avatar" aria-describedby="exploration-help"
       onFocus={(event) => { if (event.target === event.currentTarget && !disabled) { runtime.current.focused = true; setFocused(true) } }}
@@ -255,17 +256,12 @@ export function ExplorationScene(props: ExplorationSceneProps) {
       <Canvas shadows dpr={[1, 1.5]} camera={{ position: [9, 12, 12], fov: 43, near: 0.1, far: 60 }}>
         <MovingWorld room={room} objects={objects} runtime={runtime} onInteract={interact} onTick={tick} />
       </Canvas>
-      {!focused && !disabled && <span className="exploration-focus-hint">Haz clic en la sala o usa Tab para controlar al invocador</span>}
     </div>
-    <div className="exploration-controls">
-      <div><p id="exploration-help">WASD / flechas: caminar · E: interactuar. Tab: salir de la sala.</p>
-        <div className="exploration-nearby" aria-live="polite">
-          {nearby.length ? nearby.map((object) => <div key={object.id}><span>{KIND_TEXT[object.kind]} · {object.label}</span>
-            <button type="button" disabled={disabled || object.status !== 'available'} onClick={() => interact(object.id)}>
-              {object.status === 'available' ? `Interactuar · ${object.label}` : STATUS_TEXT[object.status]}
-            </button></div>) : <span>Busca un encuentro, cofre, santuario o puerta en la sala.</span>}
-        </div>
-      </div>
+    <p id="exploration-help" className="sr-only">WASD o flechas para caminar; E para interactuar con un objeto cercano; I para abrir Colección. Tab permite navegar los controles.</p>
+    {!disabled && contextualObject && <div className="exploration-context" aria-live="polite"><button type="button" onClick={() => interact(contextualObject.id)}><kbd>E</kbd><span><strong>{ACTION_TEXT[contextualObject.kind]}</strong><small>{contextualObject.label}</small></span></button></div>}
+    {!disabled && <button type="button" className="exploration-help-toggle" aria-label="Ayuda y controles de exploración" aria-expanded={showHelp} aria-controls="exploration-input-help" onClick={() => setShowHelp((current) => !current)}>?</button>}
+    {!disabled && showHelp && <div className="exploration-input-help" id="exploration-input-help">
+      <strong>Explorar la cripta</strong><p>WASD / flechas · Caminar<br/>E · Interactuar cerca<br/>I · Colección<br/>Tab · Navegar controles</p><small>La aventura dura esta sesión. Recargar inicia una partida nueva.</small>
       <div className="exploration-dpad" role="group" aria-label="Caminar con puntero">
         {([{ key: 'w', label: 'Arriba', text: '↑' }, { key: 'a', label: 'Izquierda', text: '←' }, { key: 's', label: 'Abajo', text: '↓' }, { key: 'd', label: 'Derecha', text: '→' }]).map((direction) =>
           <button type="button" key={direction.key} className={`exploration-direction-${direction.key}`} aria-label={`Caminar ${direction.label.toLowerCase()}`} disabled={disabled}
@@ -288,6 +284,7 @@ export function ExplorationScene(props: ExplorationSceneProps) {
             }}>{direction.text}</button>)}
       </div>
     </div>
+    }
   </section>
 }
 

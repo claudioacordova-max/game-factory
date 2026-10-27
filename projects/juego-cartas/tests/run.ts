@@ -9,6 +9,13 @@ import { h2Tests } from './h2.js'
 import { h3Tests } from './h3.js'
 import { worldTests } from './world.js'
 import { presentationTests } from './presentation.js'
+import { explorationUiTests } from './explorationUi.js'
+import { combatPresentationTests } from './combatPresentation.js'
+import { combatActionTests } from './combatActions.js'
+import { blockAssignmentTests } from './blockAssignments.js'
+import { boardGeometryTests } from './boardGeometry.js'
+import { blockDragTests } from './blockDrag.js'
+import { activationTests } from './activation.js'
 import { expeditionTests } from './expedition.js'
 import './spatial.js'
 import { canEnterEncounter, createExplorationProgress, currentEncounterId, isDungeonComplete, recordEncounterDefeat, recordEncounterVictory } from '../src/engine/exploration.js'
@@ -729,7 +736,7 @@ test('el aviso distingue la victoria final de una victoria que habilita el sigui
   equal(encounterVictoryMessage('Guardián de la cripta', true), 'Victoria contra Guardián de la cripta. La mazmorra ha terminado: has superado los tres encuentros.')
 })
 
-tests.push(...h1Tests, ...h2Tests, ...h3Tests, ...worldTests, ...presentationTests, ...expeditionTests)
+tests.push(...h1Tests, ...h2Tests, ...h3Tests, ...worldTests, ...presentationTests, ...expeditionTests, ...explorationUiTests, ...combatPresentationTests, ...combatActionTests, ...blockAssignmentTests, ...boardGeometryTests, ...blockDragTests, ...activationTests)
 let failed = 0
 for (const entry of tests) {
   try {

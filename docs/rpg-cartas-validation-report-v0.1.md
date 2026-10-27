@@ -1,4 +1,4 @@
-﻿# Informe de validación del prototipo RPG de cartas
+# Informe de validación del prototipo RPG de cartas
 
 **Versión:** 0.1
 **Fecha:** 22 de octubre de 2026
@@ -86,3 +86,38 @@ La revisión del alcance no identificó implementación de las funcionalidades r
 ## Conclusión
 
 La evidencia disponible y las confirmaciones manuales del usuario respaldan el cumplimiento de los 12 criterios de aceptación. Los ajustes de este cierre son documentales; no cambian la implementación del juego, sus reglas, estadísticas, recompensas ni presentación visual.
+
+## Iteración de interfaz integrada A1–A6 — entrega técnica del 27 de octubre de 2026
+
+Este apartado corresponde a la nueva iteración autorizada de exploración y combate. Las conclusiones anteriores pertenecen al prototipo histórico y no acreditan aceptación humana de esta versión. El documento rector es la solicitud del diseñador y su aprobación conjunta de A1–A6/B1; [estructura y propuesta visual](design/rpg-cartas/ui-redesign-v1.md), ejecución y dictámenes en el [plan existente](rpg-cartas-implementation-plan-v0.1.md).
+
+Se implementaron escena a viewport completo, HUD contextual, colección modal con I/Esc y suspensión del mundo, avisos/resultados internos, tablero con invocadores y recursos integrados, invocación directa, sacrificios ejecutados por última selección, atacantes/objetivos directos, bloqueo por arrastre con multiasignación ordenada y conexiones, y transiciones sin fin manual de turno. R1–R3 mantienen grupos sin invocador/vida ficticia y ataques dirigidos. Motor, contenido, balance y mezcla permanecen intactos.
+
+| Evidencia ejecutada | Resultado y alcance acreditado |
+|---|---|
+| Suite de producción y regresión | `npm.cmd run test`: 160/160 casos más comprobaciones espaciales. Incluye reglas previas, heridas/copias/mejoras, mundo/expedición, mezcla y controladores reales de selección/transacción/flujo. |
+| Invocación y sacrificio | Rechazo atómico de recursos/fase/IDs, selección parcial/deselección/cancelación, fixture de dos sacrificios, revalidación final, eventos con revisión obsoleta y continuación legítima posterior. No implica ejecución de clics React en navegador. |
+| Ataque y fases | Cero atacantes, objetivos dirigidos, finales letales antes de mantenimiento, turno enemigo automático, omisión de defensa sin atacantes y mantenimiento/robo una sola vez. Defensa con atacantes reales conserva confirmación de cero bloqueadores. |
+| Bloqueos y conexiones | Exclusividad, reasignación, orden/retirada, simultaneidad y daño sobrante mediante motor existente; payload corrupto/ajeno/obsoleto; conexiones para todos los bloqueadores y objetivos compartidos. Geometría pura cubre recortes, tarjetas invisibles y coordenadas inválidas. |
+| SSR de componentes reales | Grupo sin vida ficticia, vidas actuales/máximas de fuentes reales, recursos sin duplicación, objetivos sobre cartas, progreso/aviso de sacrificio persistente, controles de bloqueo sobre cartas, conexiones previstas y ausencia de antiguos paneles/pasos. SSR no prueba foco, arrastre ni posiciones renderizadas. |
+| Refinamiento A6 | Cuatro pruebas invocan el filtro de producción con eventos simulados: valores `detail > 1` no ejecutan otra acción entre revisiones del estado del controlador; activaciones posteriores y de teclado simple siguen disponibles; la repetición simulada de Enter/Espacio solicita prevenir la activación por defecto. No montan React ni provocan un rerender DOM. La suite no mide el conteo real de un gesto físico tras cambiar de elemento DOM; la experiencia de activación fue aceptada en el playtesting humano final. Sin temporizadores ni cambios de reglas; selección/deselección ordinaria de criaturas conservada. |
+| Compilación | `npm.cmd run build` correcto. Persiste aviso conocido de bundle principal >500 kB; no se introdujo una intervención de optimización ajena al alcance. |
+| Seguridad de archivos | Preflight sobre lista explícita de rutas autorizadas, incluyendo archivos nuevos y de pruebas; `git diff --check`. Índice sin preparar y sin cambios del motor/contenido/dependencias. Los cinco preexistentes ajenos se conservan excluidos. |
+| Revisión independiente | A1–A5 aprobados sin hallazgos reproducibles. Primera revisión de A6: entrega técnica aprobada con observación no bloqueante P3 sobre el alcance atribuido a las pruebas de multiclic; sin defectos de ejecución identificados. Ciclo 1: corrección únicamente documental. La comprobación independiente posterior aprobó la corrección sin hallazgos y la entrega técnica; no sustituye aceptación humana. |
+
+La propuesta y CSS contemplan 1440×900 y 1024×768, con filas desplazables, selectores y herramientas de bloqueo dentro de la altura prevista. Esa comprobación de fuente y la referencia imagegen inspeccionada no equivalen a inspección renderizada del juego.
+
+**Limitación visual concreta:** Playwright offline no estaba en caché (`ENOTCACHED`); IAB no estaba disponible. Después de reanudar la sesión, la activación nativa de Chrome sí funcionó, pero la operación posterior Ctrl+T detuvo Computer Use: la herramienta no pudo determinar con confianza la URL actual del navegador en Windows para aplicar su política. Se respetó la detención y no se usó otro mecanismo para eludirla. No se acredita una captura inspeccionada, recorrido DOM ni gesto de juego observado por el agente en esta versión.
+
+La versión se entregó para el playtesting humano, ya completado y aceptado, en el servidor existente `http://127.0.0.1:5180/`, sin iniciar otro ni detener el destinado al diseñador. La [guía breve del README](../projects/juego-cartas/README.md#playtesting-breve-del-rediseño--aceptado) cubre controles, costes, selección definitiva, multibloqueo, fases, retorno/persistencia y presentación en ambos tamaños. El diseñador confirmó los flujos de la guía como satisfactorios. No facilitó navegador, resolución o dispositivo exactos; no se atribuyen medidas ni ejecuciones instrumentadas adicionales.
+
+**Estado de entrega técnica (histórico):** A1–A6 implementados y aprobados técnicamente para entrega. P3 documental corregido en ciclo 1 y comprobado independientemente sin hallazgos. El coordinador confirmó 160/160 pruebas, comprobaciones espaciales, build y preflight de las 33 rutas autorizadas; la corrección documental posterior no cambió código ni pruebas y pasó su preflight. Pendientes la inspección manual de presentación/entradas y la aceptación visual/funcional final del diseñador tras playtesting. Sin staging, commit de cierre de A ni push. B1 cerrado independientemente en `eb6a165be40197937096435204df76c45763bbfe`.
+### Aceptación humana definitiva y cierre autorizado de A1–A6
+
+El diseñador declara completado el playtesting y acepta definitivamente el resultado visual, funcional y de UX. Confirma como satisfactorios exploración/navegación; colección superpuesta con I/Esc, conservación de posición/foco y ausencia de movimiento retenido; contexto E; invocación por arrastre y alternativas, con rechazo sin consumo de operaciones inválidas; sacrificios/selección/cancelación y punto definitivo; atacantes/objetivos dirigidos R1–R3; bloqueos arrastrados múltiples y edición de asignaciones; fases automáticas, recursos, resultados, persistencia e integración general.
+
+La evaluación principal fue en escritorio. La emulación móvil orientativa en herramientas del navegador también resultó aceptable, sin cobertura móvil dedicada ni requisitos adicionales. No se facilitaron navegador, resolución o dispositivo exactos. La inspección automática no realizada por la restricción de URL de Computer Use permanece documentada como tal, separada de la validación humana ahora satisfecha; no es un bloqueo pendiente.
+
+**Estado vigente:** A1–A6 completados y aceptados definitivamente; cierre formal y commit local autorizados. Revisiones independientes completas, incluido el P3 documental corregido en ciclo 1 y comprobado sin hallazgos; sin defectos pendientes. Se conservan 160/160 pruebas, comprobaciones espaciales, build y preflight anterior de 33 rutas sin repetir pruebas funcionales por este cierre exclusivamente documental. Las menciones anteriores de aceptación pendiente son historia de la entrega, no condiciones actuales.
+
+El commit local de cierre es el que incorpora este registro con mensaje `juego-cartas: close A1-A6 integrated interface redesign`; el coordinador verificará el hash real tras la ejecución segura, consultable con `git log -1 --format=%H -- docs/rpg-cartas-implementation-plan-v0.1.md`. No se afirma anticipadamente que el commit se haya ejecutado. B1 conserva su cierre independiente en `eb6a165be40197937096435204df76c45763bbfe`. Sin push ni modificaciones nuevas de código, reglas, balance o arquitectura.

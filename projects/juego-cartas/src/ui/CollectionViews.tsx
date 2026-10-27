@@ -6,18 +6,18 @@ import { CreaturePortrait, Icon } from './GameIcons.js'
 
 type Props = { session: GameSession; onChangeDeck: (copyId: string, included: boolean) => void }
 
-export function DeckPanel({ session, onChangeDeck, onMoveDeck }: Props & { onMoveDeck: (copyId: string, direction: -1 | 1) => void }) {
+export function DeckPanel({ session, onChangeDeck }: Props) {
   return <section className="deck-panel stone-panel" aria-labelledby="deck-title">
-    <header className="panel-heading"><div><p className="section-kicker">Preparación</p><h2 id="deck-title">Baraja activa <span>{session.activeDeckCopyIds.length}</span></h2></div><Icon name="cards" /></header>
-    <p className="subtle">Las cartas se roban en este orden. Usa ↑ y ↓ para moverlas.</p>
-    <ol className="deck-list">
-      {session.activeDeckCopyIds.map((copyId, index) => {
+    <header className="panel-heading"><div><p className="section-kicker">Elegidas para el duelo</p><h2 id="deck-title">Baraja activa <span>{session.activeDeckCopyIds.length}</span></h2></div><Icon name="cards" /></header>
+    <p className="subtle">El robo es aleatorio. Elige tus criaturas.</p>
+    <ul className="deck-list">
+      {session.activeDeckCopyIds.map((copyId) => {
         const copy = session.copies.find((entry) => entry.id === copyId)
         const type = copy && PLAYER_CARD_TYPES.find((entry) => entry.id === copy.cardId)
         const card = copy && type && effectiveCopyCard(type, copy)
-        return copy && card ? <li key={copyId} className={copy.health < card.maxHealth ? 'is-wounded' : ''}><span className="deck-index">{String(index + 1).padStart(2, '0')}</span><CreaturePortrait cardId={card.id} /><div><strong>{card.name}</strong><span>{card.attack} ATQ · {copy.health}/{card.maxHealth} VID{copy.health < card.maxHealth ? ' · Herida' : ''}</span></div><span className="deck-controls"><button type="button" disabled={index === 0} onClick={() => onMoveDeck(copyId, -1)} aria-label={`Subir ${card.name}`}>↑</button><button type="button" disabled={index === session.activeDeckCopyIds.length - 1} onClick={() => onMoveDeck(copyId, 1)} aria-label={`Bajar ${card.name}`}>↓</button><button className="remove-card" type="button" onClick={() => onChangeDeck(copyId, false)} aria-label={`Retirar ${card.name} de baraja`}>×</button></span></li> : null
+        return copy && card ? <li key={copyId} className={copy.health < card.maxHealth ? 'is-wounded' : ''}><CreaturePortrait cardId={card.id} /><div><strong>{card.name}</strong><span>{card.attack} ATQ · {copy.health}/{card.maxHealth} VID{copy.health < card.maxHealth ? ' · Herida' : ''}</span></div><button className="remove-card" type="button" onClick={() => onChangeDeck(copyId, false)} aria-label={`Retirar ${card.name} de baraja`}>×</button></li> : null
       })}
-    </ol>
+    </ul>
     {session.activeDeckCopyIds.length === 0 && <p className="empty-state">Baraja vacía. Recupera copias y añádelas desde Colección.</p>}
     <p className="deck-note"><Icon name="heart" />Las heridas se conservan entre duelos.</p>
   </section>

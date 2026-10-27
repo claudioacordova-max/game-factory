@@ -3,6 +3,7 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
     "noUnusedLocals": true,
@@ -12,5 +13,5 @@
     "lib": ["ES2022", "DOM"],
     "types": []
   },
-  "include": ["src/engine/**/*.ts", "tests/**/*.ts"]
+  "include": ["src/engine/**/*.ts", "tests/**/*.ts", "tests/**/*.tsx"]
 }

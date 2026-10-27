@@ -1,0 +1,8 @@
+﻿id,zona,nombre,modo,vida_rival,campo_inicial,baraja_en_orden,recompensa_primera,recompensa_repetible
+R1,Ala de ratas,Ratas · 1,Escaramuza,0,E01,,Vida máxima +1,Vida máxima +1
+R2,Ala de ratas,Ratas · 2,Escaramuza,0,E01;E03,,Vida máxima +1,Vida máxima +1
+R3,Ala de ratas,Ratas · 3,Escaramuza,0,E01;E02;E04,,Vida máxima +1,Vida máxima +1
+R4,Ala de ratas,Señora de las ratas,Duelo miniboss,12,,E01;E05,"Restauración a 20; fatiga −1; cofre P08, P12 (una vez)",Restauración a 20; fatiga −1
+B1,Sector 1,Centinela del umbral,Duelo principal,17,,E08;E07;E09,"Vida máxima +4; desbloquea P13, P16",No repetible
+B2,Sector 2,Custodia de catacumbas,Duelo principal,22,,E08;E09;E07;E11;E10,"Vida máxima +4; desbloquea P15, P17",No repetible
+B3,Sector 3,Guardián de la cripta,Duelo principal,30,E06,E11;E13;E08;E09;E14;E12,Restaura vida máxima a 20; final de demo,No repetible

@@ -13,6 +13,12 @@ export interface CreatureCard {
   attack: number
   maxHealth: number
   cost: SummonCost
+  rarity?: 'common' | 'rare' | 'epic'
+  seed?: boolean
+  reinvokeCost?: number
+  growth?: 'attack' | 'health'
+  growthCap?: number
+  growthProgress?: number
   /** Temporary duel reference to an owned copy; absent from opponent cards. */
   copyId?: string
   startingHealth?: number
@@ -29,6 +35,7 @@ export interface Creature {
 }
 
 export interface Invoker {
+  kind: 'invoker'
   level: number
   /** Persistent session fatigue applied only to the player invoker. */
   fatigue: number
@@ -39,10 +46,21 @@ export interface Invoker {
   creatures: Creature[]
 }
 
+export interface CreatureGroup {
+  kind: 'group'
+  creatures: Creature[]
+}
+export type CombatSide = Invoker | CreatureGroup
+
 export interface DuelState {
+  mode: 'duel' | 'skirmish'
+  targets: Record<string, string>
   /** Unique identity used to make session outcome settlement idempotent. */
   id: string
-  players: Record<PlayerId, Invoker>
+  /** Captured at creation; never infer participation from a later deck selection. */
+  participantCopyIds: string[]
+  encounterId?: string
+  players: { player: Invoker; opponent: CombatSide }
   activePlayer: PlayerId
   turn: number
   phase: TurnPhase
@@ -54,8 +72,13 @@ export interface DuelState {
 }
 
 export interface DuelSetup {
+  mode?: 'duel' | 'skirmish'
   playerDeck: CreatureCard[]
   opponentDeck: CreatureCard[]
   firstPlayer?: PlayerId
   playerFatigue?: number
+  playerLife?: number
+  opponentLife?: number
+  opponentInitialField?: CreatureCard[]
+  encounterId?: string
 }

@@ -1,12 +1,21 @@
+import { requireInvoker } from '../src/engine/rules.js'
 import { addCopyToActiveDeck, baseMana, createDuel, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, removeCopyFromActiveDeck, resolveCombat, RuleViolation, startCombat, startSessionDuel, summonCreature, unlockCreatureType } from '../src/engine/index.js'
 import { chooseEnemyBlockers, resolveEnemyBlocks, runEnemyTurn } from '../src/engine/enemy.js'
 import type { Creature, CreatureCard, DuelState, PlayerId } from '../src/engine/index.js'
-import { DISCOVERY_CARD, DUNGEON_ENCOUNTERS } from '../src/engine/content.js'
+import { MAIN_ENCOUNTERS as DUNGEON_ENCOUNTERS, PLAYER_CARD_TYPES } from '../src/engine/content.js'
+import { h1Tests } from './h1.js'
+import { h2Tests } from './h2.js'
+import { h3Tests } from './h3.js'
+import { worldTests } from './world.js'
+import { presentationTests } from './presentation.js'
+import { expeditionTests } from './expedition.js'
+import './spatial.js'
 import { canEnterEncounter, createExplorationProgress, currentEncounterId, isDungeonComplete, recordEncounterDefeat, recordEncounterVictory } from '../src/engine/exploration.js'
 import { encounterVictoryMessage } from '../src/ui/explorationMessages.js'
 
 type Test = { name: string; run: () => void }
 const tests: Test[] = []
+const DISCOVERY_CARD = PLAYER_CARD_TYPES.find((card) => card.id === 'P13')!
 
 function test(name: string, run: () => void): void {
   tests.push({ name, run })
@@ -70,18 +79,18 @@ function bringToMain(state: DuelState, player: PlayerId): DuelState {
 test('estado inicial: vida 20, nivel 1, maná 1 y tres cartas en mano', () => {
   const state = createDuel({ playerDeck: cards('p', 5), opponentDeck: cards('o', 3) })
   equal([state.players.player.life, state.players.player.level, state.players.player.mana, state.players.player.hand.length], [20, 1, 1, 3])
-  equal([state.players.opponent.life, state.players.opponent.hand.length], [20, 3])
+  equal([requireInvoker(state.players.opponent).life, requireInvoker(state.players.opponent).hand.length], [20, 3])
   equal(baseMana(state.players.player), 1)
   equal(state.players.player.deck.map((card) => card.id), ['p-4', 'p-5'])
 })
 
 test('mantenimiento alterna jugador, recupera maná y roba una carta disponible', () => {
   let state = createDuel({ playerDeck: cards('p', 5), opponentDeck: cards('o', 4) })
-  state = { ...state, players: { ...state.players, opponent: { ...state.players.opponent, mana: 0 } } }
+  state = { ...state, players: { ...state.players, opponent: { ...requireInvoker(state.players.opponent), mana: 0 } } }
   state = closeTurn(state)
-  equal([state.activePlayer, state.turn, state.phase, state.players.opponent.mana], ['opponent', 2, 'main', 1])
-  equal(state.players.opponent.hand.map((card) => card.id), ['o-1', 'o-2', 'o-3', 'o-4'])
-  equal(state.players.opponent.deck.length, 0)
+  equal([state.activePlayer, state.turn, state.phase, requireInvoker(state.players.opponent).mana], ['opponent', 2, 'main', 1])
+  equal(requireInvoker(state.players.opponent).hand.map((card) => card.id), ['o-1', 'o-2', 'o-3', 'o-4'])
+  equal(requireInvoker(state.players.opponent).deck.length, 0)
 })
 
 test('invocación paga maná, retira la carta de mano y permite atacar el mismo turno', () => {
@@ -92,7 +101,7 @@ test('invocación paga maná, retira la carta de mano y permite atacar el mismo 
   const unitId = state.players.player.creatures[0].id
   state = declareBlockers(declareAttackers(startCombat(state), [unitId]), {})
   state = resolveCombat(state)
-  equal(state.players.opponent.life, 16)
+  equal(requireInvoker(state.players.opponent).life, 16)
 })
 
 test('invocación rechaza maná insuficiente y sacrificios ausentes o inválidos', () => {
@@ -141,7 +150,7 @@ test('bloqueo múltiple respeta orden letal y resuelve daño de criaturas simult
   state = declareAttackers(startCombat(state), [attackerId])
   state = declareBlockers(state, { [attackerId]: [firstBlocker.id, secondBlocker.id] })
   state = resolveCombat(state)
-  equal(state.players.opponent.life, 20, 'Una criatura bloqueada no daña al invocador')
+  equal(requireInvoker(state.players.opponent).life, 20, 'Una criatura bloqueada no daña al invocador')
   equal(state.players.opponent.creatures.map((unit) => [unit.id, unit.health]), [[secondBlocker.id, 1]])
   equal(state.players.player.creatures.length, 0, 'Los dos bloqueadores infligen daño simultáneo suficiente para matar al atacante')
 })
@@ -175,14 +184,14 @@ test('ataque sin bloquear reduce vida y llegar a cero termina el duelo', () => {
   state = summon(state, 'p-1')
   const attackerId = state.players.player.creatures[0].id
   state = resolveCombat(declareBlockers(declareAttackers(startCombat(state), [attackerId]), {}))
-  equal([state.players.opponent.life, state.winner, state.phase], [0, 'player', 'finished'])
+  equal([requireInvoker(state.players.opponent).life, state.winner, state.phase], [0, 'player', 'finished'])
   throwsRule(() => endTurn(state))
 })
 
 test('mazo vacío no roba ni derrota al invocador', () => {
   let state = createDuel({ playerDeck: cards('p', 3), opponentDeck: cards('o', 3) })
   state = closeTurn(state)
-  equal([state.players.opponent.deck.length, state.players.opponent.hand.length, state.players.opponent.life], [0, 3, 20])
+  equal([requireInvoker(state.players.opponent).deck.length, requireInvoker(state.players.opponent).hand.length, requireInvoker(state.players.opponent).life], [0, 3, 20])
 })
 
 test('un bloqueador no puede asignarse a dos atacantes', () => {
@@ -213,8 +222,8 @@ test('el enemigo juega cartas legales y declara atacantes de forma determinista'
   equal(state.activePlayer, 'opponent')
   equal(state.attackers, state.players.opponent.creatures.map((unit) => unit.id))
   equal(state.players.opponent.creatures.map((unit) => unit.card.name), ['Criatura enemy-ritual-1', 'Criatura enemy-mana-1'])
-  equal(state.players.opponent.hand.map((card) => card.id), [])
-  equal(state.players.opponent.deck.map((card) => card.id), ['enemy-next-1'])
+  equal(requireInvoker(state.players.opponent).hand.map((card) => card.id), [])
+  equal(requireInvoker(state.players.opponent).deck.map((card) => card.id), ['enemy-next-1'])
 })
 
 test('el enemigo asigna bloqueos deterministas y resuelve el combate mediante el motor', () => {
@@ -256,7 +265,7 @@ test('un ataque sin defensores puede cerrar el duelo con victoria del jugador', 
     },
   }
   const result = resolveEnemyBlocks(state)
-  equal([result.phase, result.winner, result.players.opponent.life], ['finished', 'player', 0])
+  equal([result.phase, result.winner, requireInvoker(result.players.opponent).life], ['finished', 'player', 0])
 })
 
 test('el duelo termina en derrota cuando el ataque del enemigo reduce la vida a cero', () => {
@@ -292,7 +301,7 @@ test('conserva heridas de combate en la misma copia al iniciar el duelo siguient
   const completed: DuelState = { ...combat, phase: 'finished', winner: 'opponent' }
   const continued = finishSessionDuel(session, completed)
   const nextDuel = startSessionDuel(continued, [card], cards('enemy-next', 3))
-  equal(continued.copies, [{ id: 'copy-1', cardId: 'persistent', health: 3 }])
+  equal(continued.copies, [{ id: 'copy-1', cardId: 'persistent', health: 3, bonusAttack: 0, bonusHealth: 0 }])
   equal(nextDuel.players.player.hand[0], { ...card, copyId: 'copy-1', startingHealth: 3 })
 })
 
@@ -363,14 +372,14 @@ test('derrotas consecutivas aumentan la fatiga una vez por duelo y la conservan 
   equal(duplicateSettlement, afterFirstLoss, 'Finalizar dos veces el mismo duelo no debe volver a aplicar sus consecuencias')
 
   const retry = startSessionDuel(afterFirstLoss, owned, cards('enemy-retry', 3))
-  equal([retry.players.player.fatigue, retry.players.player.mana, retry.players.opponent.fatigue, retry.players.opponent.mana], [1, 0, 0, 1])
+  equal([retry.players.player.fatigue, retry.players.player.mana, requireInvoker(retry.players.opponent).fatigue, requireInvoker(retry.players.opponent).mana], [1, 0, 0, 1])
   equal([baseMana(retry.players.player), baseMana(retry.players.opponent)], [0, 1])
 
   const afterRetryLoss = finishSessionDuel(afterFirstLoss, { ...retry, phase: 'finished', winner: 'opponent' })
   equal(afterRetryLoss.fatigue, 2, 'Una segunda derrota distinta debe sumar otra fatiga')
   let maintained = closeTurn(retry)
   maintained = closeTurn(maintained)
-  equal([maintained.players.player.mana, maintained.players.opponent.mana], [0, 1], 'El mantenimiento respeta la fatiga del jugador y el maná normal del enemigo')
+  equal([maintained.players.player.mana, requireInvoker(maintained.players.opponent).mana], [0, 1], 'El mantenimiento respeta la fatiga del jugador y el maná normal del enemigo')
 })
 
 test('las victorias reducen la fatiga hasta cero sin hacerla negativa', () => {
@@ -498,25 +507,24 @@ test('la colección inicial no duplica tipos repetidos', () => {
   equal([session.copies.length, session.unlockedCardIds.length, session.activeDeckCopyIds.length], [1, 1, 1])
 })
 
-test('los tres encuentros conservan las composiciones, estadísticas, costes y orden aprobados', () => {
+test('los tres duelos principales sustituyen el contenido antiguo por el baseline aprobado', () => {
   equal(DUNGEON_ENCOUNTERS.map((encounter) => [encounter.id, encounter.enemyName]), [
-    ['threshold-sentinel', 'Centinela del umbral'],
-    ['catacomb-keeper', 'Custodia de las catacumbas'],
-    ['crypt-guardian', 'Guardián de la cripta'],
+    ['B1', 'Centinela del umbral'],
+    ['B2', 'Custodia de catacumbas'],
+    ['B3', 'Guardián de la cripta'],
   ])
   equal(DUNGEON_ENCOUNTERS.map((encounter) => encounter.opponentDeck.map((card) => card.id)), [
-    ['enemy-scout', 'enemy-bat'],
-    ['enemy-bat', 'enemy-raider', 'enemy-guard'],
-    ['enemy-scout', 'enemy-raider', 'enemy-cultist', 'enemy-boar', 'enemy-bat', 'enemy-guard', 'enemy-ogre'],
+    ['E08', 'E07', 'E09'],
+    ['E08', 'E09', 'E07', 'E11', 'E10'],
+    ['E11', 'E13', 'E08', 'E09', 'E14', 'E12'],
   ])
   equal(DUNGEON_ENCOUNTERS[2].opponentDeck.map((card) => [card.attack, card.maxHealth, card.cost]), [
-    [2, 3, { mana: 0, sacrifices: 0 }],
-    [3, 3, { mana: 1, sacrifices: 0 }],
-    [2, 2, { mana: 0, sacrifices: 1 }],
     [4, 5, { mana: 1, sacrifices: 0 }],
-    [2, 2, { mana: 0, sacrifices: 0 }],
-    [2, 5, { mana: 0, sacrifices: 0 }],
-    [4, 4, { mana: 0, sacrifices: 1 }],
+    [4, 6, { mana: 1, sacrifices: 0 }],
+    [3, 2, { mana: 1, sacrifices: 0 }],
+    [2, 4, { mana: 1, sacrifices: 0 }],
+    [5, 5, { mana: 0, sacrifices: 1 }],
+    [3, 4, { mana: 0, sacrifices: 1 }],
   ])
 })
 
@@ -551,11 +559,11 @@ test('una derrota no avanza la mazmorra y permite reintentar el mismo encuentro 
   equal([currentEncounterId(progress, DUNGEON_ENCOUNTERS), canEnterEncounter(progress, first.id, DUNGEON_ENCOUNTERS)], [first.id, true])
   equal([afterLoss.fatigue, afterLoss.invokerLife], [1, 20])
   const retry = startSessionDuel(afterLoss, owned, first.opponentDeck)
-  equal(retry.players.opponent.deck.map((card) => card.id), first.opponentDeck.slice(3).map((card) => card.id))
+  equal(requireInvoker(retry.players.opponent).deck.map((card) => card.id), first.opponentDeck.slice(3).map((card) => card.id))
   equal(retry.players.player.mana, 0)
 })
 
-test('la victoria del primer encuentro descubre Brote de musgo una sola vez sin añadirlo a la baraja', () => {
+test('el primer desbloqueo entrega Quimera menor una sola vez sin añadirla a la baraja', () => {
   const owned = cards('discovery-starter', 1)
   const session = createGameSession(owned)
   const first = DUNGEON_ENCOUNTERS[0]
@@ -579,6 +587,7 @@ test('el aviso distingue la victoria final de una victoria que habilita el sigui
   equal(encounterVictoryMessage('Guardián de la cripta', true), 'Victoria contra Guardián de la cripta. La mazmorra ha terminado: has superado los tres encuentros.')
 })
 
+tests.push(...h1Tests, ...h2Tests, ...h3Tests, ...worldTests, ...presentationTests, ...expeditionTests)
 let failed = 0
 for (const entry of tests) {
   try {

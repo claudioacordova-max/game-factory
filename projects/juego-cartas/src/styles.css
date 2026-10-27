@@ -124,3 +124,61 @@ button.creature-tile:hover { border-color: var(--teal); background: linear-gradi
   .duel-layout { grid-template-columns: 1fr; min-height: 0; }.battle-stage { grid-template-rows: 385px 212px; }.phase-panel { max-height: none; min-height: 250px; }.phase-context { max-height: 420px; flex: auto; }.phase-track { margin: 12px 0; }.phase-heading h2 { font-size: 23px; }.duel-mana { grid-template-columns: 25px auto 1fr; gap: 10px; }.duel-mana .icon { grid-row: auto; }.duel-mana > span { text-align: right; }.phase-prompt { display: none; }.summon-selection { padding-bottom: 6px; }.summon-selection > .creature-portrait { display: none; }.phase-action .button { font-size: 13px; }.hand-card { width: 142px; }.creature-row { justify-content: flex-start; }.creature-tile { width: 126px; height: 126px; }.creature-tile strong { font-size: 14px; }.creature-tile .card-stats small { font-size: 9px; }.player-heading { flex-wrap: nowrap; }.player-heading h2 { font-size: 18px; }.resources > span:nth-child(2) { display: none; }.battle-divider small { font-size: 8px; }.player-table-label { font-size: 10px; }.player-table-label small { display: none; }.game-footer > span:last-child { font-size: 9px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.card-rarity { display: block; font-size: 10px; line-height: 1.4; margin: 3px 0; letter-spacing: .02em; }
+.rarity-common { color: #c3cad0; }.rarity-rare { color: #8dc6ff; }.rarity-epic { color: #dbacff; }
+.rarity-border-rare { border-color: #6093bf; }.rarity-border-epic { border-color: #a579c4; }
+.growth-note { font-size: 10px; line-height: 1.4; color: #d5b5e7; margin: 6px 0; }
+.reinvoke-action { margin-top: auto; }.reinvoke-action p { color: #c7caba; font-size: 11px; line-height: 1.6; margin: 7px 0; }
+.reinvoke-action .button { width: 100%; }.reinvoke-action .button:disabled { opacity: .55; cursor: not-allowed; }
+.deck-controls { display: grid; grid-template-columns: repeat(2,24px); gap: 3px; flex: none; }
+.deck-controls button { min-height: 25px; border: 1px solid #668075; background: #1c3338; color: #d9e2d4; font-size: 14px; }
+.deck-controls button:disabled { opacity: .35; cursor: default; }.deck-controls .remove-card { grid-column: 1 / -1; width: auto; height: 23px; }
+.hand-card .card-rarity { font-size: 9px; margin: 2px 0 0; }.creature-tile .card-rarity { font-size: 8px; margin: 1px 0 0; }
+.hand-card > strong { font-size: 15px; }.hand-card .card-stats { margin-top: 3px; padding-top: 3px; }
+
+.target-picker { display: grid; gap: .8rem; }
+.target-picker label { display: grid; gap: .35rem; }
+.target-picker select { max-width: 100%; padding: .65rem; color: var(--ivory); background: #15262c; border: 1px solid #687874; border-radius: .3rem; }
+
+.target-picker select:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+
+.exploration-panel > .exploration-scene { margin: 0 16px 16px; }
+.exploration-panel .map-caption { padding-top: 0; }
+.result-banner > div { flex: 1; min-width: 0; }
+.result-banner > .button { flex: none; font-size: 11px; }
+.result-banner details { margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.result-banner summary { color: var(--teal); cursor: pointer; }
+.result-banner ul { margin: 7px 0 0; padding-left: 18px; }
+.copy-base-stats, .recovery-cost { font-size: 11px; line-height: 1.5; text-align: center; color: #bdc9bf; }
+.recovery-cost { padding-top: 8px; border-top: 1px solid #62716b70; color: #d1c3a3; }
+.collection-card .growth-note { text-align: center; margin: 0; }
+.collection-card .card-rarity { text-align: center; }
+.mode-duel { height: auto; min-height: 100dvh; }
+.duel-layout { min-height: 680px; }
+.battle-stage { grid-template-rows: minmax(430px, 1fr) 238px; }
+.creature-row { min-height: 166px; }
+.creature-tile { width: 145px; height: auto; min-height: 156px; justify-content: flex-start; }
+.creature-tile .creature-portrait { height: 45px; flex: none; }
+.creature-tile strong { white-space: normal; overflow: visible; text-overflow: clip; font-size: 14px; }
+.creature-tile .card-rarity { line-height: 1.35; min-height: 12px; }
+.creature-tile .card-stats { margin-top: auto; flex: none; }
+.creature-tile .tile-state { flex: none; }
+.hand-card > .creature-portrait { min-height: 35px; }
+.hand-card .card-rarity { flex: none; }
+.hand-card .card-stats { flex: none; }
+.hand-card .card-state { flex: none; min-height: 24px; }
+.target-picker { font-size: 12px; line-height: 1.5; }
+.target-picker p { color: var(--muted); }
+.target-picker select { width: 100%; font: inherit; }
+@media (max-width: 1150px) {
+  .battle-stage { grid-template-rows: minmax(430px, 1fr) 238px; }
+  .creature-tile { width: 132px; min-height: 156px; height: auto; }
+  .creature-tile .creature-portrait { height: 42px; }
+}
+@media (max-width: 640px) {
+  .result-banner { flex-wrap: wrap; }
+  .result-banner > .button { margin-left: auto; }
+  .exploration-panel > .exploration-scene { margin: 0 10px 12px; }
+  .duel-layout { min-height: 0; }
+  .battle-stage { grid-template-rows: minmax(440px, auto) 238px; }
+}

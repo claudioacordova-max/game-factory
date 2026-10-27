@@ -1,0 +1,23 @@
+.exploration-scene { min-width: 0; overflow: hidden; border: 1px solid #536064; border-radius: 5px; background: #16262e; color: #eee4cf; }
+.exploration-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .4rem 1rem; padding: .8rem 1rem; border-bottom: 1px solid #536064; }
+.exploration-heading strong { color: #eee4cf; font: 600 1.2rem Georgia, serif; }
+.exploration-heading span { color: #b4c7c5; font-size: .82rem; }
+.exploration-viewport { position: relative; height: clamp(320px, 52vh, 590px); outline: 0; background: #101b22; }
+.exploration-viewport:focus-visible, .exploration-focused { box-shadow: inset 0 0 0 2px #71c5bc; }
+.exploration-viewport canvas { display: block; touch-action: none; }
+.exploration-focus-hint { position: absolute; left: 1rem; right: 1rem; bottom: 1rem; padding: .45rem .7rem; background: #101b22e8; border: 1px solid #667d80; color: #eee4cf; text-align: center; font-size: .82rem; pointer-events: none; }
+.exploration-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; padding: .8rem 1rem; border-top: 1px solid #536064; }
+.exploration-controls p { margin: 0 0 .5rem; color: #bfcecc; font-size: .82rem; }
+.exploration-nearby { min-height: 2.8rem; font-size: .9rem; }
+.exploration-nearby > div { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem .8rem; margin-bottom: .35rem; }
+.exploration-scene button { min-height: 36px; padding: .4rem .7rem; border: 1px solid #bc995b; border-radius: 3px; background: #283e46; color: #eee4cf; font: inherit; cursor: pointer; }
+.exploration-scene button:hover:enabled { background: #36535a; }
+.exploration-scene button:disabled { border-color: #66777c; color: #b4c3c5; background: #202f36; cursor: default; }
+.exploration-scene button:focus-visible { outline: 2px solid #71c5bc; outline-offset: 3px; }
+.exploration-dpad { display: grid; align-self: start; grid-template-columns: repeat(3, 36px); grid-template-rows: repeat(2, 36px); gap: 3px; }
+.exploration-dpad button { padding: 0; font-size: 1.1rem; touch-action: none; user-select: none; }
+.exploration-direction-w { grid-column: 2; }
+.exploration-direction-a { grid-column: 1; grid-row: 2; }
+.exploration-direction-s { grid-column: 2; grid-row: 2; }
+.exploration-direction-d { grid-column: 3; grid-row: 2; }
+@media (max-width: 650px) { .exploration-controls { grid-template-columns: minmax(0, 1fr); } .exploration-dpad { justify-self: center; } .exploration-viewport { height: 360px; } }

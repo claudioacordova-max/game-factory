@@ -10,6 +10,7 @@ export function playEnemyCards(state: DuelState): DuelState {
   let next = state
   while (true) {
     const enemy = next.players.opponent
+    if (enemy.kind === 'group') return next
     const playable = enemy.hand.find((card) =>
       card.cost.mana <= enemy.mana && card.cost.sacrifices <= enemy.creatures.length,
     )
@@ -26,6 +27,7 @@ export function chooseEnemyBlockers(state: DuelState): Record<string, string[]> 
     throw new RuleViolation('El enemigo solo elige bloqueos durante el combate del jugador.')
   }
 
+  if (state.mode === 'skirmish') throw new RuleViolation('El grupo no declara bloqueadores.')
   const available = [...state.players.opponent.creatures]
   const assignments: Record<string, string[]> = {}
   for (const attackerId of state.attackers) {
@@ -42,8 +44,8 @@ export function chooseEnemyBlockers(state: DuelState): Record<string, string[]> 
 
 /** Runs the enemy's main phase and attack, leaving the player in control of blocks. */
 export function runEnemyTurn(state: DuelState): DuelState {
-  let next = playEnemyCards(state)
-  next = startCombat(next)
+  let next = state.players.opponent.kind === 'group' ? state : startCombat(playEnemyCards(state))
+  if (next.activePlayer !== 'opponent' || next.phase !== 'attackers') throw new RuleViolation('No es el turno de ataque enemigo.')
   next = declareAttackers(next, next.players.opponent.creatures.map((creature) => creature.id))
   return next
 }

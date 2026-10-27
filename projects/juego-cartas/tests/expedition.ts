@@ -10,8 +10,9 @@ import {
 } from '../src/engine/rules.js'
 import { resolveEnemyBlocks, runEnemyTurn } from '../src/engine/enemy.js'
 import {
-  createExpeditionState, interactWorldObject, isExpeditionComplete, objectsForRoom, settleExpeditionEncounter,
+  createExpeditionState, isExpeditionComplete, objectsForRoom, settleExpeditionEncounter,
 } from '../src/engine/world.js'
+import { interactWorldObject } from './duelFixtures.js'
 import type { ExpeditionState } from '../src/engine/world.js'
 import { isWalkable, ROOMS, roomWithObjects } from '../src/engine/spatial.js'
 import type { Creature, DuelState } from '../src/engine/types.js'

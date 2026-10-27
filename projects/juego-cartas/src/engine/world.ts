@@ -9,7 +9,7 @@ import {
   INTERACTION_RANGE, isWalkable, ROOMS, roomWithObjects, safeExplorationPose,
 } from './spatial.js'
 import type { ExplorationObject, RoomAnchor, RoomId, SpatialPose } from './spatial.js'
-import type { DuelState } from './types.js'
+import type { DuelState, RandomSource } from './types.js'
 
 export interface ExpeditionState extends AdventureState {
   roomId: RoomId
@@ -88,7 +88,7 @@ export function objectsForRoom(state: ExpeditionState): ExplorationObject[] {
 }
 
 /** Rejections throw before any mutation; callers commit the returned transaction once. */
-export function interactWorldObject(state: ExpeditionState, objectId: string, pose: SpatialPose): WorldInteraction {
+export function interactWorldObject(state: ExpeditionState, objectId: string, pose: SpatialPose, random?: RandomSource): WorldInteraction {
   requireOutsideCombat(state.session)
   const objects = objectsForRoom(state)
   const object = objects.find((entry) => entry.id === objectId)
@@ -100,7 +100,7 @@ export function interactWorldObject(state: ExpeditionState, objectId: string, po
     throw new ExplorationViolation('Acércate al objeto para interactuar.')
   }
   if (object.kind === 'enemy') {
-    const started = beginAdventureEncounter(state, ROOM_ENCOUNTERS[state.roomId], DUNGEON_ENCOUNTERS, PLAYER_CARD_TYPES)
+    const started = beginAdventureEncounter(state, ROOM_ENCOUNTERS[state.roomId], DUNGEON_ENCOUNTERS, PLAYER_CARD_TYPES, random)
     return {
       kind: 'encounter', duel: started.duel,
       state: { ...state, ...started.state, encounterReturnPoint: {

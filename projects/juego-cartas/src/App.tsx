@@ -1,12 +1,16 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { DragEvent } from 'react'
 import {
   reinvokeCreatureType,
   moveActiveDeckCopy,
   addCopyToActiveDeck,
+  advanceMainPhaseIfNoLegalSummons,
   baseMana,
   declareAttackers,
   declareBlockers,
   endTurn,
+  hasLegalSummon,
+  summonAvailability,
   resolveCombat,
   RuleViolation,
   startSessionDuel,
@@ -29,6 +33,13 @@ import type { EncounterSummary } from './ui/encounterSummary.js'
 import { CreatureTile, HandCard } from './ui/CardViews.js'
 import { CollectionView, DeckPanel } from './ui/CollectionViews.js'
 import { CreaturePortrait, Icon } from './ui/GameIcons.js'
+import {
+  assignTargetToFocusedAttacker,
+  cancelPendingSummon,
+  setAttackerTarget,
+  toggleBlockerChoice,
+  togglePlayerAttacker,
+} from './ui/combatSelection.js'
 
 export default function App() {
   const [adventure, setAdventure] = useState<ExpeditionState>(createExpeditionState)
@@ -42,17 +53,30 @@ export default function App() {
   const [sacrificeIds, setSacrificeIds] = useState<string[]>([])
   const [attackerIds, setAttackerIds] = useState<string[]>([])
   const [targetChoices, setTargetChoices] = useState<Record<string, string>>({})
+  const [focusedAttackerId, setFocusedAttackerId] = useState<string | null>(null)
   const [blockerChoices, setBlockerChoices] = useState<Record<string, string[]>>({})
+  const [focusedBlockerAttackerId, setFocusedBlockerAttackerId] = useState<string | null>(null)
   const [view, setView] = useState<'exploration' | 'collection'>('exploration')
   const [notice, setNotice] = useState('Camina con WASD o flechas. Acércate a enemigos, cofres, santuarios y puertas; pulsa E para interactuar.')
 
   const player = duel.players.player
   const enemy = duel.players.opponent
   const isPlayerMain = duel.phase === 'main' && duel.activePlayer === 'player'
+  const isEnemyAttacking = isDuelActive && duel.phase === 'blockers' && duel.activePlayer === 'opponent'
+  const isSkirmishAttackSelection = duel.mode === 'skirmish' && duel.phase === 'attackers' && duel.activePlayer === 'player'
   const selectedCard = player.hand.find((card) => card.id === selectedCardId)
+  const selectedAvailability = selectedCard ? summonAvailability(player, selectedCard.id) : null
+  const playerHasLegalSummon = hasLegalSummon(player)
+  const summonInteractionPending = selectedCardId !== null || sacrificeIds.length > 0
   const canManageBetweenDuels = !isDuelActive
   const usableMana = canManageBetweenDuels ? Math.max(0, player.level - session.fatigue) : baseMana(player)
   const shownMana = canManageBetweenDuels ? usableMana : player.mana
+
+  useEffect(() => {
+    if (!isDuelActive) return
+    const next = advanceMainPhaseIfNoLegalSummons(duel, summonInteractionPending)
+    if (next !== duel) setDuel(next)
+  }, [duel, isDuelActive, summonInteractionPending])
 
   function closeDuel(result: DuelState) {
     const next = settleExpeditionEncounter(adventure, result)
@@ -70,31 +94,106 @@ export default function App() {
   }
 
   function selectCard(card: CreatureCard) {
+    if (!isPlayerMain) return
     setSelectedCardId((current) => current === card.id ? null : card.id)
     setSacrificeIds([])
   }
 
-  function summonSelected() {
-    if (!selectedCard) return
+  function clearPendingSummon() {
+    const cleared = cancelPendingSummon()
+    setSelectedCardId(cleared.cardId)
+    setSacrificeIds(cleared.sacrificeIds)
+  }
+
+  function commitSummon(cardId: string, selectedSacrifices: string[]) {
+    const card = player.hand.find((candidate) => candidate.id === cardId)
+    if (!card) {
+      clearPendingSummon()
+      setNotice('La carta ya no está en tu mano.')
+      return
+    }
+    const availability = summonAvailability(player, cardId)
+    if (!availability.allowed) {
+      clearPendingSummon()
+      setNotice(availability.reason)
+      return
+    }
+    if (selectedSacrifices.length !== card.cost.sacrifices) {
+      setNotice(`Selecciona exactamente ${card.cost.sacrifices} criatura(s) para confirmar.`)
+      return
+    }
     try {
-      const next = summonCreature(duel, selectedCard.id, sacrificeIds)
-      const sacrificed = player.creatures.filter((unit) => sacrificeIds.includes(unit.id)).flatMap((unit) => unit.copyId ? [unit.copyId] : [])
+      const next = summonCreature(duel, cardId, selectedSacrifices)
+      const sacrificed = player.creatures.filter((unit) => selectedSacrifices.includes(unit.id)).flatMap((unit) => unit.copyId ? [unit.copyId] : [])
       sacrificedCopies.current.push(...sacrificed)
       setDuel(next)
-      setSelectedCardId(null)
-      setSacrificeIds([])
-      setNotice(`${selectedCard.name} entra en juego.${sacrificeIds.length ? ' Las criaturas sacrificadas se perdieron permanentemente.' : ''}`)
+      clearPendingSummon()
+      setNotice(`${card.name} entra en juego.${selectedSacrifices.length ? ' Las criaturas sacrificadas se perdieron permanentemente.' : ''}`)
     } catch (error) {
       reject(error)
     }
   }
 
+  function summonSelected() {
+    if (selectedCard) commitSummon(selectedCard.id, sacrificeIds)
+  }
+
+  function attemptSummonDrop(cardId: string) {
+    if (!isPlayerMain) return
+    const card = player.hand.find((candidate) => candidate.id === cardId)
+    if (!card) {
+      setNotice('La carta ya no está en tu mano.')
+      return
+    }
+    const availability = summonAvailability(player, cardId)
+    if (!availability.allowed) {
+      clearPendingSummon()
+      setNotice(availability.reason)
+      return
+    }
+    setSelectedCardId(cardId)
+    setSacrificeIds([])
+    if (card.cost.sacrifices > 0) {
+      setNotice(`Selecciona ${card.cost.sacrifices} criatura(s) de tu mesa y confirma la invocación.`)
+      return
+    }
+    commitSummon(cardId, [])
+  }
+
+  function allowFieldDrop(event: DragEvent<HTMLElement>) {
+    if (!isPlayerMain) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+  }
+
+  function dropHandCard(event: DragEvent<HTMLElement>) {
+    if (!isPlayerMain) return
+    event.preventDefault()
+    const cardId = event.dataTransfer.getData('text/plain')
+    if (cardId) attemptSummonDrop(cardId)
+  }
+
+  function toggleSacrifice(creatureId: string) {
+    if (!selectedCard) return
+    setSacrificeIds((current) => {
+      if (current.includes(creatureId)) return current.filter((id) => id !== creatureId)
+      if (current.length >= selectedCard.cost.sacrifices) return current
+      return [...current, creatureId]
+    })
+  }
+
   function beginCombat() {
+    if (selectedCard?.cost.sacrifices) {
+      setNotice('Confirma o cancela la selección de sacrificios antes de pasar a los atacantes.')
+      return
+    }
     try {
       setDuel(startCombat(duel))
       setAttackerIds([])
       setTargetChoices({})
+      setFocusedAttackerId(null)
       setSelectedCardId(null)
+      setSacrificeIds([])
       setNotice('Selecciona las criaturas que atacarán. Las recién invocadas también pueden atacar.')
     } catch (error) {
       reject(error)
@@ -114,21 +213,57 @@ export default function App() {
       }
       setAttackerIds([])
       setTargetChoices({})
+      setFocusedAttackerId(null)
     } catch (error) {
       reject(error)
     }
   }
 
   function toggleBlock(attackerId: string, blockerId: string) {
-    setBlockerChoices((current) => {
-      const assignedElsewhere = Object.entries(current).some(([id, ids]) => id !== attackerId && ids.includes(blockerId))
-      if (assignedElsewhere) return current
-      const existing = current[attackerId] ?? []
-      const nextIds = existing.includes(blockerId)
-        ? existing.filter((id) => id !== blockerId)
-        : [...existing, blockerId]
-      return { ...current, [attackerId]: nextIds }
-    })
+    setFocusedBlockerAttackerId(attackerId)
+    setBlockerChoices((current) => toggleBlockerChoice(current, attackerId, blockerId))
+  }
+
+  function togglePlayerBlocker(blockerId: string) {
+    if (!focusedBlockerAttackerId) {
+      setNotice('Selecciona primero una criatura atacante enemiga en el campo.')
+      return
+    }
+    toggleBlock(focusedBlockerAttackerId, blockerId)
+  }
+
+  function selectEnemyCreature(unitId: string) {
+    if (isEnemyAttacking) {
+      setFocusedBlockerAttackerId((current) => current === unitId ? null : unitId)
+      return
+    }
+    if (duel.mode !== 'skirmish' || duel.phase !== 'attackers' || duel.activePlayer !== 'player') return
+    if (!focusedAttackerId || !attackerIds.includes(focusedAttackerId)) {
+      setNotice('Selecciona primero una criatura propia como atacante.')
+      return
+    }
+    const selection = assignTargetToFocusedAttacker({ attackerIds, targetChoices, focusedAttackerId }, unitId)
+    setTargetChoices(selection.targetChoices)
+    const target = enemy.creatures.find((unit) => unit.id === unitId)
+    setNotice(`${target?.card.name ?? 'Objetivo'} asignado a ${player.creatures.find((unit) => unit.id === focusedAttackerId)?.card.name ?? 'atacante'}.`)
+  }
+
+  function selectPlayerAttacker(unitId: string) {
+    const selection = togglePlayerAttacker({ attackerIds, targetChoices, focusedAttackerId }, unitId)
+    setAttackerIds(selection.attackerIds)
+    setTargetChoices(selection.targetChoices)
+    setFocusedAttackerId(selection.focusedAttackerId)
+  }
+
+  function chooseAttackerTarget(attackerId: string, targetId: string) {
+    const selection = setAttackerTarget({ attackerIds, targetChoices, focusedAttackerId }, attackerId, targetId)
+    setTargetChoices(selection.targetChoices)
+    setFocusedAttackerId(selection.focusedAttackerId)
+  }
+
+  function cancelSummon() {
+    clearPendingSummon()
+    setNotice('Invocación cancelada; no se sacrificó ninguna criatura.')
   }
 
   function confirmBlocks() {
@@ -143,6 +278,7 @@ export default function App() {
         setNotice('Bloqueos resueltos. Comienza tu turno.')
       }
       setBlockerChoices({})
+      setFocusedBlockerAttackerId(null)
     } catch (error) {
       reject(error)
     }
@@ -157,6 +293,7 @@ export default function App() {
       const played = before.kind === 'invoker' && after.kind === 'invoker' ? before.hand.length - after.hand.length : 0
       setDuel(enemyCombat)
       setBlockerChoices({})
+      setFocusedBlockerAttackerId(null)
       setNotice(duel.mode === 'skirmish' ? 'Las criaturas del grupo atacan a tu invocador. Elige tus bloqueos.' : `Turno del enemigo: invoca ${played} criatura(s) y declara sus ataques. Elige tus bloqueos.`)
     } catch (error) {
       reject(error)
@@ -177,7 +314,9 @@ export default function App() {
         setSacrificeIds([])
         setAttackerIds([])
         setTargetChoices({})
+        setFocusedAttackerId(null)
         setBlockerChoices({})
+        setFocusedBlockerAttackerId(null)
       }
       setNotice(message)
     } catch (error) {
@@ -212,7 +351,6 @@ export default function App() {
       : duel.phase === 'blockers' ? (duel.activePlayer === 'player' ? 'Elegir bloqueos del enemigo' : 'Declarar tus bloqueos')
         : duel.phase === 'resolved' ? 'Combate resuelto'
           : duel.phase === 'resolve' ? 'Resolver combate' : 'Duelo terminado'
-  const isEnemyAttacking = isDuelActive && duel.phase === 'blockers' && duel.activePlayer === 'opponent'
   const dungeonComplete = isExpeditionComplete(adventure)
   const objects = objectsForRoom(adventure)
   const localEnemy = objects.find((object) => object.kind === 'enemy')!
@@ -225,7 +363,7 @@ export default function App() {
         {!isDuelActive && <nav className="view-navigation" aria-label="Vistas de la aventura"><button type="button" aria-pressed={view === 'exploration'} onClick={() => setView('exploration')}><Icon name="gate" />Explorar</button><button type="button" aria-pressed={view === 'collection'} onClick={() => setView('collection')}><Icon name="cards" />Colección <span>{session.copies.length}</span></button></nav>}
         <div className="hero-resources" aria-label="Recursos del invocador">
           <span className="life-resource" title="Vida actual / máxima persistente (techo 20)"><Icon name="heart" /><strong>{isDuelActive ? Math.max(0, player.life) : session.invokerLife}<small>/{session.invokerMaxLife}</small></strong><span>Vida</span></span>
-          <span className="mana-resource" title="Maná actual / máximo utilizable"><Icon name="mana" /><strong>{shownMana}<small>/{usableMana}</small></strong><span>Maná</span></span>
+          <span className="mana-resource" aria-label={`Maná actual ${shownMana}; máximo utilizable ${usableMana}`} title="Maná actual / máximo utilizable"><Icon name="mana" /><strong>{shownMana}<small>/{usableMana}</small></strong><span>Maná actual / máximo</span></span>
           <span className="fatigue-resource" title={`La fatiga bloquea ${Math.min(session.fatigue, player.level)} de ${player.level} maná base.`}><Icon name="skull" /><strong>{session.fatigue}</strong><span>Fatiga</span></span>
         </div>
       </header>
@@ -254,23 +392,37 @@ export default function App() {
         <div className="battle-stage">
           <section className="duel-board" aria-label="Campo de batalla">
             <section className="side-panel enemy-panel" aria-label={duel.mode === 'skirmish' ? 'Grupo enemigo' : 'Invocador enemigo'}>
-              <header className="player-heading"><div><p className="section-kicker">Oponente</p><h2>{activeEncounter?.enemyName}</h2></div><div className="resources">{enemy.kind === 'group' ? <span>{enemy.creatures.length} criaturas restantes</span> : <><span className="life-resource"><Icon name="heart" />{Math.max(0, enemy.life)}<small> / {activeEncounter?.opponentLife} VID</small></span><span><Icon name="mana" />{enemy.mana}<small>maná</small></span><span><Icon name="cards" />{enemy.deck.length}<small>mazo</small></span></>}</div></header>
-              <div className="creature-row" aria-label="Mesa enemiga">{enemy.creatures.length ? enemy.creatures.map((unit) => <CreatureTile key={unit.id} creature={unit} hint={duel.attackers.includes(unit.id) ? 'Atacando' : undefined} />) : <p className="empty-row"><Icon name="shield" />La mesa enemiga está vacía</p>}</div>
+              <header className="player-heading"><div><p className="section-kicker">Oponente</p><h2>{activeEncounter?.enemyName}</h2></div><div className="resources">{enemy.kind === 'group' ? <span>{enemy.creatures.length} criaturas restantes</span> : <><span className="life-resource"><Icon name="heart" />{Math.max(0, enemy.life)}<small> / {activeEncounter?.opponentLife} VID</small></span><span><Icon name="mana" />{enemy.mana}<small>maná</small></span><span><Icon name="shield" />{enemy.level}<small>nivel</small></span><span><Icon name="skull" />{enemy.fatigue}<small>fatiga</small></span><span><Icon name="cards" />{enemy.deck.length}<small>mazo</small></span></>}</div></header>
+              <div className="creature-row" aria-label="Mesa enemiga">{enemy.creatures.length ? enemy.creatures.map((unit) => {
+                const assignedAttacker = Object.entries(targetChoices).find(([, targetId]) => targetId === unit.id)?.[0]
+                const assignedAttackerName = assignedAttacker ? player.creatures.find((creature) => creature.id === assignedAttacker)?.card.name : undefined
+                const focusedForBlocks = isEnemyAttacking && focusedBlockerAttackerId === unit.id
+                const canSelect = isEnemyAttacking || isSkirmishAttackSelection
+                const hint = focusedForBlocks ? 'Atacante elegido · selecciona bloqueadores'
+                  : assignedAttackerName ? `Objetivo de ${assignedAttackerName}`
+                    : duel.attackers.includes(unit.id) ? 'Atacando'
+                      : isSkirmishAttackSelection ? 'Elegir objetivo' : undefined
+                return <CreatureTile key={unit.id} creature={unit} selected={Boolean(focusedForBlocks || assignedAttackerName)} onClick={canSelect ? () => selectEnemyCreature(unit.id) : undefined} hint={hint} />
+              }) : <p className="empty-row"><Icon name="shield" />La mesa enemiga está vacía</p>}</div>
             </section>
             <div className="battle-divider"><span/><Icon name="sword" /><small>{isEnemyAttacking ? 'Defiende tu invocador' : duel.phase === 'attackers' ? 'Elige tus atacantes' : 'Campo de invocaciones'}</small><span/></div>
-            <section className="side-panel player-panel" aria-label="Tu mesa">
+            <section className={`side-panel player-panel${isPlayerMain ? ' accepts-card-drop' : ''}`} aria-label={isPlayerMain ? 'Tu mesa; arrastra una carta aquí para intentar invocarla' : 'Tu mesa'} onDragOver={allowFieldDrop} onDrop={dropHandCard}>
               <div className="creature-row" aria-label="Criaturas propias">{player.creatures.length ? player.creatures.map((unit, index) => {
                 const canSacrifice = isPlayerMain && Boolean(selectedCard?.cost.sacrifices)
-                const canAttack = duel.phase === 'attackers'
+                const canAttack = duel.phase === 'attackers' && duel.activePlayer === 'player'
                 const blockTarget = Object.entries(blockerChoices).find(([, ids]) => ids.includes(unit.id))
                 const selected = isEnemyAttacking ? Boolean(blockTarget) : canSacrifice ? sacrificeIds.includes(unit.id) : canAttack && attackerIds.includes(unit.id)
                 let onClick: (() => void) | undefined
-                if (canSacrifice) onClick = () => setSacrificeIds((current) => current.includes(unit.id) ? current.filter((id) => id !== unit.id) : [...current, unit.id])
-                else if (canAttack) onClick = () => {
-                  setAttackerIds((current) => current.includes(unit.id) ? current.filter((id) => id !== unit.id) : [...current, unit.id])
-                  setTargetChoices((current) => { const next = { ...current }; delete next[unit.id]; return next })
-                }
-                const hint = selected ? isEnemyAttacking ? 'Bloqueando' : canSacrifice ? 'Sacrificio' : 'Atacará' : canSacrifice ? 'Elegir sacrificio' : canAttack ? 'Elegir atacante' : 'En mesa'
+                if (canSacrifice) onClick = () => toggleSacrifice(unit.id)
+                else if (isEnemyAttacking) onClick = () => togglePlayerBlocker(unit.id)
+                else if (canAttack) onClick = () => selectPlayerAttacker(unit.id)
+                const blockOrder = blockTarget?.[1].indexOf(unit.id) ?? -1
+                const targetId = targetChoices[unit.id]
+                const targetName = targetId ? enemy.creatures.find((target) => target.id === targetId)?.card.name : undefined
+                const hint = isEnemyAttacking ? blockTarget ? `Bloqueando · ${blockOrder + 1}. en orden` : focusedBlockerAttackerId ? 'Añadir como bloqueador' : 'Elige atacante enemigo primero'
+                  : canSacrifice ? selected ? 'Sacrificio seleccionado' : 'Elegir sacrificio'
+                    : canAttack ? selected ? targetName ? `Ataca a ${targetName}` : 'Atacante elegido · toca un objetivo' : 'Elegir atacante'
+                      : 'En mesa'
                 return <CreatureTile key={unit.id} creature={unit} selected={selected} onClick={onClick} hint={duel.mode === 'skirmish' ? `${index + 1}. ${hint}` : hint} />
               }) : <p className="empty-row"><Icon name="shield" />Tu mesa está vacía{isPlayerMain ? ' · Invoca desde tu mano' : ''}</p>}</div>
               <footer className="player-table-label"><span><Icon name="shield" />Tu invocador <small>Nivel {player.level}</small></span><span>{player.creatures.length} en mesa · {player.deck.length} en el mazo</span></footer>
@@ -278,10 +430,13 @@ export default function App() {
           </section>
 
           <section className="hand-section" aria-labelledby="hand-title">
-            <header className="hand-heading"><h2 id="hand-title">Tu mano <span>{player.hand.length}</span></h2><span>{isPlayerMain ? 'Selecciona una carta para invocar' : 'Las invocaciones estarán disponibles en tu fase principal'}</span></header>
+            <header className="hand-heading"><h2 id="hand-title">Tu mano <span>{player.hand.length}</span></h2><span>{isPlayerMain ? 'Arrastra una carta a tu campo o selecciónala para invocar' : 'Las invocaciones estarán disponibles en tu fase principal'}</span></header>
             <div className="hand-row">{player.hand.length ? player.hand.map((card) => {
-              const unavailableReason = !isPlayerMain ? 'Fuera de fase principal' : card.cost.mana > player.mana ? 'Sin maná suficiente' : card.cost.sacrifices > player.creatures.length ? 'Faltan criaturas para sacrificar' : ''
-              return <HandCard key={card.id} card={card} selected={selectedCardId === card.id} unavailableReason={unavailableReason} onClick={() => selectCard(card)} />
+              const unavailableReason = isPlayerMain ? '' : 'Fuera de fase principal'
+              return <HandCard key={card.id} card={card} selected={selectedCardId === card.id} unavailableReason={unavailableReason} draggable={isPlayerMain} onDragStart={(event) => {
+                event.dataTransfer.setData('text/plain', card.id)
+                event.dataTransfer.effectAllowed = 'move'
+              }} onClick={() => selectCard(card)} />
             }) : <p className="empty-row"><Icon name="cards" />No tienes cartas en la mano.{player.deck.length ? ' Robarás en tu próximo turno.' : ' Tu mazo está vacío.'}</p>}</div>
           </section>
         </div>
@@ -289,14 +444,14 @@ export default function App() {
         <aside className="phase-panel stone-panel" aria-label="Acciones del duelo">
           <header className="phase-heading"><p className="section-kicker">Turno {duel.turn} · {duel.activePlayer === 'player' ? 'Tu turno' : 'Enemigo'}</p><h2>{phaseText}</h2></header>
           <ol className="phase-track" aria-label="Fases del duelo">{['Invocar', 'Atacar', 'Bloquear', 'Resolver'].map((label, index) => <li key={label} className={phaseIndex === index ? 'is-current' : ''} aria-current={phaseIndex === index ? 'step' : undefined}><span>{index + 1}</span>{label}</li>)}</ol>
-          <div className="duel-mana"><Icon name="mana" /><strong>{shownMana}<span> / {usableMana}</span></strong><span>Maná utilizable</span></div>
+          <div className="duel-mana" aria-label={`Maná actual ${shownMana} de ${usableMana} máximo utilizable este turno`}><Icon name="mana" /><strong>{shownMana}<span> / {usableMana}</span></strong><span>Actual / máximo utilizable</span></div>
           {session.fatigue > 0 && <p className="fatigue-warning">Fatiga {session.fatigue} · {Math.min(session.fatigue, player.level)} de {player.level} maná base bloqueado</p>}
           <div className="phase-context">
-            {isPlayerMain && (selectedCard ? <section className="summon-selection" aria-label="Invocación seleccionada"><CreaturePortrait cardId={selectedCard.id} /><h3>{selectedCard.name}</h3><p>{selectedCard.cost.mana} maná{selectedCard.cost.sacrifices > 0 ? ` + ${selectedCard.cost.sacrifices} sacrificio` : ' · Sin sacrificios'}</p>{selectedCard.cost.sacrifices > 0 && <div className="sacrifice-warning"><Icon name="skull" /><p>Elige {selectedCard.cost.sacrifices} criatura de tu mesa.<strong>Se perderá permanentemente.</strong><span>{sacrificeIds.length}/{selectedCard.cost.sacrifices} seleccionadas{Boolean(sacrificeIds.length) && ` · ${player.creatures.filter((unit) => sacrificeIds.includes(unit.id)).map((unit) => unit.card.name).join(', ')}`}</span></p></div>}<button type="button" className="button button-primary summon-button" disabled={sacrificeIds.length !== selectedCard.cost.sacrifices} onClick={summonSelected}><Icon name="mana" />Invocar criatura</button></section> : <div className="phase-prompt"><Icon name="cards" /><h3>Prepara tu mesa</h3><p>Invoca desde tu mano o pasa al ataque.</p></div>)}
-            {duel.phase === 'attackers' && <div className="phase-prompt"><Icon name="sword" /><h3>{attackerIds.length} atacante{attackerIds.length === 1 ? '' : 's'} seleccionado{attackerIds.length === 1 ? '' : 's'}</h3><p>Elige criaturas de tu mesa. Las recién invocadas también pueden atacar.</p><p>Puedes declarar el ataque sin seleccionar ninguna.</p></div>}
-            {duel.mode === 'skirmish' && duel.phase === 'attackers' && <section className="target-picker" aria-label="Objetivos de los ataques"><p>Cada enemigo contraataca una vez. Su ataque se reparte en el orden numerado de tu mesa.</p>{player.creatures.filter((unit) => attackerIds.includes(unit.id)).map((unit) => <label key={unit.id}>{player.creatures.indexOf(unit) + 1}. {unit.card.name}<select aria-label={`Objetivo de ${unit.card.name}`} value={targetChoices[unit.id] ?? ''} onChange={(event) => setTargetChoices({ ...targetChoices, [unit.id]: event.target.value })}><option value="">Elige objetivo</option>{enemy.creatures.map((target) => <option key={target.id} value={target.id}>{target.card.name} | {target.health} VID | {target.card.attack} ATQ</option>)}</select></label>)}</section>}
+            {isPlayerMain && (selectedCard ? <section className="summon-selection" aria-label="Invocación seleccionada"><CreaturePortrait cardId={selectedCard.id} /><h3>{selectedCard.name}</h3><p>{selectedCard.cost.mana} maná{selectedCard.cost.sacrifices > 0 ? ` + ${selectedCard.cost.sacrifices} sacrificio` : ' · Sin sacrificios'}</p>{selectedAvailability && !selectedAvailability.allowed && <p className="summon-unavailable" role="status">{selectedAvailability.reason}</p>}{selectedCard.cost.sacrifices > 0 && <div className="sacrifice-warning"><Icon name="skull" /><p>Elige {selectedCard.cost.sacrifices} criatura de tu mesa.<strong>Se perderá permanentemente al confirmar.</strong><span>{sacrificeIds.length}/{selectedCard.cost.sacrifices} seleccionadas{Boolean(sacrificeIds.length) && ` · ${player.creatures.filter((unit) => sacrificeIds.includes(unit.id)).map((unit) => unit.card.name).join(', ')}`}</span></p></div>}<div className="summon-actions"><button type="button" className="button button-primary summon-button" disabled={Boolean(selectedAvailability?.allowed && sacrificeIds.length !== selectedCard.cost.sacrifices)} onClick={summonSelected}><Icon name="mana" />{selectedAvailability?.allowed ? 'Confirmar invocación' : 'Intentar invocación'}</button><button type="button" className="button button-secondary summon-cancel" onClick={cancelSummon}>Cancelar</button></div></section> : <div className="phase-prompt"><Icon name="cards" /><h3>Prepara tu mesa</h3><p>Selecciona una carta para ver la opción de invocar. Arrastrarla a tu campo intentará jugarla directamente.</p></div>)}
+            {duel.phase === 'attackers' && <div className="phase-prompt"><Icon name="sword" /><h3>{attackerIds.length} atacante{attackerIds.length === 1 ? '' : 's'} seleccionado{attackerIds.length === 1 ? '' : 's'}</h3><p>{duel.activePlayer === 'player' && !playerHasLegalSummon ? 'No quedan invocaciones legales. Elige qué criaturas atacan.' : 'Elige criaturas de tu mesa. Las recién invocadas también pueden atacar.'}</p>{isSkirmishAttackSelection && <p>Después, toca un enemigo para asignar el objetivo a la criatura seleccionada; también puedes usar el selector.</p>}<p>Puedes declarar el ataque sin seleccionar ninguna.</p></div>}
+            {duel.mode === 'skirmish' && duel.phase === 'attackers' && <section className="target-picker" aria-label="Objetivos de los ataques"><p>Cada enemigo contraataca una vez. Su ataque se reparte en el orden numerado de tu mesa.</p>{player.creatures.filter((unit) => attackerIds.includes(unit.id)).map((unit) => <label key={unit.id}>{player.creatures.indexOf(unit) + 1}. {unit.card.name}<select aria-label={`Objetivo de ${unit.card.name}`} value={targetChoices[unit.id] ?? ''} onChange={(event) => chooseAttackerTarget(unit.id, event.target.value)}><option value="">Elige objetivo</option>{enemy.creatures.map((target) => <option key={target.id} value={target.id}>{target.card.name} | {target.health} VID | {target.card.attack} ATQ</option>)}</select></label>)}</section>}
             {duel.phase === 'resolved' && <div className="phase-prompt"><Icon name="check" /><h3>Combate resuelto</h3><p>{duel.mode === 'skirmish' ? 'Al terminar tu turno, las criaturas supervivientes atacaran a tu invocador.' : 'Al terminar tu turno, el enemigo invocara y atacara.'}</p></div>}
-            {isEnemyAttacking && <section className="block-section" aria-labelledby="blocks-title"><h3 id="blocks-title">Asigna tus bloqueadores</h3><p className="block-help">El orden de selección determina el daño. Puedes dejar un ataque sin bloquear.</p>{duel.attackers.length ? <div className="attack-list">{duel.attackers.map((attackerId) => {
+            {isEnemyAttacking && <section className="block-section" aria-labelledby="blocks-title"><h3 id="blocks-title">Asigna tus bloqueadores</h3><p className="block-help">Toca un atacante enemigo en el campo y después una o varias criaturas propias. El orden de selección determina el daño. Puedes dejar un ataque sin bloquear.</p>{duel.attackers.length ? <div className="attack-list">{duel.attackers.map((attackerId) => {
               const attacker = enemy.creatures.find((unit) => unit.id === attackerId)
               if (!attacker) return null
               const chosen = blockerChoices[attackerId] ?? []
@@ -308,7 +463,7 @@ export default function App() {
             })}</div> : <p className="empty-state">El enemigo no declaró atacantes.</p>}</section>}
           </div>
           <div className="phase-action">
-            {isPlayerMain && <button type="button" className="button button-primary" onClick={beginCombat}>Declarar atacantes<Icon name="arrow" /></button>}
+            {isPlayerMain && <button type="button" className="button button-primary" disabled={Boolean(selectedCard?.cost.sacrifices)} onClick={beginCombat}>Declarar atacantes<Icon name="arrow" /></button>}
             {duel.phase === 'attackers' && <button type="button" className="button button-primary" disabled={!attacksReady(duel, attackerIds, targetChoices)} onClick={declarePlayerAttacks}>{attackerIds.length ? 'Declarar ataques' : 'Pasar sin atacar'}<Icon name="sword" /></button>}
             {duel.phase === 'resolved' && duel.activePlayer === 'player' && <button type="button" className="button button-primary" onClick={finishPlayerTurn}>Terminar turno<Icon name="arrow" /></button>}
             {isEnemyAttacking && <button type="button" className="button button-primary" onClick={confirmBlocks}>Confirmar bloqueos y resolver<Icon name="shield" /></button>}

@@ -1,3 +1,4 @@
+import type { DragEvent } from 'react'
 import type { Creature, CreatureCard } from '../engine/index.js'
 import { CreaturePortrait, Icon } from './GameIcons.js'
 
@@ -16,15 +17,22 @@ export function CreatureTile({ creature, selected = false, onClick, hint }: { cr
   const className = `creature-tile${selected ? ' is-selected' : ''}${wounded ? ' is-wounded' : ''}`
   return onClick ? <button type="button" className={className} onClick={onClick} aria-pressed={selected}>{content}</button> : <article className={className}>{content}</article>
 }
-export function HandCard({ card, selected, unavailableReason, onClick }: { card: CreatureCard; selected: boolean; unavailableReason: string; onClick: () => void }) {
+export function HandCard({ card, selected, unavailableReason, draggable, onDragStart, onClick }: {
+  card: CreatureCard
+  selected: boolean
+  unavailableReason: string
+  draggable: boolean
+  onDragStart: (event: DragEvent<HTMLButtonElement>) => void
+  onClick: () => void
+}) {
   const health = card.startingHealth ?? card.maxHealth
-  return <button type="button" className={`hand-card${selected ? ' is-selected' : ''}${health < card.maxHealth ? ' is-wounded' : ''}`} disabled={Boolean(unavailableReason)} onClick={onClick} aria-pressed={selected}>
+  return <button type="button" className={`hand-card${selected ? ' is-selected' : ''}${health < card.maxHealth ? ' is-wounded' : ''}`} disabled={Boolean(unavailableReason)} draggable={draggable} onDragStart={onDragStart} onClick={onClick} aria-pressed={selected}>
     <span className="card-cost" title={`${card.cost.mana} maná`}><Icon name="mana" />{card.cost.mana}<span className="sr-only">maná</span></span>
     {card.cost.sacrifices > 0 && <span className="sacrifice-cost"><Icon name="skull" />{card.cost.sacrifices}<span className="sr-only">sacrificio permanente</span></span>}
     <CreaturePortrait cardId={card.id} />
     <strong>{card.name}</strong>
     <RarityLabel card={card} />
     <CardStats attack={card.attack} health={health} maxHealth={card.maxHealth} />
-    <span className="card-state">{unavailableReason || (selected ? '✓ Seleccionada' : health < card.maxHealth ? 'Herida persistente' : card.cost.sacrifices ? 'Requiere sacrificio' : 'Lista para invocar')}</span>
+    <span className="card-state">{unavailableReason || (selected ? '✓ Seleccionada · confirma para invocar' : 'Arrastra al campo o selecciona para invocar')}</span>
   </button>
 }

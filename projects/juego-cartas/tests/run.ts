@@ -1,5 +1,6 @@
 import { requireInvoker } from '../src/engine/rules.js'
-import { addCopyToActiveDeck, baseMana, createDuel, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, removeCopyFromActiveDeck, resolveCombat, RuleViolation, startCombat, startSessionDuel, summonCreature, unlockCreatureType } from '../src/engine/index.js'
+import { addCopyToActiveDeck, advanceMainPhaseIfNoLegalSummons, baseMana, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, hasLegalSummon, removeCopyFromActiveDeck, resolveCombat, RuleViolation, startCombat, summonAvailability, summonCreature, unlockCreatureType } from '../src/engine/index.js'
+import { createDuel as createShuffledDuel, startSessionDuel as startShuffledSessionDuel } from '../src/engine/index.js'
 import { chooseEnemyBlockers, resolveEnemyBlocks, runEnemyTurn } from '../src/engine/enemy.js'
 import type { Creature, CreatureCard, DuelState, PlayerId } from '../src/engine/index.js'
 import { MAIN_ENCOUNTERS as DUNGEON_ENCOUNTERS, PLAYER_CARD_TYPES } from '../src/engine/content.js'
@@ -12,6 +13,8 @@ import { expeditionTests } from './expedition.js'
 import './spatial.js'
 import { canEnterEncounter, createExplorationProgress, currentEncounterId, isDungeonComplete, recordEncounterDefeat, recordEncounterVictory } from '../src/engine/exploration.js'
 import { encounterVictoryMessage } from '../src/ui/explorationMessages.js'
+import { assignTargetToFocusedAttacker, cancelPendingSummon, setAttackerTarget, toggleBlockerChoice, togglePlayerAttacker } from '../src/ui/combatSelection.js'
+import { createDuel, seededRandom, startSessionDuel } from './duelFixtures.js'
 
 type Test = { name: string; run: () => void }
 const tests: Test[] = []
@@ -76,12 +79,151 @@ function bringToMain(state: DuelState, player: PlayerId): DuelState {
   return current
 }
 
+test('selección directa conserva un objetivo concreto por atacante y limpia el objetivo al retirar al atacante', () => {
+  const empty = { attackerIds: [], targetChoices: {}, focusedAttackerId: null }
+  let selection = togglePlayerAttacker(empty, 'player-1')
+  selection = assignTargetToFocusedAttacker(selection, 'enemy-1')
+  equal(selection.targetChoices, { 'player-1': 'enemy-1' })
+  selection = togglePlayerAttacker(selection, 'player-2')
+  selection = setAttackerTarget(selection, 'player-2', 'enemy-2')
+  equal(selection.targetChoices, { 'player-1': 'enemy-1', 'player-2': 'enemy-2' })
+  selection = togglePlayerAttacker(selection, 'player-1')
+  equal(selection, { attackerIds: ['player-2'], targetChoices: { 'player-2': 'enemy-2' }, focusedAttackerId: 'player-2' })
+  const withoutFocus = { attackerIds: [], targetChoices: {}, focusedAttackerId: null }
+  truthy(assignTargetToFocusedAttacker(withoutFocus, 'enemy-1') === withoutFocus, 'No se debe asignar un objetivo si no hay atacante seleccionado.')
+})
+
+test('selección directa permite varios bloqueadores ordenados y no reutiliza uno en otro ataque', () => {
+  const first = toggleBlockerChoice({}, 'enemy-1', 'player-1')
+  const second = toggleBlockerChoice(first, 'enemy-1', 'player-2')
+  equal(second, { 'enemy-1': ['player-1', 'player-2'] })
+  truthy(toggleBlockerChoice(second, 'enemy-2', 'player-1') === second, 'Una criatura ya asignada debe permanecer en un solo bloqueo.')
+  equal(toggleBlockerChoice(second, 'enemy-1', 'player-1'), { 'enemy-1': ['player-2'] })
+})
+
+test('cancelar sacrificios limpia solo la selección pendiente', () => {
+  const duel = createDuel({ playerDeck: cards('cancel-player', 3), opponentDeck: cards('cancel-enemy', 3) })
+  const pending = { cardId: 'P13', sacrificeIds: ['creature-1'] }
+  equal(cancelPendingSummon(), { cardId: null, sacrificeIds: [] })
+  equal(duel.players.player.mana, 1)
+  equal(duel.players.player.creatures, [])
+  equal(pending, { cardId: 'P13', sacrificeIds: ['creature-1'] })
+})
+
+test('la fase principal avanza solo cuando no quedan invocaciones legales ni elecciones pendientes', () => {
+  const tooExpensive = cards('too-expensive', 1, { cost: { mana: 2, sacrifices: 0 } })
+  const noLegalSummon = createDuel({ playerDeck: tooExpensive, opponentDeck: [] })
+  const advanced = advanceMainPhaseIfNoLegalSummons(noLegalSummon)
+  equal([advanced.phase, advanced.activePlayer, advanced.attackers], ['attackers', 'player', []])
+  truthy(advanceMainPhaseIfNoLegalSummons(noLegalSummon, true) === noLegalSummon, 'Una elección pendiente debe mantener la fase principal.')
+  truthy(advanceMainPhaseIfNoLegalSummons(advanced) === advanced, 'La fase de atacantes debe esperar una decisión táctica explícita.')
+
+  const combinedCost = cards('combined-phase', 1, { cost: { mana: 1, sacrifices: 1 } })
+  const combinedDuel = createDuel({ playerDeck: combinedCost, opponentDeck: [] })
+  const sacrificeReady = {
+    ...combinedDuel,
+    players: {
+      ...combinedDuel.players,
+      player: { ...combinedDuel.players.player, creatures: [creature('phase-sacrifice', 'player', 1, 2)] },
+    },
+  }
+  truthy(hasLegalSummon(sacrificeReady.players.player), 'Maná y sacrificio disponibles deben formar una invocación legal.')
+  truthy(advanceMainPhaseIfNoLegalSummons(sacrificeReady) === sacrificeReady, 'Una invocación legal debe conservar la fase principal.')
+
+  const noMana = {
+    ...sacrificeReady,
+    players: { ...sacrificeReady.players, player: { ...sacrificeReady.players.player, mana: 0 } },
+  }
+  equal(advanceMainPhaseIfNoLegalSummons(noMana).phase, 'attackers')
+  const noSacrifice = { ...combinedDuel, players: { ...combinedDuel.players, player: { ...combinedDuel.players.player, creatures: [] } } }
+  equal(advanceMainPhaseIfNoLegalSummons(noSacrifice).phase, 'attackers')
+
+  const opponentMain = createDuel({ playerDeck: tooExpensive, opponentDeck: [], firstPlayer: 'opponent' })
+  truthy(advanceMainPhaseIfNoLegalSummons(opponentMain) === opponentMain, 'No se debe avanzar la fase del oponente.')
+})
+
+test('la invocación de una carta con maná y sacrificio reevalúa las opciones restantes', () => {
+  const resolveCombinedCost = (remainingCost: CreatureCard['cost'], suffix: string) => {
+    const playerDeck = [
+      ...cards(`phase-fuel-${suffix}`, 1),
+      ...cards(`phase-ritual-${suffix}`, 1, { cost: { mana: 1, sacrifices: 1 } }),
+      ...cards(`phase-option-${suffix}`, 1, { cost: remainingCost }),
+    ]
+    const initial = createDuel({ playerDeck, opponentDeck: [] })
+    const withSacrifice = summon(initial, `phase-fuel-${suffix}-1`)
+    const sacrificeId = withSacrifice.players.player.creatures[0].id
+    truthy(hasLegalSummon(withSacrifice.players.player), 'El ritual debe ser legal con maná y una criatura disponibles.')
+    const afterRitual = summonCreature(withSacrifice, `phase-ritual-${suffix}-1`, [sacrificeId])
+    equal([afterRitual.players.player.mana, afterRitual.players.player.creatures.length], [0, 1])
+    return afterRitual
+  }
+
+  const noLegalOption = resolveCombinedCost({ mana: 1, sacrifices: 0 }, 'no-legal')
+  equal(advanceMainPhaseIfNoLegalSummons(noLegalOption).phase, 'attackers', 'Sin otra invocación legal, el pago y sacrificio deben permitir avanzar.')
+
+  const legalOptionRemains = resolveCombinedCost({ mana: 0, sacrifices: 0 }, 'legal')
+  truthy(hasLegalSummon(legalOptionRemains.players.player), 'La invocación gratuita restante debe seguir siendo legal tras el pago.')
+  equal(advanceMainPhaseIfNoLegalSummons(legalOptionRemains).phase, 'main', 'Una invocación legal restante debe conservar la fase principal.')
+})
+
 test('estado inicial: vida 20, nivel 1, maná 1 y tres cartas en mano', () => {
   const state = createDuel({ playerDeck: cards('p', 5), opponentDeck: cards('o', 3) })
   equal([state.players.player.life, state.players.player.level, state.players.player.mana, state.players.player.hand.length], [20, 1, 1, 3])
   equal([requireInvoker(state.players.opponent).life, requireInvoker(state.players.opponent).hand.length], [20, 3])
   equal(baseMana(state.players.player), 1)
   equal(state.players.player.deck.map((card) => card.id), ['p-4', 'p-5'])
+})
+
+test('el barajado inicial del jugador es reproducible, conserva copias heridas/mejoradas y no altera el mazo enemigo', () => {
+  const playerDeck = cards('shuffle-player', 8)
+  const opponentDeck = cards('shuffle-enemy', 5)
+  const createSeeded = () => createShuffledDuel({ playerDeck, opponentDeck, random: seededRandom(8042) })
+  const first = createSeeded()
+  const repeated = createSeeded()
+  const firstPlayerOrder = [...first.players.player.hand, ...first.players.player.deck].map((card) => card.id)
+  const repeatedPlayerOrder = [...repeated.players.player.hand, ...repeated.players.player.deck].map((card) => card.id)
+  equal(firstPlayerOrder, repeatedPlayerOrder)
+  truthy(firstPlayerOrder.join(',') !== playerDeck.map((card) => card.id).join(','), 'La fuente sembrada debe generar un orden distinto del mazo original.')
+  const firstOpponent = requireInvoker(first.players.opponent)
+  equal([...firstOpponent.hand, ...firstOpponent.deck].map((card) => card.id), opponentDeck.map((card) => card.id))
+  equal([...firstPlayerOrder].sort(), playerDeck.map((card) => card.id).sort())
+
+  const improved = PLAYER_CARD_TYPES.find((card) => card.id === 'P18')!
+  const wounded = PLAYER_CARD_TYPES.find((card) => card.id === 'P01')!
+  const originalSession = createGameSession([improved, wounded])
+  const [improvedCopy, woundedCopy] = originalSession.copies
+  truthy(improvedCopy && woundedCopy, 'Las copias de prueba deben existir.')
+  const session = {
+    ...originalSession,
+    copies: [
+      { ...improvedCopy, health: 3, bonusAttack: 2 },
+      { ...woundedCopy, health: 1 },
+    ],
+  }
+  const ownedDuel = startShuffledSessionDuel(session, [improved, wounded], [], { random: seededRandom(19) })
+  const dealt = [...ownedDuel.players.player.hand, ...ownedDuel.players.player.deck]
+  equal(dealt.map((card) => card.copyId).sort(), session.copies.map((copy) => copy.id).sort())
+  equal(dealt.find((card) => card.copyId === improvedCopy.id) && [
+    dealt.find((card) => card.copyId === improvedCopy.id)!.attack,
+    dealt.find((card) => card.copyId === improvedCopy.id)!.startingHealth,
+    dealt.find((card) => card.copyId === improvedCopy.id)!.growthProgress,
+  ], [improved.attack + 2, 3, 2])
+  equal(dealt.find((card) => card.copyId === woundedCopy.id)?.startingHealth, 1)
+  equal(session.copies, [{ ...improvedCopy, health: 3, bonusAttack: 2 }, { ...woundedCopy, health: 1 }])
+})
+
+test('la legalidad de invocación combina maná y sacrificios sin modificar la mesa', () => {
+  const combined = { ...cards('combined', 1)[0], cost: { mana: 1, sacrifices: 1 } }
+  const duel = createDuel({ playerDeck: [combined], opponentDeck: [] })
+  const player = duel.players.player
+  equal(summonAvailability(player, combined.id), { allowed: false, reason: 'Faltan criaturas para sacrificar.' })
+  equal(hasLegalSummon(player), false)
+  const withoutMana = { ...player, mana: 0, creatures: [creature('sacrifice-ready', 'player', 1, 2)] }
+  equal(summonAvailability(withoutMana, combined.id), { allowed: false, reason: 'No hay maná suficiente.' })
+  const ableToPay = { ...player, creatures: [creature('sacrifice-ready', 'player', 1, 2)] }
+  equal(summonAvailability(ableToPay, combined.id), { allowed: true, reason: '' })
+  equal(hasLegalSummon(ableToPay), true)
+  equal([duel.players.player.mana, duel.players.player.hand.map((card) => card.id), duel.players.player.creatures], [1, [combined.id], []])
 })
 
 test('mantenimiento alterna jugador, recupera maná y roba una carta disponible', () => {

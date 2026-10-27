@@ -30,11 +30,21 @@ function makeInvoker(deck: CreatureCard[], fatigue = 0, life = INITIAL_LIFE): In
   }
 }
 
+function shuffle(deck: CreatureCard[], random: () => number): CreatureCard[] {
+  const shuffled = [...deck]
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(random() * (index + 1))
+    ;[shuffled[index], shuffled[target]] = [shuffled[target], shuffled[index]]
+  }
+  return shuffled
+}
+
 export function createDuel(setup: DuelSetup): DuelState {
   const mode = setup.mode ?? 'duel'
   if ((setup.playerLife ?? INITIAL_LIFE) <= 0 || (mode === 'duel' && (setup.opponentLife ?? INITIAL_LIFE) <= 0)) throw new RuleViolation('Un invocador requiere vida positiva.')
   if (mode === 'skirmish' && (setup.opponentDeck.length || !setup.opponentInitialField?.length)) throw new RuleViolation('Una escaramuza requiere grupo inicial y ninguna baraja enemiga.')
   const firstPlayer = setup.firstPlayer ?? 'player'
+  const playerDeck = shuffle(setup.playerDeck, setup.random ?? Math.random)
   const participantCopyIds = setup.playerDeck.flatMap((card) => card.copyId ? [card.copyId] : [])
   if (new Set(participantCopyIds).size !== participantCopyIds.length
     || new Set(setup.playerDeck.map((card) => card.id)).size !== setup.playerDeck.length) {
@@ -48,7 +58,7 @@ export function createDuel(setup: DuelSetup): DuelState {
     participantCopyIds,
     encounterId: setup.encounterId,
     players: {
-      player: makeInvoker(setup.playerDeck, setup.playerFatigue ?? 0, setup.playerLife ?? INITIAL_LIFE),
+      player: makeInvoker(playerDeck, setup.playerFatigue ?? 0, setup.playerLife ?? INITIAL_LIFE),
       opponent: {
         ...(mode === 'skirmish' ? { kind: 'group' as const } : makeInvoker(setup.opponentDeck, 0, setup.opponentLife ?? INITIAL_LIFE)),
         creatures: initialField.map((card, index) => ({
@@ -74,6 +84,24 @@ export function requireInvoker(side: CombatSide): Invoker {
 export function baseMana(invoker: CombatSide): number {
   if (invoker.kind === 'group') return 0
   return Math.max(0, invoker.level - invoker.fatigue)
+}
+
+export interface SummonAvailability {
+  allowed: boolean
+  reason: string
+}
+
+/** Checks the two current summon costs without changing combat state. */
+export function summonAvailability(invoker: Invoker, cardId: string): SummonAvailability {
+  const card = invoker.hand.find((candidate) => candidate.id === cardId)
+  if (!card) return { allowed: false, reason: 'La carta no está en la mano del jugador activo.' }
+  if (invoker.mana < card.cost.mana) return { allowed: false, reason: 'No hay maná suficiente.' }
+  if (invoker.creatures.length < card.cost.sacrifices) return { allowed: false, reason: 'Faltan criaturas para sacrificar.' }
+  return { allowed: true, reason: '' }
+}
+
+export function hasLegalSummon(invoker: Invoker): boolean {
+  return invoker.hand.some((card) => summonAvailability(invoker, card.id).allowed)
 }
 
 function requireOngoing(state: DuelState): void {
@@ -259,4 +287,12 @@ export function endTurn(state: DuelState): DuelState {
 export function startCombat(state: DuelState): DuelState {
   requirePhase(state, 'main')
   return { ...state, phase: 'attackers' }
+}
+
+/** Leaves the player's main phase only when no summon is legal and no UI choice is pending. */
+export function advanceMainPhaseIfNoLegalSummons(state: DuelState, interactionPending = false): DuelState {
+  if (state.phase !== 'main' || state.activePlayer !== 'player' || interactionPending || hasLegalSummon(state.players.player)) {
+    return state
+  }
+  return startCombat(state)
 }

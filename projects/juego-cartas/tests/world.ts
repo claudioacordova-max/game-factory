@@ -5,8 +5,9 @@ import { isWalkable, ROOMS, roomWithObjects } from '../src/engine/spatial.js'
 import type { RoomId, SpatialPose } from '../src/engine/spatial.js'
 import type { DuelState } from '../src/engine/types.js'
 import {
-  createExpeditionState, interactWorldObject, isExpeditionComplete, objectsForRoom, settleExpeditionEncounter,
+  createExpeditionState, isExpeditionComplete, objectsForRoom, settleExpeditionEncounter,
 } from '../src/engine/world.js'
+import { interactWorldObject } from './duelFixtures.js'
 import type { ExpeditionState } from '../src/engine/world.js'
 
 type Test = { name: string; run: () => void }

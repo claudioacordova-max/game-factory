@@ -122,7 +122,7 @@ export function moveActiveDeckCopy(session: GameSession, copyId: string, directi
   return { ...session, activeDeckCopyIds: ids }
 }
 
-type SessionDuelOptions = Pick<DuelSetup, 'opponentLife' | 'opponentInitialField' | 'encounterId'> & { mode?: 'duel' | 'skirmish' }
+type SessionDuelOptions = Pick<DuelSetup, 'opponentLife' | 'opponentInitialField' | 'encounterId' | 'random'> & { mode?: 'duel' | 'skirmish' }
 
 /** Pure construction helper for engine fixtures. Live play must use beginSessionDuel to lock management. */
 export function startSessionDuel(session: GameSession, cardTypes: readonly CreatureCard[], opponentDeck: CreatureCard[], options: SessionDuelOptions = {}): DuelState {

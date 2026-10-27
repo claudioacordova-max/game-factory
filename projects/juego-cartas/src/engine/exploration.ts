@@ -1,6 +1,6 @@
 import { beginSessionDuel, finishSessionDuel, unlockCreatureType, requireOutsideCombat } from './session.js'
 import type { GameSession } from './session.js'
-import type { CreatureCard, DuelState } from './types.js'
+import type { CreatureCard, DuelState, RandomSource } from './types.js'
 
 export interface DungeonEncounter {
   id: string
@@ -142,7 +142,7 @@ export function leaveRatWing(state: AdventureState): AdventureState {
 
 export function beginAdventureEncounter(
   state: AdventureState, encounterId: string,
-  encounters: readonly DungeonEncounter[], cardTypes: readonly CreatureCard[],
+  encounters: readonly DungeonEncounter[], cardTypes: readonly CreatureCard[], random?: RandomSource,
 ): { state: AdventureState; duel: DuelState; encounter: DungeonEncounter } {
   const encounter = encounters.find((entry) => entry.id === encounterId)
   if (!encounter || !canEnterEncounter(state.progress, encounterId, encounters)) {
@@ -150,6 +150,7 @@ export function beginAdventureEncounter(
   }
   const started = beginSessionDuel(state.session, cardTypes, encounter.opponentDeck, {
     mode: encounter.mode, encounterId, opponentLife: encounter.opponentLife, opponentInitialField: encounter.opponentInitialField,
+    random,
   })
   return { state: { ...state, session: started.session }, duel: started.duel, encounter }
 }

@@ -1,4 +1,5 @@
 export type PlayerId = 'player' | 'opponent'
+export type RandomSource = () => number
 
 export type TurnPhase = 'main' | 'attackers' | 'blockers' | 'resolve' | 'resolved' | 'finished'
 
@@ -75,6 +76,8 @@ export interface DuelSetup {
   mode?: 'duel' | 'skirmish'
   playerDeck: CreatureCard[]
   opponentDeck: CreatureCard[]
+  /** Optional random source for the player's one-time shuffle at duel setup. */
+  random?: RandomSource
   firstPlayer?: PlayerId
   playerFatigue?: number
   playerLife?: number

@@ -1,10 +1,11 @@
 import {
-  addCopyToActiveDeck, beginAdventureEncounter, beginSessionDuel, createExplorationProgress,
+  addCopyToActiveDeck, createExplorationProgress,
   createGameSession, declareAttackers, declareBlockers, effectiveCopyCard, endTurn,
   ENEMY_CARD_TYPES, finishSessionDuel, MAIN_ENCOUNTERS, PLAYER_CARD_TYPES,
   reinvokeCreatureType, removeCopyFromActiveDeck, resolveCombat, settleAdventureEncounter,
   startCombat, summonCreature,
 } from '../src/engine/index.js'
+import { beginAdventureEncounter, beginSessionDuel } from './duelFixtures.js'
 import type { CreatureCopy, DuelState, GameSession } from '../src/engine/index.js'
 
 type Test = { name: string; run: () => void }

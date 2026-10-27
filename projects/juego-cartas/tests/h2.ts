@@ -1,9 +1,10 @@
 ﻿import {
-  addCopyToActiveDeck, beginAdventureEncounter, createDuel, createExplorationProgress,
+  addCopyToActiveDeck, createExplorationProgress,
   createGameSession, currentEncounterId, declareAttackers, declareBlockers, DUNGEON_ENCOUNTERS,
   endTurn, enterRatWing, isDungeonComplete, leaveRatWing, PLAYER_CARD_TYPES, reinvokeCreatureType,
   removeCopyFromActiveDeck, resolveCombat, settleAdventureEncounter, startCombat, summonCreature,
 } from '../src/engine/index.js'
+import { beginAdventureEncounter, createDuel } from './duelFixtures.js'
 import type { AdventureState, CreatureCard, DuelState } from '../src/engine/index.js'
 import { runEnemyTurn, resolveEnemyBlocks } from '../src/engine/enemy.js'
 

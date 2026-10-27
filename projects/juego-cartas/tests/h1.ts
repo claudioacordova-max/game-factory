@@ -1,13 +1,14 @@
 import { requireInvoker } from '../src/engine/rules.js'
 import {
-  enterRatWing, addCopyToActiveDeck, beginAdventureEncounter, beginSessionDuel, createDuel,
+  enterRatWing, addCopyToActiveDeck,
   createExplorationProgress, createGameSession, DUNGEON_ENCOUNTERS, ENEMY_CARD_TYPES,
   finishSessionDuel, INITIAL_PLAYER_CARD_IDS, MAIN_ENCOUNTERS, moveActiveDeckCopy,
   PLAYER_CARD_TYPES, PLAYER_DECK, reinvokeCreatureType, reinvokeStatus,
-  removeCopyFromActiveDeck, settleAdventureEncounter, startSessionDuel,
+  removeCopyFromActiveDeck, settleAdventureEncounter,
   summonCreature, unlockCreatureType,
   declareAttackers, declareBlockers, endTurn, resolveCombat, startCombat,
 } from '../src/engine/index.js'
+import { beginAdventureEncounter, beginSessionDuel, createDuel, seededRandom, startSessionDuel } from './duelFixtures.js'
 import { runEnemyTurn } from '../src/engine/enemy.js'
 import type { AdventureState, CreatureCard, DuelState, GameSession } from '../src/engine/index.js'
 
@@ -217,6 +218,27 @@ test('transición única: sesión, progreso, recompensas y bajas idempotentes', 
   ok(settleAdventureEncounter(settled,won,MAIN_ENCOUNTERS,PLAYER_CARD_TYPES) === settled)
   equal(settleAdventureEncounter(started.state,won,MAIN_ENCOUNTERS,PLAYER_CARD_TYPES),settled)
   equal(settled.session.settledDuelIds,settled.progress.settledDuelIds)
+})
+
+test('la semilla de entrada a un encuentro de aventura llega al barajado del duelo', () => {
+  const initial = adventure()
+  const entry = encounter('B1')
+  const source = seededRandom(8042)
+  let randomCalls = 0
+  const countedSource = () => { randomCalls += 1; return source() }
+  const seeded = beginAdventureEncounter(initial, entry.id, MAIN_ENCOUNTERS, PLAYER_CARD_TYPES, countedSource).duel
+  equal(randomCalls, initial.session.activeDeckCopyIds.length - 1)
+  const expected = startSessionDuel(initial.session, PLAYER_CARD_TYPES, entry.opponentDeck, {
+    mode: entry.mode,
+    encounterId: entry.id,
+    opponentLife: entry.opponentLife,
+    opponentInitialField: entry.opponentInitialField,
+    random: seededRandom(8042),
+  })
+  equal(
+    [...seeded.players.player.hand, ...seeded.players.player.deck].map((card) => card.copyId),
+    [...expected.players.player.hand, ...expected.players.player.deck].map((card) => card.copyId),
+  )
 })
 
 test('primer descubrimiento básico sano, premios repetidos no duplican ni reponen una pérdida', () => {

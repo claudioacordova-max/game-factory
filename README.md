@@ -8,6 +8,7 @@ Revisión documental: 2026-10-28. Ámbito: Factory y proyectos existentes.
 
 - [Descripción general](docs/factory/overview.md), [capacidades y límites](docs/factory/status.md) y [procedimiento operativo](docs/factory/workflow-v1.md).
 - [Instrucciones para agentes](AGENTS.md).
+- [Informe histórico de evolución arquitectónica — octubre de 2026](docs/factory/history/architecture-evolution-2026-10.md): contenido aprobado; referencia retrospectiva sin autoridad operativa.
 - [Duelo en la cripta / juego-cartas](projects/juego-cartas/README.md): [estado](projects/juego-cartas/docs/status.md), [especificación](projects/juego-cartas/docs/spec-v1.md) y [continuidad](projects/juego-cartas/docs/implementation-plan.md).
 - [Comerciante Medieval](projects/comerciante-medieval/README.md): [estado](projects/comerciante-medieval/docs/status.md), [especificación](projects/comerciante-medieval/docs/spec-v1.md) y [continuidad](projects/comerciante-medieval/docs/implementation-plan.md).
 

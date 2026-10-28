@@ -1,6 +1,6 @@
 # Instrucciones para un chat nuevo — Arquitectura y configuración de Game Factory
 
-> **Documento histórico.** Estas instrucciones describen una etapa anterior a la configuración aprobada de Game Factory v1.1. Se conserva el contenido original como antecedente y no como encargo vigente. Consulta [`status.md`](status.md), [`AGENTS.md`](../../AGENTS.md) y [`workflow-v1.md`](workflow-v1.md) para el estado y procedimiento actuales.
+> **Documento histórico.** Estas instrucciones describen una etapa anterior a la configuración aprobada de Game Factory v1.1. Se conserva el contenido original como antecedente y no como encargo vigente. Consulta [`status.md`](../status.md), [`AGENTS.md`](../../../AGENTS.md) y [`workflow-v1.md`](../workflow-v1.md) para el estado y procedimiento actuales.
 
 **Uso:** abrir un chat nuevo de ChatGPT y adjuntar este archivo junto con `00-contexto-comun.md`. Cuando sea relevante, agregar el `AGENTS.md` y los documentos concretos del repositorio. Este chat sustituye la función de asesoría de configuración que cumplía la conversación histórica; **no** se convierte en el coordinador técnico que vive en Codex.
 

@@ -1,9 +1,11 @@
+> Archivo histórico trasladado el 2026-10-28 desde `docs/rpg-cartas-prototype-spec-v0.2.md`. Conserva el contexto y las afirmaciones de su etapa; la referencia consolidada vigente es [spec-v1.md](../spec-v1.md) y la continuidad está en [implementation-plan.md](../implementation-plan.md). Las rutas de los registros de ejecución son históricas; los enlaces navegables se adaptaron al traslado. Los saltos Markdown de metadatos se normalizaron a barra inversa final, sin cambiar contenido ni significado.
+
 # RPG de invocaciones y duelos de cartas
 ## Especificación funcional del primer prototipo
 
-**Versión:** 0.2 — Aprobada para planificación técnica  
-**Fecha:** 21 de octubre de 2026  
-**Proyecto:** AI Game Factory  
+**Versión:** 0.2 — Aprobada para planificación técnica\
+**Fecha:** 21 de octubre de 2026\
+**Proyecto:** AI Game Factory\
 **Estado:** Aprobada por el diseñador; pendiente de planificación técnica
 
 ---

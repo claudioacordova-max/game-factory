@@ -1,6 +1,8 @@
 # Comerciante Medieval
 
-Prototipo de Comerciante Medieval basado en Vite, React, TypeScript, Three.js y React Three Fiber. El motor económico puede ejecutarse sin interfaz gráfica.
+Demo de comercio en dos pueblos 3D con economía autónoma de familias, negocios y caravana. Stack: TypeScript, React, Vite, Three.js y React Three Fiber; el motor también funciona sin interfaz gráfica.
+
+Revisión documental: 2026-10-28; corte de código `5495567`, último cierre del juego `737fea9` (ITER-10). Sin guardado tras recargar ni condición de victoria/derrota.
 
 ## Requisitos
 
@@ -18,15 +20,19 @@ npm run dev
 
 Abre en el navegador la dirección local que muestra Vite (normalmente `http://localhost:5173`).
 
-## Bucle comercial (Hito 6)
+## Jugar
 
-Muévete con WASD o las flechas y pulsa E, o usa el botón de interacción junto a un NPC. En **Negocio** puedes comprar del stock comercial o vender insumos pertinentes; en **Hogar** puedes vender bienes que la familia necesite. El menú muestra el precio fijo, el máximo actual, el total y el resultado previsto. Confirma una cantidad entera para ver el resultado; una operación rechazada no cambia dinero ni inventario.
+1. Camina con **WASD o flechas** y usa **E** o el botón contextual junto a un NPC.
+2. En **Comprar/Vender**, pulsa una oferta para operar **una unidad inmediatamente**, sin cantidad editable ni confirmación adicional. Cada venta identifica al destinatario. Precio, stock/máximo y restricciones vienen del estado real; un rechazo no transfiere dinero ni bienes.
+3. Abre/cierra inventario con **I** o su botón: mercancías, cantidades y carga utilizada/máxima/disponible. **Esc** cierra ventanas. El comercio se cierra al alejarse del NPC.
+4. Usa **Avanzar día** o acércate a la salida señalizada y elige el otro pueblo: viajar avanza **un día global**, sin tarifa monetaria. El puerto pertenece solo a la caravana.
 
-Comerciar y caminar no avanzan el calendario. Usa **Avanzar día** o viaja al otro pueblo para procesar un día económico global.
+Comerciar y caminar no avanzan días. Las familias solo aceptan necesidades activas y no recompran bienes producidos por sus negocios. Carga, existencias, fondos y límite diario de progreso restringen las operaciones.
 
 Para compilar y previsualizar la versión de producción:
 
 ```sh
+npm test
 npm run build
 npm run preview
 ```
@@ -39,7 +45,7 @@ npm run simulate
 
 También se puede indicar otra duración entera, por ejemplo `npm run simulate -- 18`.
 
-El panel **Herramientas de inspección y prueba** está separado de la partida normal y empieza cerrado. Permite inspeccionar hogares, estados de necesidad, inventarios separados, durabilidad, negocios, jugador y calendario/operaciones de la caravana; ejecutar los escenarios del §12 con 1, 9, 36, 90 o cualquier duración; y consultar, copiar o exportar informes diarios y por ciclo. Cada ejecución reinicia al escenario elegido. Los controles de tarifas, producción, frecuencia, durabilidades y umbrales se aplican solo a esa ejecución y parten de los valores predeterminados aprobados; restaurarlos no cambia la partida abierta.
+El panel **Herramientas de inspección y prueba** está separado de la partida y empieza cerrado. Inspecciona familias, necesidades, inventarios, durabilidad, negocios, jugador y caravana; ejecuta escenarios reproducibles de 1/9/36/90 o duración entera y copia/exporta informes. Cada experimento reinicia su escenario; sus parámetros declarados y su restauración no alteran la partida normal abierta. Los resultados no certifican por sí solos equilibrio económico.
 
 Ejecutar todos los escenarios por nueve días con semilla registrada, o uno específico:
 
@@ -48,4 +54,9 @@ npm run simulate -- --scenario all --days 9 --seed 42
 npm run simulate -- --scenario trade-opportunity --days 9 --seed 42
 ```
 
-Modifica la escena según la especificación aprobada para este juego.
+## Documentación
+
+- [Estado actual: propuesta, sistemas, contenido y limitaciones](docs/status.md).
+- [Especificación consolidada de requisitos aprobados](docs/spec-v1.md).
+- [Plan y punto de continuidad](docs/implementation-plan.md).
+- [Historial íntegro de implementación e iteraciones](docs/history/implementation-plan-v0.1.md).

@@ -1,6 +1,6 @@
 # AI Game Factory — Contexto común para chats nuevos
 
-> **Documento histórico (referencia: 22 de octubre de 2026).** Se conserva su contenido original como antecedente; las afirmaciones de estado y propuestas describen esa revisión, no el estado actual de la factory. Para el estado vigente, consulta [`status.md`](status.md), [`AGENTS.md`](../../AGENTS.md) y [`workflow-v1.md`](workflow-v1.md).
+> **Documento histórico (referencia: 22 de octubre de 2026).** Se conserva su contenido original como antecedente; las afirmaciones de estado y propuestas describen esa revisión, no el estado actual de la factory. Para el estado vigente, consulta [`status.md`](../status.md), [`AGENTS.md`](../../../AGENTS.md) y [`workflow-v1.md`](../workflow-v1.md).
 
 **Fecha de referencia:** 22 de octubre de 2026
 **Estado del documento:** validado para los hechos comprobables en el repositorio; las afirmaciones históricas y propuestas se identifican abajo.

@@ -1,3 +1,5 @@
+> Archivo histórico trasladado el 2026-10-28 desde `docs/design/rpg-cartas/exploration-3d-v1/reference-prompt.md`. Conserva el contexto y las afirmaciones de su etapa; la referencia consolidada vigente es [spec-v1.md](../../../spec-v1.md) y la continuidad está en [implementation-plan.md](../../../implementation-plan.md). Las rutas de los registros de ejecución son históricas; los enlaces navegables se adaptaron al traslado.
+
 # Referencia de exploración 3D v1
 
 Generada con la herramienta integrada `imagegen` el 2026-10-27. Referencia conceptual de materiales, arquitectura y siluetas; no sustituye geometría funcional, contenido, escalas ni reglas existentes. La escena final utiliza geometría programática, sin consumir esta imagen como textura. [Imagen](reference.png).

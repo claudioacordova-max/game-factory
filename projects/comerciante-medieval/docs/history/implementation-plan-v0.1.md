@@ -1,5 +1,7 @@
 # Comerciante medieval — Plan técnico de implementación v0.1
 
+> Archivo histórico trasladado el 2026-10-28 desde `docs/comerciante-medieval-implementation-plan-v0.1.md`, corte `54955677ec9430695b233c99a8fb4067b103a86d`. Conserva los siete hitos, ITER-01–10 y sus estados sucesivos; las rutas textuales describen el trabajo de entonces. La especificación original citada abajo está ahora en [spec-v0.2.md](spec-v0.2.md). Para continuar usar [implementation-plan.md](../implementation-plan.md) y [spec-v1.md](../spec-v1.md). ITER-10 quedó incorporada en `737fea910ae0461eabf2520d365cbb49035b1cd5`; esa referencia estable complementa la mención histórica a la entrega del coordinador, sin reescribir sus resultados.
+
 **Estado:** aprobado por el diseñador para ejecución con los ajustes registrados en el mensaje de aprobación.
 **Fuente de verdad funcional:** `docs/comerciante-medieval-spec-v0.2.md`.
 **Alcance:** demo jugable. Los valores [E] se usan como configuración inicial autorizada; los riesgos [R] se miden y reportan, sin retocar automáticamente las reglas.

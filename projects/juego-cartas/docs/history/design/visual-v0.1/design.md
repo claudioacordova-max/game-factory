@@ -1,6 +1,8 @@
+> Archivo histórico trasladado el 2026-10-28 desde `docs/rpg-cartas-visual-design-v0.1.md`. Conserva el contexto y las afirmaciones de su etapa; la referencia consolidada vigente es [spec-v1.md](../../../spec-v1.md) y la continuidad está en [implementation-plan.md](../../../implementation-plan.md). Las rutas de los registros de ejecución son históricas; los enlaces navegables se adaptaron al traslado.
+
 # RPG de cartas — Transformación visual v0.1
 
-Fecha: 2026-10-26. Encargo autorizado por el diseñador: transformación integral de presentación y procedimiento reutilizable. Fuente de gameplay: [especificación v0.2](rpg-cartas-prototype-spec-v0.2.md).
+Fecha: 2026-10-26. Encargo autorizado por el diseñador: transformación integral de presentación y procedimiento reutilizable. Fuente de gameplay: [especificación v0.2](../../prototype-spec-v0.2.md).
 
 ## Brief y límites
 
@@ -36,7 +38,7 @@ Paneles con líneas finas y esquinas contenidas; jerarquía por composición y t
 
 Mapa como pequeño diorama de criptas/portales de piedra con camino visible, geometría simple, luces turquesa y bronce en el encuentro disponible. Mantener coherencia con el tablero 2D; no introducir cámara libre ni movimiento del jugador.
 
-Referencia estética: [visual-reference-v1.png](design/rpg-cartas/visual-reference-v1.png), generada con imagegen integrado y observada antes de implementar. Es una propuesta de composición, no una captura de la aplicación ni una especificación nueva. Sus nombres, cifras, arte y ornamentos ilustrativos no sustituyen los datos reales: usar exactamente el contenido del motor y emblemas SVG realizables; no copiar los costes ni los nombres inventados en la imagen.
+Referencia estética: [visual-reference-v1.png](visual-reference-v1.png), generada con imagegen integrado y observada antes de implementar. Es una propuesta de composición, no una captura de la aplicación ni una especificación nueva. Sus nombres, cifras, arte y ornamentos ilustrativos no sustituyen los datos reales: usar exactamente el contenido del motor y emblemas SVG realizables; no copiar los costes ni los nombres inventados en la imagen.
 
 ### Prompt de referencia (imagegen integrado)
 
@@ -53,7 +55,7 @@ Constraints: only existing mechanics: linear three encounters, deck management o
 
 ## C–D. Ejecución y evaluación
 
-Implementación delegada al rol nativo implementer; revisión independiente posterior con rol reviewer. Verificación técnica y visual y ciclos correctivos se registran en la sección de iteraciones del [plan existente](rpg-cartas-implementation-plan-v0.1.md).
+Implementación delegada al rol nativo implementer; revisión independiente posterior con rol reviewer. Verificación técnica y visual y ciclos correctivos se registran en la sección de iteraciones del [plan existente](../../implementation-plan-v0.1.md).
 
 Se requirió playtesting del diseñador para cerrar esta transformación, por el cambio amplio de navegación y controles presentados. Esta condición quedó satisfecha con la confirmación personal y aprobación definitiva registradas al final de este documento.
 

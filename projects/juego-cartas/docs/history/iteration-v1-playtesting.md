@@ -1,8 +1,10 @@
+> Archivo histórico trasladado el 2026-10-28 desde `docs/rpg-cartas-iteration-v1-playtesting.md`. Conserva el contexto y las afirmaciones de su etapa; la referencia consolidada vigente es [spec-v1.md](../spec-v1.md) y la continuidad está en [implementation-plan.md](../implementation-plan.md). Las rutas de los registros de ejecución son históricas; los enlaces navegables se adaptaron al traslado.
+
 # RPG de cartas — guía humana H6
 
 **Estado: H6 e iteración cerrados por aceptación final del diseñador; commit local autorizado mediante el procedimiento seguro del coordinador.** El diseñador confirma una expedición completa B1→B2→B3, pruebas del ala de ratas y reinvocación, y controles/interacciones satisfactorios, sin errores encontrados. No ejecutó exhaustivamente el protocolo experimental siguiente ni registró tiempos o puntuaciones. Su criterio final de cierre acepta la cobertura automatizada real de los extremos y conserva las comparaciones de épicas/balance como antecedentes experimentales, sin exigir esas mediciones manuales para cerrar. Esta aceptación corresponde a la nueva versión integrada, no a la transformación visual anterior.
 
-La guía y sus tablas se conservan como referencia histórica del protocolo propuesto; no son una lista de pendientes ni nuevos requisitos. La demo local registrada fue `http://127.0.0.1:5174/`; su proceso no se reanuda automáticamente entre sesiones. Los ensayos técnicos están en el [informe de balance](rpg-cartas-iteration-v1-balance.md) y la aceptación vigente en el [registro de iteración](rpg-cartas-iteration-v1.md). Las frases de aquel informe sobre aceptación pendiente describen el momento de su entrega técnica, anterior a la declaración humana de cierre.
+La guía y sus tablas se conservan como referencia histórica del protocolo propuesto; no son una lista de pendientes ni nuevos requisitos. La demo local registrada fue `http://127.0.0.1:5174/`; su proceso no se reanuda automáticamente entre sesiones. Los ensayos técnicos están en el [informe de balance](iteration-v1-balance.md) y la aceptación vigente en el [registro de iteración](iteration-v1.md). Las frases de aquel informe sobre aceptación pendiente describen el momento de su entrega técnica, anterior a la declaración humana de cierre.
 
 ## Preparación y registro
 

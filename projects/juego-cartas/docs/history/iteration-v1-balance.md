@@ -1,10 +1,12 @@
+> Archivo histórico trasladado el 2026-10-28 desde `docs/rpg-cartas-iteration-v1-balance.md`. Conserva el contexto y las afirmaciones de su etapa; la referencia consolidada vigente es [spec-v1.md](../spec-v1.md) y la continuidad está en [implementation-plan.md](../implementation-plan.md). Las rutas de los registros de ejecución son históricas; los enlaces navegables se adaptaron al traslado.
+
 # RPG de cartas — evidencia técnica de expediciones H6
 
 Fecha: 2026-10-26. Resultado observado: **26 expediciones completas y una derrota en 27 políticas deterministas**, cuatro rescates críticos completos y cuatro continuaciones comparables de entrenamiento. Esto acredita secuencias legales y continuidad técnica; no estima probabilidad humana de victoria ni acepta el balance o la experiencia. Playtesting humano y aceptación final pendientes.
 
 ## Alcance y reproducción
 
-Fuente de autoridad: [anexo aprobado D01–D12](rpg-cartas-iteration-v1.md), [catálogos archivados](design/rpg-cartas/iteration-v1/) y [especificación original](rpg-cartas-prototype-spec-v0.2.md). El modelado heurístico anterior no se usa como prueba. Se añadió exclusivamente el [harness](../projects/juego-cartas/tests/expedition.ts), este informe y la [guía humana](rpg-cartas-iteration-v1-playtesting.md). No se modificaron reglas, estadísticas, IA enemiga, UI, dependencias, Factory ni especificaciones. Sin staging, commits o push.
+Fuente de autoridad: [anexo aprobado D01–D12](iteration-v1.md), [catálogos archivados](iteration-v1) y [especificación original](prototype-spec-v0.2.md). El modelado heurístico anterior no se usa como prueba. Se añadió exclusivamente el [harness](../../tests/expedition.ts), este informe y la [guía humana](iteration-v1-playtesting.md). No se modificaron reglas, estadísticas, IA enemiga, UI, dependencias, Factory ni especificaciones. Sin staging, commits o push.
 
 HEAD de partida y de estas comprobaciones: `2d477ff9ef793a8754f24826f763ade53b10b29f`. El árbol ya contenía los cambios H0–H5 y trabajo ajeno en App, motor, UI, estilos, runner, escena, pruebas, plan/anexo y archivos de traspaso/experimentos. Ninguno pertenece a este diff H6. Las tres rutas H6 eran nuevas. Los módulos probados son archivos de trabajo posteriores a HEAD, identificados por SHA-256:
 

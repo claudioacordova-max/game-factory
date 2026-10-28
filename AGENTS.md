@@ -72,12 +72,8 @@ Before work, record `HEAD` and the complete Git status. Never include pre-existi
 - Do not introduce major architectural changes without approval.
 - Never assume a task is complete solely because code was written.
 
-## Current project
+## Project context and documentation
 
-The first prototype is a card-based RPG.
+Identify the active game from the task and its authorized scope; do not assume one project is permanently active. Factory documentation lives in `docs/factory/`. Each game's current documentation lives in `projects/<game>/docs/`: `status.md` describes the implemented state, `spec-vN.md` consolidates approved requirements for a defined scope, and `implementation-plan.md` is the planning and continuity record. Read the applicable specification and later authorized decisions together; a consolidation does not grant new design approval.
 
-Its approved functional specification is located at:
-
-docs/rpg-cartas-prototype-spec-v0.2.md
-
-Treat this document as the source of truth for gameplay requirements.
+The existing games are `projects/juego-cartas/` and `projects/comerciante-medieval/`. Their root READMEs link to their current documents and archived sources in `docs/history/` within each project. Historical records preserve evidence, not permission to restart superseded work. Follow the documentation maintenance conventions in `docs/factory/workflow-v1.md` without changing the existing milestone, review, playtesting, or commit gates.

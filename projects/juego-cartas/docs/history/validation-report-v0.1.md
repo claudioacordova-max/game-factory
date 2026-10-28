@@ -1,10 +1,12 @@
+> Archivo histórico trasladado el 2026-10-28 desde `docs/rpg-cartas-validation-report-v0.1.md`. Conserva el contexto y las afirmaciones de su etapa; la referencia consolidada vigente es [spec-v1.md](../spec-v1.md) y la continuidad está en [implementation-plan.md](../implementation-plan.md). Las rutas de los registros de ejecución son históricas; los enlaces navegables se adaptaron al traslado.
+
 # Informe de validación del prototipo RPG de cartas
 
 **Versión:** 0.1
 **Fecha:** 22 de octubre de 2026
 **Proyecto:** `projects/juego-cartas`
-**Especificación evaluada:** [`rpg-cartas-prototype-spec-v0.2.md`](rpg-cartas-prototype-spec-v0.2.md)
-**Plan de implementación:** [`rpg-cartas-implementation-plan-v0.1.md`](rpg-cartas-implementation-plan-v0.1.md)
+**Especificación evaluada:** [`rpg-cartas-prototype-spec-v0.2.md`](prototype-spec-v0.2.md)
+**Plan de implementación:** [`rpg-cartas-implementation-plan-v0.1.md`](implementation-plan-v0.1.md)
 **Resultado:** los 12 criterios de aceptación se consideran cumplidos con la evidencia de código, pruebas automatizadas registradas y recorridos manuales confirmados por el usuario.
 
 ## Alcance y fuentes de evidencia
@@ -89,7 +91,7 @@ La evidencia disponible y las confirmaciones manuales del usuario respaldan el c
 
 ## Iteración de interfaz integrada A1–A6 — entrega técnica del 27 de octubre de 2026
 
-Este apartado corresponde a la nueva iteración autorizada de exploración y combate. Las conclusiones anteriores pertenecen al prototipo histórico y no acreditan aceptación humana de esta versión. El documento rector es la solicitud del diseñador y su aprobación conjunta de A1–A6/B1; [estructura y propuesta visual](design/rpg-cartas/ui-redesign-v1.md), ejecución y dictámenes en el [plan existente](rpg-cartas-implementation-plan-v0.1.md).
+Este apartado corresponde a la nueva iteración autorizada de exploración y combate. Las conclusiones anteriores pertenecen al prototipo histórico y no acreditan aceptación humana de esta versión. El documento rector es la solicitud del diseñador y su aprobación conjunta de A1–A6/B1; [estructura y propuesta visual](design/ui-redesign-v1/design.md), ejecución y dictámenes en el [plan existente](implementation-plan-v0.1.md).
 
 Se implementaron escena a viewport completo, HUD contextual, colección modal con I/Esc y suspensión del mundo, avisos/resultados internos, tablero con invocadores y recursos integrados, invocación directa, sacrificios ejecutados por última selección, atacantes/objetivos directos, bloqueo por arrastre con multiasignación ordenada y conexiones, y transiciones sin fin manual de turno. R1–R3 mantienen grupos sin invocador/vida ficticia y ataques dirigidos. Motor, contenido, balance y mezcla permanecen intactos.
 
@@ -109,7 +111,7 @@ La propuesta y CSS contemplan 1440×900 y 1024×768, con filas desplazables, sel
 
 **Limitación visual concreta:** Playwright offline no estaba en caché (`ENOTCACHED`); IAB no estaba disponible. Después de reanudar la sesión, la activación nativa de Chrome sí funcionó, pero la operación posterior Ctrl+T detuvo Computer Use: la herramienta no pudo determinar con confianza la URL actual del navegador en Windows para aplicar su política. Se respetó la detención y no se usó otro mecanismo para eludirla. No se acredita una captura inspeccionada, recorrido DOM ni gesto de juego observado por el agente en esta versión.
 
-La versión se entregó para el playtesting humano, ya completado y aceptado, en el servidor existente `http://127.0.0.1:5180/`, sin iniciar otro ni detener el destinado al diseñador. La [guía breve del README](../projects/juego-cartas/README.md#playtesting-breve-del-rediseño--aceptado) cubre controles, costes, selección definitiva, multibloqueo, fases, retorno/persistencia y presentación en ambos tamaños. El diseñador confirmó los flujos de la guía como satisfactorios. No facilitó navegador, resolución o dispositivo exactos; no se atribuyen medidas ni ejecuciones instrumentadas adicionales.
+La versión se entregó para el playtesting humano, ya completado y aceptado, en el servidor existente `http://127.0.0.1:5180/`, sin iniciar otro ni detener el destinado al diseñador. La [guía breve del README](README-before-migration-2026-10-28.md#playtesting-breve-del-rediseño--aceptado) cubre controles, costes, selección definitiva, multibloqueo, fases, retorno/persistencia y presentación en ambos tamaños. El diseñador confirmó los flujos de la guía como satisfactorios. No facilitó navegador, resolución o dispositivo exactos; no se atribuyen medidas ni ejecuciones instrumentadas adicionales.
 
 **Estado de entrega técnica (histórico):** A1–A6 implementados y aprobados técnicamente para entrega. P3 documental corregido en ciclo 1 y comprobado independientemente sin hallazgos. El coordinador confirmó 160/160 pruebas, comprobaciones espaciales, build y preflight de las 33 rutas autorizadas; la corrección documental posterior no cambió código ni pruebas y pasó su preflight. Pendientes la inspección manual de presentación/entradas y la aceptación visual/funcional final del diseñador tras playtesting. Sin staging, commit de cierre de A ni push. B1 cerrado independientemente en `eb6a165be40197937096435204df76c45763bbfe`.
 ### Aceptación humana definitiva y cierre autorizado de A1–A6
@@ -120,4 +122,4 @@ La evaluación principal fue en escritorio. La emulación móvil orientativa en 
 
 **Estado vigente:** A1–A6 completados y aceptados definitivamente; cierre formal y commit local autorizados. Revisiones independientes completas, incluido el P3 documental corregido en ciclo 1 y comprobado sin hallazgos; sin defectos pendientes. Se conservan 160/160 pruebas, comprobaciones espaciales, build y preflight anterior de 33 rutas sin repetir pruebas funcionales por este cierre exclusivamente documental. Las menciones anteriores de aceptación pendiente son historia de la entrega, no condiciones actuales.
 
-El commit local de cierre es el que incorpora este registro con mensaje `juego-cartas: close A1-A6 integrated interface redesign`; el coordinador verificará el hash real tras la ejecución segura, consultable con `git log -1 --format=%H -- docs/rpg-cartas-implementation-plan-v0.1.md`. No se afirma anticipadamente que el commit se haya ejecutado. B1 conserva su cierre independiente en `eb6a165be40197937096435204df76c45763bbfe`. Sin push ni modificaciones nuevas de código, reglas, balance o arquitectura.
+El commit local de cierre es el que incorpora este registro con mensaje `juego-cartas: close A1-A6 integrated interface redesign`; el coordinador verificará el hash real tras la ejecución segura, identificado mediante la referencia estable `a16c9c560335be109f11ffe58a258f27b82d9f13` (incorporada al trasladar el documento). No se afirma anticipadamente que el commit se haya ejecutado. B1 conserva su cierre independiente en `eb6a165be40197937096435204df76c45763bbfe`. Sin push ni modificaciones nuevas de código, reglas, balance o arquitectura.

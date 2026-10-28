@@ -1,5 +1,7 @@
 # Comerciante medieval — Especificación funcional de demo v0.2 · APROBADA
 
+> Archivo histórico trasladado el 2026-10-28 desde `docs/comerciante-medieval-spec-v0.2.md`, corte `54955677ec9430695b233c99a8fb4067b103a86d`. Se conserva su significado y sus referencias de época, incluidas las menciones a contextos externos no disponibles. La consolidación vigente está en [spec-v1.md](../spec-v1.md); las sustituciones posteriores están registradas en el [plan histórico](implementation-plan-v0.1.md). Este archivo no es un nuevo encargo de implementación.
+
 **Estado:** **APROBADO POR EL DISEÑADOR PARA ENTREGA A CODEX.**
 **Fecha de aprobación:** 22 de octubre de 2026
 **Versión:** v0.2 (revisión aprobada de la v0.1)

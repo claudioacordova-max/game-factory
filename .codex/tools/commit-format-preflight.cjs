@@ -39,18 +39,50 @@ function parseArguments(argv) {
   return { paths, safeEof };
 }
 
-function regularFile(root, file) {
+function fail(message) { throw new Error(message); }
+
+function inspectPath(root, file, filesystem = fs) {
   validatePath(file);
-  let current = root;
+  const absolute = path.resolve(root, ...file.split('/'));
+  const relative = path.relative(root, absolute);
+  if (!relative || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) fail('path is outside the repository');
+  let current = path.resolve(root);
   const parts = file.split('/');
   for (let i = 0; i < parts.length; i += 1) {
+    const parent = current;
     current = path.join(current, parts[i]);
-    const stat = fs.lstatSync(current);
-    if (stat.isSymbolicLink() || (i < parts.length - 1 ? !stat.isDirectory() : !stat.isFile())) {
-      throw new Error(`only regular files through non-link directories are supported: ${file}`);
-    }
+    let stat;
+    try { stat = filesystem.lstatSync(current); }
+    catch (error) { if (error.code === 'ENOENT') return { file, absolute, kind: 'delete' }; throw error; }
+    if (!filesystem.readdirSync(parent).includes(parts[i])) fail('path spelling or case is ambiguous: ' + file);
+    if (stat.isSymbolicLink()) fail('symbolic links are not allowed: ' + file);
+    if (i < parts.length - 1 ? !stat.isDirectory() : !stat.isFile()) fail('only regular files through directories are allowed: ' + file);
   }
-  return current;
+  return { file, absolute, kind: 'file' };
+}
+
+function deletionEntry(git, file) {
+  const index = git(['--literal-pathspecs', 'ls-files', '--stage', '-z', '--', file]).stdout.split('\0').filter(Boolean);
+  const head = git(['--literal-pathspecs', 'ls-tree', '-r', '-z', 'HEAD', '--', file]).stdout.split('\0').filter(Boolean);
+  const entry = /^(100644|100755) ([a-f0-9]+) 0\t(.+)$/u.exec(index[0] || '');
+  const original = /^(100644|100755) blob ([a-f0-9]+)\t(.+)$/u.exec(head[0] || '');
+  if (index.length !== 1 || head.length !== 1 || !entry || !original
+    || entry[3] !== file || original[3] !== file || entry[1] !== original[1] || entry[2] !== original[2]) {
+    fail('missing path is not an exact unchanged regular file in HEAD and index: ' + file);
+  }
+  return { mode: entry[1], oid: entry[2] };
+}
+
+function classifyPath(root, file, git, filesystem = fs) {
+  const candidate = inspectPath(root, file, filesystem);
+  return candidate.kind === 'delete' ? { ...candidate, entry: deletionEntry(git, file) } : candidate;
+}
+
+
+function regularFile(root, file) {
+  const result = inspectPath(root, file);
+  if (result.kind !== "file") throw new Error("EOF correction requires an existing regular file");
+  return result.absolute;
 }
 
 function trimReviewedEof(bytes) {
@@ -94,13 +126,16 @@ function preflight(root, { paths, safeEof = new Map() }, git = makeGit(root)) {
   if (fs.realpathSync(root).toLowerCase() !== root.toLowerCase()) throw new Error('repository root resolves through a link');
   const actualRoot = path.resolve(git(['rev-parse', '--show-toplevel']).stdout.trim());
   if (actualRoot.toLowerCase() !== root.toLowerCase()) throw new Error('unexpected repository root');
-  if (git(['diff', '--cached', '--name-only', '-z']).stdout) throw new Error('index already contains staged paths; no files were corrected');
+  if (git(['diff', '--cached', '--name-only', '--ita-visible-in-index', '-z']).stdout) throw new Error('index already contains staged paths; no files were corrected');
   const authorized = new Set(paths);
   if (!paths.length || new Set(paths.map((file) => file.toLowerCase())).size !== paths.length) throw new Error('authorized paths must be nonempty and unique');
   for (const file of safeEof.keys()) if (!authorized.has(file)) throw new Error(`EOF correction is not authorized: ${file}`);
-  const files = paths.map((file) => ({ file, absolute: regularFile(root, file) }));
+  const files = paths.map((file) => classifyPath(root, file, git));
+  const rechecked = paths.map((file) => classifyPath(root, file, git));
+  if (JSON.stringify(files) !== JSON.stringify(rechecked)) throw new Error("authorized path classification changed during preflight");
   // Validate every attestation before performing any correction.
   const corrections = files.filter(({ file }) => safeEof.has(file)).map((entry) => {
+    if (entry.kind === "delete") throw new Error("EOF correction is not allowed for a versioned deletion");
     const before = fs.readFileSync(entry.absolute);
     if (sha256(before) !== safeEof.get(entry.file)) throw new Error(`reviewed SHA-256 no longer matches: ${entry.file}`);
     if (fs.statSync(entry.absolute).nlink !== 1) throw new Error(`refusing to modify a multiply linked file: ${entry.file}`);
@@ -120,6 +155,8 @@ function preflight(root, { paths, safeEof = new Map() }, git = makeGit(root)) {
       fixed.push(entry.file);
     }
     const checks = fixed.length ? files.map(({ file, absolute }) => checkFile(git, file, absolute, emptyFile)) : initial;
+    const finalFiles = paths.map((file) => classifyPath(root, file, git));
+    if (JSON.stringify(files) !== JSON.stringify(finalFiles)) throw new Error("authorized path classification changed during preflight");
     return { ok: checks.every((check) => check.ok), fixed, checks };
   } finally {
     // Delete only the two exact temporary paths this invocation created.
@@ -142,7 +179,7 @@ function main(argv = process.argv.slice(2)) {
   return result.ok ? 0 : 1;
 }
 
-module.exports = { parseArguments, validatePath, trimReviewedEof, preflight, sha256, main };
+module.exports = { parseArguments, validatePath, inspectPath, deletionEntry, classifyPath, trimReviewedEof, preflight, sha256, main };
 if (require.main === module) {
   try { process.exitCode = main(); }
   catch (error) { process.stderr.write(`commit-format-preflight: ${error.message}\n`); process.exitCode = 1; }

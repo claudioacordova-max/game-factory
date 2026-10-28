@@ -25,7 +25,17 @@ function fixture(run) {
     let result;
     if (args[0] === 'rev-parse') result = { status: 0, stdout: root, stderr: '' };
     else if (args[0] === 'diff' && args[1] === '--cached') result = { status: 0, stdout: staged, stderr: '' };
-    else if (args[1] === 'ls-files') result = { status: baselines.has(args.at(-1)) ? 0 : 1, stdout: '', stderr: '' };
+    else if (args[1] === 'ls-files') {
+      const tracked = baselines.has(args.at(-1));
+      result = args.includes('--stage')
+        ? { status: 0, stdout: tracked ? '100644 ' + 'a'.repeat(40) + ' 0\t' + args.at(-1) + '\0' : '', stderr: '' }
+        : { status: tracked ? 0 : 1, stdout: '', stderr: '' };
+    } else if (args[1] === 'ls-tree') {
+      const tracked = baselines.has(args.at(-1));
+      result = { status: 0, stdout: tracked ? '100644 blob ' + 'a'.repeat(40) + '\t' + args.at(-1) + '\0' : '', stderr: '' };
+    } else if (args.includes('--check') && baselines.has(args.at(-1)) && !fs.existsSync(path.join(root, args.at(-1)))) {
+      result = { status: 0, stdout: '', stderr: '' };
+    }
     else {
       const diffArgs = args[0] === '--literal-pathspecs'
         ? ['diff', '--no-index', '--check', '--', baselines.get(args.at(-1)), path.join(root, args.at(-1))]
@@ -152,7 +162,7 @@ test('rejects unauthorized corrections, directories, links and multiply linked w
   assert.throws(() => preflight(root, { paths: ['dir/source.ts'], safeEof: new Map([['elsewhere.ts', 'a'.repeat(64)]]) }, git), /not authorized/u);
   assert.throws(() => preflight(root, { paths: ['dir'] }, git), /regular files/u);
   fs.symlinkSync(path.join(root, 'dir'), path.join(root, 'linked-dir'), 'junction');
-  assert.throws(() => preflight(root, { paths: ['linked-dir/source.ts'] }, git), /non-link/u);
+  assert.throws(() => preflight(root, { paths: ['linked-dir/source.ts'] }, git), /symbolic links/u);
   fs.linkSync(target, path.join(root, 'hardlink.ts'));
   assert.throws(() => preflight(root, { paths: ['dir/source.ts'], safeEof: new Map([['dir/source.ts', sha256(fs.readFileSync(target))]]) }, git), /multiply linked/u);
 }));
@@ -166,10 +176,55 @@ test('preflight Git errors do not get treated as whitespace or bypassed', () => 
   assert.throws(() => preflight(root, { paths: ['source.ts'] }, failingGit), /permission denied/u);
 }));
 
-test('safe executor remains byte-identical and retains security/format gates', () => {
+test('safe executor matches its reviewed hash and retains security/format gates', () => {
   const executor = fs.readFileSync(path.join(__dirname, 'local-commit-executor.cjs'));
-  assert.equal(sha256(executor), '7355133d67c7c11dc4ca11c3dbf0dc16f061a736af800effc347af5b940b1dd1');
-  for (const gate of ["runGit(['diff', '--cached', '--check'])", 'refuseConfiguredCommitHooks()', "runGit(['--literal-pathspecs', 'add'", 'initiallyStaged.length > 0']) {
+  assert.equal(sha256(executor), '758fa50726a64fd33b07a9485e04d5d358376a0c517e6ed29eefbd11401aefdf');
+  for (const gate of ["runGit(['diff', '--cached', '--check'])", 'refuseConfiguredCommitHooks(root, runGit)', "runGit(['--literal-pathspecs', 'add'", 'initiallyStaged.length > 0']) {
     assert.ok(executor.toString('utf8').includes(gate));
   }
 });
+
+test('checks verified deletions including absent parents alongside new files without staging', () => fixture(({ root, write, track, git, calls }) => {
+  track('old/nested/gone.md', 'old\n');
+  write('new.md', 'new\n');
+  const result = preflight(root, { paths: ['old/nested/gone.md', 'new.md'] }, git);
+  assert.equal(result.ok, true);
+  assert.equal(result.checks.length, 2);
+  assert.ok(calls.some((args) => args.includes('ls-tree') && args.includes('HEAD')));
+  assert.ok(calls.every((args) => !args.includes('add') && !args.includes('commit')));
+}));
+
+test('rejects an unknown missing path before any otherwise safe EOF correction', () => fixture(({ root, write, git }) => {
+  const target = write('first.md', 'content\n\n');
+  const original = fs.readFileSync(target);
+  assert.throws(() => preflight(root, { paths: ['first.md', 'unknown.md'], safeEof: new Map([['first.md', sha256(original)]]) }, git), /exact unchanged regular/u);
+  assert.deepEqual(fs.readFileSync(target), original);
+}));
+
+test('rejects EOF attestation for a verified deletion before correcting another file', () => fixture(({ root, write, track, git }) => {
+  track('gone.md', 'old\n');
+  const target = write('first.md', 'content\n\n');
+  const original = fs.readFileSync(target);
+  assert.throws(() => preflight(root, {
+    paths: ['first.md', 'gone.md'],
+    safeEof: new Map([['first.md', sha256(original)], ['gone.md', sha256(Buffer.from('old\n'))]]),
+  }, git), /not allowed for a versioned deletion/u);
+  assert.deepEqual(fs.readFileSync(target), original);
+}));
+
+test('rejects a deletion that reappears during the read-only checks', () => fixture(({ root, write, track, git }) => {
+  track('gone.md', 'old\n');
+  let changed = false;
+  const racingGit = (args, accepted) => {
+    const result = git(args, accepted);
+    if (!changed && args.includes('--check') && args.at(-1) === 'gone.md') { changed = true; write('gone.md', 'reappeared\n'); }
+    return result;
+  };
+  assert.throws(() => preflight(root, { paths: ['gone.md'] }, racingGit), /classification changed/u);
+}));
+
+test('classifies filesystem permission errors as errors, never as deletions', () => fixture(({ root, git }) => {
+  const { classifyPath } = require('./commit-format-preflight.cjs');
+  const filesystem = { lstatSync() { const error = new Error('denied'); error.code = 'EACCES'; throw error; }, readdirSync: fs.readdirSync };
+  assert.throws(() => classifyPath(root, 'gone.md', git, filesystem), /denied/u);
+}));

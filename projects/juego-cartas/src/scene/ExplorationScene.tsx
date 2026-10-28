@@ -7,6 +7,8 @@ import {
   movePose, roomWithObjects, safeExplorationPose,
 } from '../engine/spatial.js'
 import type { ExplorationObject, RoomDefinition, SpatialPose } from '../engine/spatial.js'
+import { Avatar, WorldObject } from './ExplorationActors.js'
+import { CryptLighting, CryptRoom } from './CryptEnvironment.js'
 import './exploration.css'
 
 export type { ExplorationObject, RoomDefinition, SpatialPose } from '../engine/spatial.js'
@@ -28,86 +30,6 @@ interface Runtime {
   focused: boolean
   dirty: boolean
   disabled: boolean
-}
-
-function Avatar({ walking }: { walking: MutableRefObject<number> }) {
-  const leftLeg = useRef<Group>(null), rightLeg = useRef<Group>(null)
-  useFrame(() => {
-    const swing = Math.sin(walking.current) * 0.48
-    if (leftLeg.current) leftLeg.current.rotation.x = swing
-    if (rightLeg.current) rightLeg.current.rotation.x = -swing
-  })
-  return <group>
-    <mesh position={[0, 0.68, 0]} castShadow><coneGeometry args={[0.31, 0.72, 8]} /><meshStandardMaterial color="#356b70" roughness={0.9} /></mesh>
-    <mesh position={[0, 0.86, 0.18]}><boxGeometry args={[0.23, 0.31, 0.08]} /><meshStandardMaterial color="#bc995b" metalness={0.45} roughness={0.65} /></mesh>
-    <mesh position={[0, 1.16, 0]} castShadow><sphereGeometry args={[0.19, 10, 8]} /><meshStandardMaterial color="#eee4cf" /></mesh>
-    <mesh position={[0, 1.29, -0.035]} castShadow><sphereGeometry args={[0.21, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2]} /><meshStandardMaterial color="#243c4b" /></mesh>
-    {[-0.07, 0.07].map((x) => <mesh key={x} position={[x, 1.19, 0.177]}><boxGeometry args={[0.038, 0.046, 0.032]} /><meshStandardMaterial color="#101b22" /></mesh>)}
-    <mesh position={[0, 1.12, 0.195]}><boxGeometry args={[0.06, 0.055, 0.05]} /><meshStandardMaterial color="#d4bea0" /></mesh>
-    {[-0.1, 0.1].map((x, index) => <group key={x} ref={index === 0 ? leftLeg : rightLeg} position={[x, 0.42, 0]}>
-      <mesh position={[0, -0.18, 0.025]} castShadow><boxGeometry args={[0.13, 0.35, 0.18]} /><meshStandardMaterial color="#263440" /></mesh>
-      <mesh position={[0, -0.33, 0.07]}><boxGeometry args={[0.15, 0.13, 0.23]} /><meshStandardMaterial color="#8d7552" /></mesh>
-    </group>)}
-    <mesh position={[-0.29, 0.68, 0.02]} castShadow><boxGeometry args={[0.13, 0.4, 0.15]} /><meshStandardMaterial color="#356b70" /></mesh>
-    <mesh position={[0.29, 0.68, 0.02]} castShadow><boxGeometry args={[0.13, 0.4, 0.15]} /><meshStandardMaterial color="#356b70" /></mesh>
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}><ringGeometry args={[0.34, 0.4, 24]} /><meshBasicMaterial color="#71c5bc" /></mesh>
-  </group>
-}
-
-function WorldObject({ object, onInteract }: { object: ExplorationObject; onInteract: (id: string) => void }) {
-  const color = object.status === 'available' ? '#71c5bc' : object.status === 'locked' ? '#68757a' : '#bc995b'
-  if (object.kind === 'enemy' && object.status === 'completed') return null
-  return <group position={[object.position.x, 0, object.position.z]} onClick={(event) => { event.stopPropagation(); onInteract(object.id) }}>
-    <mesh position={[0, 0.06, 0]} receiveShadow><cylinderGeometry args={[0.64, 0.7, 0.12, 8]} /><meshStandardMaterial color="#30424a" /></mesh>
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.13, 0]}><ringGeometry args={[0.52, 0.57, 24]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.35} /></mesh>
-    {object.kind === 'enemy' && <group>
-      <mesh position={[0, 0.7, 0]} castShadow><coneGeometry args={[0.32, 1.1, 6]} /><meshStandardMaterial color="#7e5f53" /></mesh>
-      <mesh position={[0, 1.35, 0]} castShadow><icosahedronGeometry args={[0.22, 0]} /><meshStandardMaterial color="#d6ccad" /></mesh>
-      <mesh position={[0.4, 0.85, 0]} castShadow><boxGeometry args={[0.07, 1.1, 0.07]} /><meshStandardMaterial color="#bc995b" /></mesh>
-      <mesh position={[0.4, 1.45, 0]}><octahedronGeometry args={[0.15]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.65} /></mesh>
-    </group>}
-    {object.kind === 'chest' && <group>
-      <mesh position={[0, 0.35, 0]} castShadow><boxGeometry args={[0.77, 0.43, 0.57]} /><meshStandardMaterial color="#655342" roughness={0.9} /></mesh>
-      <group position={[0, 0.55, -0.27]} rotation={[object.status === 'completed' ? -1.05 : 0, 0, 0]}>
-        <mesh position={[0, 0.04, 0.27]} castShadow><boxGeometry args={[0.81, 0.15, 0.6]} /><meshStandardMaterial color="#bc995b" metalness={0.45} roughness={0.7} /></mesh>
-      </group>
-    </group>}
-    {object.kind === 'shrine' && <group>
-      <mesh position={[0, 0.45, 0]} castShadow><cylinderGeometry args={[0.25, 0.4, 0.7, 6]} /><meshStandardMaterial color="#59676a" /></mesh>
-      <mesh position={[0, 1.02, 0]}><octahedronGeometry args={[0.25]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={object.status === 'available' ? 0.9 : 0.05} /></mesh>
-    </group>}
-    {object.kind === 'exit' && <group>
-      {[-0.65, 0.65].map((x) => <mesh key={x} position={[x, 0.85, 0]} castShadow><boxGeometry args={[0.28, 1.7, 0.43]} /><meshStandardMaterial color="#4b5d64" /></mesh>)}
-      <mesh position={[0, 1.72, 0]} castShadow><boxGeometry args={[1.58, 0.28, 0.46]} /><meshStandardMaterial color="#bc995b" roughness={0.8} /></mesh>
-      <mesh position={[0, 0.85, 0]}><boxGeometry args={[1, 1.55, 0.06]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={object.status === 'available' ? 0.3 : 0.02} transparent opacity={0.28} /></mesh>
-    </group>}
-    {object.status === 'locked' && <group position={[0, 0.85, 0.32]}>
-      <mesh><boxGeometry args={[0.25, 0.25, 0.13]} /><meshStandardMaterial color="#bc995b" /></mesh>
-      <mesh position={[0, 0.18, 0]}><torusGeometry args={[0.09, 0.03, 6, 12, Math.PI]} /><meshStandardMaterial color="#bc995b" /></mesh>
-    </group>}
-  </group>
-}
-
-function CryptRoom({ room }: { room: RoomDefinition }) {
-  return <group>
-    <mesh position={[0, -0.16, 0]} receiveShadow><boxGeometry args={[room.width, 0.3, room.depth]} /><meshStandardMaterial color="#263a43" roughness={1} /></mesh>
-    {Array.from({ length: room.width - 1 }, (_, i) => i - room.width / 2 + 1).map((x) => <mesh key={`x${x}`} position={[x, 0, 0]}><boxGeometry args={[0.025, 0.012, room.depth]} /><meshStandardMaterial color="#1b2b32" /></mesh>)}
-    {Array.from({ length: room.depth - 1 }, (_, i) => i - room.depth / 2 + 1).map((z) => <mesh key={`z${z}`} position={[0, 0, z]}><boxGeometry args={[room.width, 0.012, 0.025]} /><meshStandardMaterial color="#1b2b32" /></mesh>)}
-    {/* Low boundaries keep both the avatar and nearby controls visible from the fixed camera. */}
-    {[-1, 1].map((side) => <group key={side}>
-      <mesh position={[side * room.width / 2, 0.2, 0]} castShadow><boxGeometry args={[0.3, 0.5, room.depth]} /><meshStandardMaterial color="#3b4c53" /></mesh>
-      <mesh position={[0, 0.2, side * room.depth / 2]} castShadow><boxGeometry args={[room.width, 0.5, 0.3]} /><meshStandardMaterial color="#3b4c53" /></mesh>
-    </group>)}
-    {room.obstacles.map((obstacle, index) => <group key={index} position={[obstacle.x, 0, obstacle.z]}>
-      <mesh position={[0, (obstacle.height ?? 0.85) / 2, 0]} castShadow receiveShadow><boxGeometry args={[obstacle.width, obstacle.height ?? 0.85, obstacle.depth]} /><meshStandardMaterial color="#3b4c53" roughness={0.95} /></mesh>
-      <mesh position={[0, (obstacle.height ?? 0.85) + 0.04, 0]}><boxGeometry args={[obstacle.width + 0.12, 0.1, obstacle.depth + 0.12]} /><meshStandardMaterial color="#59676a" /></mesh>
-    </group>)}
-    {[-1, 1].flatMap((x) => [-1, 1].map((z) => <group key={`${x}:${z}`} position={[x * (room.width / 2 - 0.7), 0, z * (room.depth / 2 - 0.6)]}>
-      <mesh position={[0, 0.65, 0]} castShadow><cylinderGeometry args={[0.06, 0.12, 1.3, 6]} /><meshStandardMaterial color="#bc995b" /></mesh>
-      <mesh position={[0, 1.4, 0]}><octahedronGeometry args={[0.17]} /><meshStandardMaterial color="#dfae62" emissive="#dfae62" emissiveIntensity={1.4} /></mesh>
-      <pointLight position={[0, 1.6, 0]} color="#dfae62" intensity={5} distance={6} />
-    </group>))}
-  </group>
 }
 
 function MovingWorld({ room, objects, runtime, onInteract, onTick }: {
@@ -143,12 +65,9 @@ function MovingWorld({ room, objects, runtime, onInteract, onTick }: {
     onTick(delta)
   })
   return <>
-    <color attach="background" args={['#101b22']} />
-    <ambientLight color="#bacbd1" intensity={1.5} />
-    <directionalLight position={[4, 10, 6]} intensity={2.4} color="#eee4cf" castShadow shadow-mapSize={[1024, 1024]} />
-    <pointLight position={[0, 3, -2]} color="#71c5bc" intensity={12} distance={10} />
+    <CryptLighting roomId={room.id} />
     <CryptRoom room={room} />
-    {objects.map((object) => <WorldObject key={object.id} object={object} onInteract={onInteract} />)}
+    {objects.map((object) => <WorldObject key={object.id} object={object} roomId={room.id} onInteract={onInteract} />)}
     <group ref={avatar}><Avatar walking={walking} /></group>
   </>
 }
@@ -253,7 +172,8 @@ export function ExplorationScene(props: ExplorationSceneProps) {
         if (key === 'e') { event.preventDefault(); if (!event.repeat) interact() }
       }}
       onKeyUp={(event) => { runtime.current.keys.delete(event.key.toLowerCase()) }}>
-      <Canvas shadows dpr={[1, 1.5]} camera={{ position: [9, 12, 12], fov: 43, near: 0.1, far: 60 }}>
+      {/* One render pixel per CSS pixel avoids the measured supersampling cost; MSAA and shadows stay enabled. */}
+      <Canvas shadows dpr={1} camera={{ position: [9, 12, 12], fov: 43, near: 0.1, far: 60 }}>
         <MovingWorld room={room} objects={objects} runtime={runtime} onInteract={interact} onTick={tick} />
       </Canvas>
     </div>

@@ -16,6 +16,8 @@ import { blockAssignmentTests } from './blockAssignments.js'
 import { boardGeometryTests } from './boardGeometry.js'
 import { blockDragTests } from './blockDrag.js'
 import { activationTests } from './activation.js'
+import { cryptVisualTests } from './cryptVisuals.js'
+import { cryptRenderingTests } from './cryptRendering.js'
 import { expeditionTests } from './expedition.js'
 import './spatial.js'
 import { canEnterEncounter, createExplorationProgress, currentEncounterId, isDungeonComplete, recordEncounterDefeat, recordEncounterVictory } from '../src/engine/exploration.js'
@@ -23,7 +25,7 @@ import { encounterVictoryMessage } from '../src/ui/explorationMessages.js'
 import { assignTargetToFocusedAttacker, cancelPendingSummon, setAttackerTarget, toggleBlockerChoice, togglePlayerAttacker } from '../src/ui/combatSelection.js'
 import { createDuel, seededRandom, startSessionDuel } from './duelFixtures.js'
 
-type Test = { name: string; run: () => void }
+type Test = { name: string; run: () => void | Promise<void> }
 const tests: Test[] = []
 const DISCOVERY_CARD = PLAYER_CARD_TYPES.find((card) => card.id === 'P13')!
 
@@ -736,11 +738,11 @@ test('el aviso distingue la victoria final de una victoria que habilita el sigui
   equal(encounterVictoryMessage('Guardián de la cripta', true), 'Victoria contra Guardián de la cripta. La mazmorra ha terminado: has superado los tres encuentros.')
 })
 
-tests.push(...h1Tests, ...h2Tests, ...h3Tests, ...worldTests, ...presentationTests, ...expeditionTests, ...explorationUiTests, ...combatPresentationTests, ...combatActionTests, ...blockAssignmentTests, ...boardGeometryTests, ...blockDragTests, ...activationTests)
+tests.push(...h1Tests, ...h2Tests, ...h3Tests, ...worldTests, ...presentationTests, ...expeditionTests, ...explorationUiTests, ...combatPresentationTests, ...combatActionTests, ...blockAssignmentTests, ...boardGeometryTests, ...blockDragTests, ...activationTests, ...cryptVisualTests, ...cryptRenderingTests)
 let failed = 0
 for (const entry of tests) {
   try {
-    entry.run()
+    await entry.run()
     console.log(`✓ ${entry.name}`)
   } catch (error) {
     failed += 1

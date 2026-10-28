@@ -68,3 +68,17 @@ La [guía de playtesting de la expedición](../../docs/rpg-cartas-iteration-v1-p
 npm run test
 npm run build
 ```
+
+## Primera transformación visual de exploración 3D — aprobada
+
+La exploración usa ahora arquitectura funeraria y personajes de geometría programática compartida. El umbral tiene portal/pilares; catacumbas, nichos mortuorios apilados; cámara final, columnas y monumento ceremonial. El ala conserva la cripta deteriorada: R1 introduce madrigueras y tierra, R2 grandes aberturas con madera, R3 nidos y acumulaciones, R4 una madriguera coronada. El protagonista lleva abrigo negro largo y sombrero ancho. Centinela, Custodia, Guardián, grupos roedores y Señora tienen siluetas propias. Combate, colección, controles, colisiones, objetos y reglas permanecen en sus módulos originales.
+
+El diseñador recorrió personalmente los siete niveles y aprobó su identidad visual, personajes y funcionamiento general. Esta transformación queda cerrada junto con su estabilización, registrada en la [iteración del plan](../../docs/rpg-cartas-implementation-plan-v0.1.md). Solo los tres sectores tienen santuario; R4 contiene el cofre de recompensa.
+
+La [referencia conceptual](../../docs/design/rpg-cartas/exploration-3d-v1/reference-prompt.md) y el [registro de implementación](../../docs/rpg-cartas-implementation-plan-v0.1.md) distinguen automatización, inspección renderizada y playtesting humano.
+
+## Estabilización gráfica — aprobada y cerrada
+
+El arte de las siete salas y personajes fue aprobado tras el recorrido humano completo. La corrección posterior agrupa la arquitectura estática conservando piezas, transformaciones, materiales y sombras. La escena usa resolución nativa (`dpr=1`) para evitar el coste del supersampling, manteniendo antialiasing y encuadre. También se corrige la inicialización del lote de suelo al cambiar de paleta, que producía baldosas superpuestas como un bloque al regresar a salas.
+
+El diseñador probó las salas después de la optimización: no volvió a observar el bloque y valoró el movimiento como estable, con una mejora perceptible. Esta evaluación es manual y cualitativa. Las mediciones comparativas, su alcance temporal —anteriores al ajuste final de normales— y los resultados de pruebas, build y revisión están en el registro de estabilización del plan. Combate y colección mantienen su implementación previa. No quedan acciones pendientes en esta iteración; las invocaciones 3D pertenecen a una iteración futura independiente.

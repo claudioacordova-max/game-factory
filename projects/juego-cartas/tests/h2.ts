@@ -102,7 +102,7 @@ test('incomplete, foreign, extra and duplicate directed selections reject atomic
   equal(resolveCombat(declareAttackers(duel, [], {})).players.opponent.creatures.length, 1)
 })
 
-test('combined attacks sum damage and share one retaliation in visible order', () => {
+test('combined attacks sum damage and share one retaliation in chosen priority', () => {
   const weak: CreatureCard = { id: 'fixture-a', name: 'A', attack: 2, maxHealth: 2, cost: { mana: 0, sacrifices: 0 } }
   const second = { ...weak, id: 'fixture-b', name: 'B', maxHealth: 4 }
   const enemy = { ...weak, id: 'fixture-target', attack: 3, maxHealth: 4 }
@@ -111,10 +111,10 @@ test('combined attacks sum damage and share one retaliation in visible order', (
   const [a, b] = duel.players.player.creatures.map((c) => c.id)
   const target = duel.players.opponent.creatures[0].id
   const declared = declareAttackers(startCombat(duel), [b, a], { [a]: target, [b]: target })
-  equal(declared.attackers, [a, b])
+  equal(declared.attackers, [b, a])
   const result = resolveCombat(declared)
   equal([result.winner, result.players.opponent.creatures.length], ['player', 0])
-  equal(result.players.player.creatures.map((c) => [c.card.id, c.health]), [['fixture-b', 3]])
+  equal(result.players.player.creatures.map((c) => [c.card.id, c.health]), [['fixture-a', 2], ['fixture-b', 1]])
 })
 
 test('last creatures mutual kill is victory with persistent casualty; zero hero overrides group elimination', () => {
@@ -191,7 +191,7 @@ test('played seed-only recovery R1-R4 restores max 20 and reduces fatigue exactl
   }
   equal([duel.phase, duel.winner], ['finished', 'player'])
   state = settle(started.state, duel)
-  equal([state.session.invokerMaxLife, state.session.invokerLife, state.session.fatigue, state.progress.ratChestUnlocked], [20, 20, 3, true])
+  equal([state.session.invokerMaxLife, state.session.invokerLife, state.session.fatigue, state.progress.ratChestUnlocked], [20, 20, 0, true])
   equal(state.session.unlockedCardIds, ['P01', 'P02', 'P03', 'P04'])
   ok(settle(state, duel) === state)
   const session = state.session

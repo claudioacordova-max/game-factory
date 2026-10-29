@@ -19,7 +19,7 @@ export function CreatureTile({ creature, selected = false, onClick, hint, dragga
   const wounded = creature.health < creature.card.maxHealth
   const content = <><CreaturePortrait cardId={creature.card.id} /><strong>{creature.card.name}</strong><RarityLabel card={creature.card} compact /><CardStats attack={creature.card.attack} health={creature.health} maxHealth={creature.card.maxHealth} /><span className="tile-state">{selected ? '✓ ' : ''}{hint || (wounded ? 'Herida' : 'En mesa')}</span></>
   const className = `creature-tile${selected ? ' is-selected' : ''}${wounded ? ' is-wounded' : ''}`
-  return onClick ? <button type="button" className={className} onClick={onClick} aria-pressed={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd}>{content}</button> : <article className={className}>{content}</article>
+  return onClick || draggable ? <button type="button" className={className} onClick={onClick} aria-pressed={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd}>{content}</button> : <article className={className}>{content}</article>
 }
 export function HandCard({ card, selected, unavailableReason, draggable, onDragStart, onClick }: {
   card: CreatureCard

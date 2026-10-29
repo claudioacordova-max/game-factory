@@ -429,20 +429,18 @@ export function runCriticalRecovery(fatigue: 1 | 4, mode: 'r1-max' | 'direct' = 
     if (!run.fight('max-recovery', [], [[selected, 'E01']])) return run.report()
     run.interact('wing')
   }
-  // Seed-only R1->R4, repeated until the initial fatigue has actually been removed.
+  // One real seed-only visit clears all fatigue at its first R4 victory.
   const plans: [string, string][][] = [
     [['P01', 'E01']], [['P01', 'E03'], ['P02', 'E03'], ['P03', 'E01']],
     [['P01', 'E01'], ['P02', 'E02'], ['P03', 'E04']],
   ]
-  for (let cycle = 0; cycle < fatigue; cycle++) {
-    run.interact('wing')
-    for (let i = 0; i < 4; i++) {
-      run.prepare(SEEDS)
-      if (!run.fight('fatigue-recovery', [], i < 3 ? plans[i] : undefined)) return run.report()
-      if (i < 3) run.interact('forward')
-    }
-    run.chest(); run.interact('wing')
+  run.interact('wing')
+  for (let i = 0; i < 4; i++) {
+    run.prepare(SEEDS)
+    if (!run.fight('fatigue-recovery', [], i < 3 ? plans[i] : undefined)) return run.report()
+    if (i < 3) run.interact('forward')
   }
+  run.chest(); run.interact('wing')
   return run.report()
 }
 
@@ -497,14 +495,14 @@ export const expeditionTests: Test[] = [
       }
     }
   } },
-  { name: 'H6 - critical seed-only recovery records actual wounds, casualties, reinvocation and repeat R4', run: () => {
+  { name: 'H6 - critical seed-only recovery records wounds, casualties and full fatigue recovery at first R4', run: () => {
     for (const fatigue of [1, 4] as const) {
       for (const mode of ['r1-max', 'direct'] as const) {
         const r = runCriticalRecovery(fatigue, mode)
         ok(!r.diagnostic, `rescue inconclusive: ${r.diagnostic}`)
         ok(r.encounters.every((e) => e.winner === 'player'), 'scripted rescue must actually win')
         ok(r.final.maxLife === 20 && r.final.fatigue === 0, 'recovery target')
-        ok(r.encounters.filter((e) => e.encounter === 'R4').length === fatigue, 'R4 repeated for each fatigue')
+        ok(r.encounters.filter((e) => e.encounter === 'R4').length === 1, 'first R4 clears all accumulated fatigue')
         ok(r.encounters.some((e) => e.lost.length) && r.encounters.some((e) => e.after.wounded.length), 'persistent losses/wounds')
         ok(r.reinvocations.length > 4 && r.reinvocations.every((x) => x.cost === 0), 'free repeated seed recreation')
         ok(r.final.chests.length === 1 && r.final.chests[0] === 'rats-4:chest', 'single earned chest')

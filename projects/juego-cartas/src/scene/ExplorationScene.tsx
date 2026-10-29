@@ -19,6 +19,7 @@ export interface ExplorationSceneProps {
   onInteract: (objectId: string) => void
   onPoseChange: (pose: SpatialPose) => void
   disabled?: boolean
+  resumeRevision?: number
 }
 
 const MOVEMENT_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright'])
@@ -74,7 +75,7 @@ function MovingWorld({ room, objects, runtime, onInteract, onTick }: {
 
 /** initialPose is sampled at mount / room.id change, never on ordinary parent rerenders. */
 export function ExplorationScene(props: ExplorationSceneProps) {
-  const { room, objects, disabled = false } = props
+  const { room, objects, disabled = false, resumeRevision = 0 } = props
   const callbacks = useRef(props)
   callbacks.current = props
   const viewport = useRef<HTMLDivElement>(null)
@@ -86,6 +87,7 @@ export function ExplorationScene(props: ExplorationSceneProps) {
   const nearbyKey = useRef('')
   const [focused, setFocused] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [helpResumeRevision, setHelpResumeRevision] = useState(0)
   const clearInput = useCallback(() => { runtime.current.keys.clear(); runtime.current.focused = false; setFocused(false) }, [])
   const reportPose = useCallback(() => {
     if (runtime.current.dirty) {
@@ -119,7 +121,18 @@ export function ExplorationScene(props: ExplorationSceneProps) {
   useEffect(() => {
     if (disabled) { clearInput(); reportPose() }
   }, [disabled, clearInput, reportPose])
-  useEffect(() => { viewport.current?.focus({ preventScroll: true }) }, [])
+  useEffect(() => {
+    if (disabled) return
+    // Wait for dialog cleanup/native focus restoration, then resume the world once.
+    const frame = requestAnimationFrame(() => {
+      if (callbacks.current.disabled || document.querySelector('dialog[open]')) return
+      runtime.current.keys.clear()
+      viewport.current?.focus({ preventScroll: true })
+      runtime.current.focused = document.activeElement === viewport.current
+      setFocused(runtime.current.focused)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [disabled, resumeRevision, helpResumeRevision])
   useEffect(() => {
     const blur = () => { clearInput(); reportPose() }
     const visibility = () => { if (document.hidden) blur() }
@@ -168,7 +181,11 @@ export function ExplorationScene(props: ExplorationSceneProps) {
         runtime.current.focused = true
         setFocused(true)
         const key = event.key.toLowerCase()
-        if (MOVEMENT_KEYS.has(key)) { event.preventDefault(); runtime.current.keys.add(key) }
+        if (MOVEMENT_KEYS.has(key)) {
+          event.preventDefault()
+          // A key held across a modal/blur must be released before it can move again.
+          if (!event.repeat || runtime.current.keys.has(key)) runtime.current.keys.add(key)
+        }
         if (key === 'e') { event.preventDefault(); if (!event.repeat) interact() }
       }}
       onKeyUp={(event) => { runtime.current.keys.delete(event.key.toLowerCase()) }}>
@@ -179,7 +196,15 @@ export function ExplorationScene(props: ExplorationSceneProps) {
     </div>
     <p id="exploration-help" className="sr-only">WASD o flechas para caminar; E para interactuar con un objeto cercano; I para abrir Colección. Tab permite navegar los controles.</p>
     {!disabled && contextualObject && <div className="exploration-context" aria-live="polite"><button type="button" onClick={() => interact(contextualObject.id)}><kbd>E</kbd><span><strong>{ACTION_TEXT[contextualObject.kind]}</strong><small>{contextualObject.label}</small></span></button></div>}
-    {!disabled && <button type="button" className="exploration-help-toggle" aria-label="Ayuda y controles de exploración" aria-expanded={showHelp} aria-controls="exploration-input-help" onClick={() => setShowHelp((current) => !current)}>?</button>}
+    {!disabled && <button type="button" className="exploration-help-toggle" aria-label="Ayuda y controles de exploración" aria-expanded={showHelp} aria-controls="exploration-input-help" onClick={() => {
+      if (callbacks.current.disabled) return
+      if (showHelp) {
+        clearInput()
+        reportPose()
+        setHelpResumeRevision((current) => current + 1)
+      }
+      setShowHelp(!showHelp)
+    }}>?</button>}
     {!disabled && showHelp && <div className="exploration-input-help" id="exploration-input-help">
       <strong>Explorar la cripta</strong><p>WASD / flechas · Caminar<br/>E · Interactuar cerca<br/>I · Colección<br/>Tab · Navegar controles</p><small>La aventura dura esta sesión. Recargar inicia una partida nueva.</small>
       <div className="exploration-dpad" role="group" aria-label="Caminar con puntero">

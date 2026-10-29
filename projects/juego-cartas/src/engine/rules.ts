@@ -169,8 +169,7 @@ export function declareAttackers(state: DuelState, attackerIds: string[], target
       || attackerIds.some((id) => !enemies.some((unit) => unit.id === targets[id]))) {
       throw new RuleViolation('Elige un objetivo enemigo válido para cada atacante, sin asignaciones adicionales.')
     }
-    const ordered = units.filter((unit) => attackerIds.includes(unit.id)).map((unit) => unit.id)
-    return { ...state, attackers: ordered, targets: { ...targets }, blockers: {}, phase: 'resolve' }
+    return { ...state, attackers: [...attackerIds], targets: { ...targets }, blockers: {}, phase: 'resolve' }
   }
   // No criatura tiene mareo de invocación: las invocadas este turno también pueden atacar.
   return { ...state, attackers: [...attackerIds], blockers: {}, phase: 'blockers' }
@@ -221,7 +220,8 @@ export function resolveCombat(state: DuelState): DuelState {
       throw new RuleViolation('La selección de objetivos está incompleta o dejó de ser v?lida.')
     }
     for (const target of defenders) {
-      const targeting = attackers.filter((unit) => state.attackers.includes(unit.id) && state.targets[unit.id] === target.id)
+      const targeting = state.attackers.filter((id) => state.targets[id] === target.id)
+        .flatMap((id) => attackers.find((unit) => unit.id === id) ?? [])
       if (!targeting.length) continue
       damageToUnits.set(target.id, targeting.reduce((sum, unit) => sum + unit.card.attack, 0))
       distributeDamage(target.card.attack, targeting, damageToUnits)

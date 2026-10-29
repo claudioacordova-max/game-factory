@@ -16,10 +16,10 @@ function fixture(skirmish = false): CombatViewProps {
   return {
     duel: createDuel({ playerDeck: cards, opponentDeck: [], mode: skirmish ? 'skirmish' : 'duel', opponentLife: 17, playerLife: 11, opponentInitialField: skirmish ? [cards[0]] : [] }),
     session: { ...createGameSession(cards), invokerMaxLife: 11, invokerLife: 11 }, enemyName: skirmish ? 'Ratas de la cripta' : 'Centinela', enemyMaxLife: 17,
-    notice: '', noticeRevision: 0, selectedCardId: null, sacrificeIds: [], attackerIds: [], targetChoices: {}, blockerChoices: {}, focusedBlockerAttackerId: null, focusedAttackerId: null, onFocusAttacker: noop,
-    onSelectCard: noop, onAllowFieldDrop: noop, onDropHandCard: noop, onToggleSacrifice: noop, onSelectEnemy: noop, onSelectAttacker: noop, onSelectBlocker: noop, onChooseTarget: noop,
+    notice: '', noticeRevision: 0, selectedCardId: null, sacrificeIds: [], attackerIds: [], targetChoices: {}, blockerChoices: {}, presenting: false,
+    onSelectCard: noop, onAllowFieldDrop: noop, onDropHandCard: noop, onToggleSacrifice: noop, onSelectAttacker: noop,
     onCancelSummon: noop, onBeginCombat: noop, onDeclareAttacks: noop, onConfirmBlocks: noop,
-    onStartBlockDrag: () => true, onEndBlockDrag: noop, onDropBlocker: noop, onRemoveBlocker: noop, onMoveBlocker: noop,
+    onStartBlockDrag: () => true, onEndBlockDrag: noop, onDropRelation: noop, onMoveBlocker: noop, onMoveAttacker: noop,
   }
 }
 
@@ -50,7 +50,7 @@ test('el objetivo dirigido se conserva junto a la carta atacante', () => {
   props.targetChoices = { [attacker]: target }
   const markup = renderToStaticMarkup(<CombatView {...props} />)
   ok(markup.includes(`data-creature-id="${attacker}"`) && markup.includes(`data-creature-id="${target}"`), 'Las criaturas necesitan anclajes propios del tablero.')
-  ok(markup.includes('class="combat-target"') && markup.includes('Ataca a '), 'El objetivo debe verse y poder cambiarse en la carta propia.')
+  ok(!markup.includes('class="combat-target"') && markup.includes('Ataca a '), 'El objetivo debe verse y poder cambiarse en la carta propia.')
   ok(markup.includes('Confirmar ataques'), 'Debe conservarse la decisión táctica.')
 })
 
@@ -82,18 +82,29 @@ test('el combate resuelto no ofrece un fin manual de turno', () => {
   ok(!markup.includes('Terminar turno'), 'El siguiente turno pertenece al flujo automático.')
 })
 
+test('el duelo prepara la transición antes de confirmar y bloquea decisiones durante su presentación', () => {
+  const props = fixture()
+  props.duel = { ...props.duel, phase: 'attackers', activePlayer: 'player' }
+  const declaring = renderToStaticMarkup(<CombatView {...props} />)
+  ok(declaring.includes('uses-preview-transition') && !declaring.includes(' is-presenting'), 'El timing debe estar preparado antes de iniciar la geometría de resolución.')
+  ok(declaring.includes('Pasar sin atacar'), 'Preparar la animación no debe suspender la decisión del jugador.')
+  props.duel = { ...props.duel, phase: 'resolve' }
+  props.presenting = true
+  const presenting = renderToStaticMarkup(<CombatView {...props} />)
+  ok(presenting.includes('uses-preview-transition') && presenting.includes('aria-busy="true"'), 'La presentación conserva timing y bloqueo de entrada.')
+  ok(!presenting.includes('Confirmar ataques') && !presenting.includes('Pasar sin atacar'), 'La presentación automática no debe añadir una confirmación.')
+})
+
 test('defensa integra arrastre en la carta, orden, retirada y conexiones sin listas', () => {
   const props = fixture(true)
   props.duel = blockDefenseFixture('skirmish')
   props.blockerChoices = { 'enemy-a': ['own-a', 'own-b'] }
-  props.focusedBlockerAttackerId = 'enemy-a'
   const markup = renderToStaticMarkup(<CombatView {...props} />)
   ok((markup.match(/class="creature-tile[^\"]*"[^>]*draggable="true"/g) ?? []).length === 3, 'Se debe arrastrar la carta propia, no solo su contenedor.')
   ok(markup.includes('aria-label="Orden de bloqueo 1"') && markup.includes('aria-label="Orden de bloqueo 2"'), 'Cada bloqueador muestra su orden actual.')
-  ok(markup.includes('Retirar bloqueo de own-a') && markup.includes('Adelantar en daño a own-b'), 'Las acciones accesibles permanecen junto a la criatura.')
+  ok(markup.includes('Sin asignar; arrastra aquí') && markup.includes('Adelantar en daño a own-b'), 'Retirada por arrastre y prioridad deben permanecer disponibles.')
   ok(markup.includes('data-board-link-count="2"'), 'Las dos asignaciones deben alimentar la capa de conexiones.')
   ok(!markup.includes('combat-field-order') && !markup.includes('attack-list') && !markup.includes('blocker-picker'), 'La defensa no mezcla el índice de represalia con orden de bloqueos ni usa listas laterales.')
-  props.focusedBlockerAttackerId = null
   ok(renderToStaticMarkup(<CombatView {...props} />).includes('Arrastra para bloquear'), 'La criatura sin asignar debe presentar el arrastre como interacción principal.')
 })
 
@@ -104,4 +115,6 @@ test('el tablero conecta todos los ataques dirigidos contra un mismo enemigo', (
   props.targetChoices = { 'own-a': 'enemy-a', 'own-b': 'enemy-a' }
   const markup = renderToStaticMarkup(<CombatView {...props} />)
   ok(markup.includes('data-board-link-count="2"') && markup.includes('Objetivo de 2 atacantes'), 'El objetivo compartido debe reflejar ambas relaciones.')
+  ok(markup.includes('Prioridad de represalia 1') && markup.includes('Prioridad de represalia 2') && markup.includes('Adelantar en represalia a own-b'), 'El grupo dirigido debe ofrecer prioridad, sin otro mecanismo de asignación.')
+  ok(markup.includes('has-contextual-layout') && markup.includes('is-available'), 'La criatura sin asignar debe quedar en la fila disponible contextual.')
 })

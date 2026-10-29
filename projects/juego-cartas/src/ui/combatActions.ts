@@ -1,5 +1,5 @@
 import { advanceMainPhaseIfNoLegalSummons, declareAttackers, declareBlockers, endTurn, resolveCombat, RuleViolation, startCombat, summonAvailability, summonCreature } from '../engine/rules.js'
-import { resolveEnemyBlocks, runEnemyTurn } from '../engine/enemy.js'
+import { chooseEnemyBlockers, runEnemyTurn } from '../engine/enemy.js'
 import type { DuelState } from '../engine/types.js'
 
 export interface PendingSummon { cardId: string; sacrificeIds: string[] }
@@ -12,7 +12,7 @@ export type CombatAction =
   | { type: 'attack'; attackerIds: string[]; targets: Record<string, string> }
   | { type: 'blocks'; choices: Record<string, string[]> }
   | { type: 'advance' }
-export interface CombatActionResult { state: CombatControls; message: string; sacrificedCopyIds: string[] }
+export interface CombatActionResult { state: CombatControls; message: string; sacrificedCopyIds: string[]; presentation?: DuelState }
 
 export function createCombatControls(duel: DuelState, revision = 0): CombatControls {
   return { duel, pending: null, revision }
@@ -48,6 +48,7 @@ export function applyCombatAction(current: CombatControls, action: CombatAction,
   const { duel } = current
   let next = duel, pending = current.pending, message = ''
   let sacrificedCopyIds: string[] = []
+  let presentation: DuelState | undefined
   try {
     if (action.type === 'advance') {
       next = continueToPlayerDecision(duel, pending !== null)
@@ -95,7 +96,9 @@ export function applyCombatAction(current: CombatControls, action: CombatAction,
     } else if (action.type === 'attack') {
       requirePlayerPhase(duel, 'attackers')
       const declared = declareAttackers(duel, action.attackerIds, action.targets)
-      next = continueToPlayerDecision(duel.mode === 'skirmish' ? resolveCombat(declared) : resolveEnemyBlocks(declared))
+      const ready = duel.mode === 'skirmish' ? declared : declareBlockers(declared, chooseEnemyBlockers(declared))
+      if (duel.mode === 'duel' && ready.attackers.length) presentation = ready
+      next = continueToPlayerDecision(resolveCombat(ready))
       message = next.phase === 'blockers' ? 'El enemigo ataca. Asigna tus bloqueos.' : next.phase === 'finished' ? '' : 'Comienza tu siguiente turno.'
     } else {
       requirePlayerPhase(duel, 'blockers', 'opponent')
@@ -103,7 +106,7 @@ export function applyCombatAction(current: CombatControls, action: CombatAction,
       message = next.phase === 'finished' ? '' : 'Bloqueos resueltos. Comienza tu turno.'
     }
     if (next === duel && pending === current.pending) return unchanged(message)
-    return { state: { duel: next, pending, revision: current.revision + 1 }, message, sacrificedCopyIds }
+    return { state: { duel: next, pending, revision: current.revision + 1 }, message, sacrificedCopyIds, presentation }
   } catch (error) {
     if (!(error instanceof RuleViolation)) throw error
     return unchanged(error.message)

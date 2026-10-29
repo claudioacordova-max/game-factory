@@ -1,4 +1,5 @@
 import { useLayoutEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { RefObject } from 'react'
 import { boardConnection } from './boardGeometry.js'
 import type { BoardConnection, BoardLink } from './boardGeometry.js'
@@ -15,7 +16,8 @@ export function BoardConnections({ boardRef, links }: {
     const root = boardRef.current
     if (!root) return
     let frame: number | null = null
-    const measure = () => {
+    const moving = new Set<string>()
+    const measure = (animationFrame = false) => {
       frame = null
       const board = root.getBoundingClientRect()
       const cards = new Map(Array.from(root.querySelectorAll<HTMLElement>('.combat-creature-slot[data-creature-id]'))
@@ -23,15 +25,38 @@ export function BoardConnections({ boardRef, links }: {
       const visible: MeasuredLink[] = []
       for (const link of links) {
         const from = cards.get(link.from), to = cards.get(link.to)
-        const ownRow = from?.closest('.combat-creature-row'), enemyRow = to?.closest('.combat-creature-row')
+        const ownRow = from?.closest('.combat-table-scroll') ?? from?.closest('.combat-creature-row'), enemyRow = to?.closest('.combat-table-scroll') ?? to?.closest('.combat-creature-row')
         if (!from || !to || !ownRow || !enemyRow) continue
-        const geometry = boardConnection(board, from.getBoundingClientRect(), ownRow.getBoundingClientRect(), to.getBoundingClientRect(), enemyRow.getBoundingClientRect())
+        const fromCard = from.querySelector('.creature-tile') ?? from
+        const toCard = to.querySelector('.creature-tile') ?? to
+        const geometry = boardConnection(board, fromCard.getBoundingClientRect(), ownRow.getBoundingClientRect(), toCard.getBoundingClientRect(), enemyRow.getBoundingClientRect())
         if (geometry) visible.push({ ...link, geometry })
       }
       const next = { width: Number.isFinite(board.width) ? board.width : 0, height: Number.isFinite(board.height) ? board.height : 0, links: visible }
-      setMeasured((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
+      const publish = () => setMeasured((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
+      // CSS positions are sampled for this paint. Deferring React's SVG commit makes links trail by a frame.
+      // The initial layout-effect measurement stays within React's normal synchronous layout cycle.
+      if (animationFrame) flushSync(publish)
+      else publish()
+      if (moving.size) frame = requestAnimationFrame(() => measure(true))
     }
-    const schedule = () => { if (frame === null) frame = requestAnimationFrame(measure) }
+    const schedule = () => { if (frame === null) frame = requestAnimationFrame(() => measure(true)) }
+    const transitionKey = (event: TransitionEvent) => {
+      if (!['left', 'transform', 'top', 'margin-top'].includes(event.propertyName) || !(event.target instanceof HTMLElement) || !event.target.matches('.combat-creature-slot')) return null
+      return `${event.target.dataset.creatureId}:${event.propertyName}`
+    }
+    const transitionStart = (event: TransitionEvent) => {
+      const key = transitionKey(event)
+      if (!key) return
+      moving.add(key)
+      schedule()
+    }
+    const transitionEnd = (event: TransitionEvent) => {
+      const key = transitionKey(event)
+      if (!key) return
+      moving.delete(key)
+      schedule()
+    }
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
     const observe = () => {
       observer?.disconnect()
@@ -46,6 +71,9 @@ export function BoardConnections({ boardRef, links }: {
     observe()
     mutation.observe(root, { childList: true, subtree: true })
     root.addEventListener('scroll', schedule, true)
+    root.addEventListener('transitionrun', transitionStart)
+    root.addEventListener('transitionend', transitionEnd)
+    root.addEventListener('transitioncancel', transitionEnd)
     window.addEventListener('resize', schedule)
     measure()
     return () => {
@@ -53,6 +81,9 @@ export function BoardConnections({ boardRef, links }: {
       observer?.disconnect()
       mutation.disconnect()
       root.removeEventListener('scroll', schedule, true)
+      root.removeEventListener('transitionrun', transitionStart)
+      root.removeEventListener('transitionend', transitionEnd)
+      root.removeEventListener('transitioncancel', transitionEnd)
       window.removeEventListener('resize', schedule)
     }
   }, [boardRef, links])

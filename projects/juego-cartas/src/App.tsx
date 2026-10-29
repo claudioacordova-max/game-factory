@@ -27,12 +27,12 @@ import { GameNotice } from './ui/GameNotice.js'
 import { collectionShortcut } from './ui/explorationControls.js'
 import { applyCombatAction, cancelSummonShortcut, createCombatControls } from './ui/combatActions.js'
 import type { CombatAction, CombatControls } from './ui/combatActions.js'
-import { assignPlayerBlocker, movePlayerBlocker, removePlayerBlocker } from './ui/blockAssignments.js'
-import { applyBlockDrop, BLOCK_DRAG_MIME, createBlockDrag } from './ui/blockDrag.js'
+import { movePlayerBlocker } from './ui/blockAssignments.js'
+import { applyCombatBlockDrop, COMBAT_DRAG_MIME, createCombatDrag, readCombatDrag } from './ui/blockDrag.js'
 import { Icon } from './ui/GameIcons.js'
 import {
-  assignTargetToFocusedAttacker,
-  setAttackerTarget,
+  assignDirectedAttacker,
+  moveDirectedAttacker,
   togglePlayerAttacker,
 } from './ui/combatSelection.js'
 
@@ -51,26 +51,33 @@ export default function App() {
   const [sacrificeIds, setSacrificeIds] = useState<string[]>([])
   const [attackerIds, setAttackerIds] = useState<string[]>([])
   const [targetChoices, setTargetChoices] = useState<Record<string, string>>({})
-  const [focusedAttackerId, setFocusedAttackerId] = useState<string | null>(null)
   const [blockerChoices, setBlockerChoicesState] = useState<Record<string, string[]>>({})
   const blockSelection = useRef({ choices: {} as Record<string, string[]>, revision: 0 })
   const [blockDragOrigin] = useState(() => crypto.randomUUID())
   const activeBlockDrag = useRef<string | null>(null)
-  const [focusedBlockerAttackerId, setFocusedBlockerAttackerId] = useState<string | null>(null)
+  const relationRevision = useRef(0)
+  const attackSelection = useRef({ attackerIds, targetChoices })
+  attackSelection.current = { attackerIds, targetChoices }
+  const presentationBusy = useRef(false)
+  const [presenting, setPresenting] = useState(false)
+  const presentationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [resumeRevision, setResumeRevision] = useState(0)
+  function resumeExploration() { setResumeRevision((value) => value + 1) }
+  function closeCollection() { setView('exploration'); resumeExploration() }
+  function closeResult() { setLastResult(null); resumeExploration() }
+  useEffect(() => () => { if (presentationTimer.current !== null) clearTimeout(presentationTimer.current) }, [])
   const [view, setView] = useState<'exploration' | 'collection'>('exploration')
   const [notice, setNoticeText] = useState('')
   const [noticeRevision, setNoticeRevision] = useState(0)
+  const [noticeExpiresAt, setNoticeExpiresAt] = useState(0)
+  function clearNotice() { setNoticeText('') }
   function setNotice(message: string) {
     setNoticeText(message)
+    setNoticeExpiresAt(Date.now() + 5200)
     setNoticeRevision((current) => current + 1)
   }
-  useEffect(() => {
-    const timer = window.setTimeout(() => setNoticeText(''), 5200)
-    return () => window.clearTimeout(timer)
-  }, [noticeRevision])
 
   const player = duel.players.player
-  const enemy = duel.players.opponent
   const isPlayerMain = duel.phase === 'main' && duel.activePlayer === 'player'
   const canManageBetweenDuels = !isDuelActive
   const usableMana = canManageBetweenDuels ? Math.max(0, player.level - session.fatigue) : baseMana(player)
@@ -80,7 +87,6 @@ export default function App() {
     activeBlockDrag.current = null
     if (previous.id !== next.duel.id || previous.turn !== next.duel.turn || previous.phase !== next.duel.phase || previous.activePlayer !== next.duel.activePlayer) {
       setBlockerChoices({})
-      setFocusedBlockerAttackerId(null)
     }
     controls.current = next
     setDuelState(next.duel)
@@ -99,17 +105,34 @@ export default function App() {
   }
 
   function dispatchCombat(action: CombatAction): boolean {
+    if (presentationBusy.current) return false
     const result = applyCombatAction(controls.current, action, renderedRevision)
-    if (result.message) setNotice(result.message)
-    if (result.state === controls.current) return false
-    publishControls(result.state)
-    sacrificedCopies.current.push(...result.sacrificedCopyIds.filter((id) => !sacrificedCopies.current.includes(id)))
-    if (result.state.duel.phase === 'finished') closeDuel(result.state.duel)
+    if (result.state === controls.current) { if (result.message) setNotice(result.message); return false }
+    const commit = () => {
+      publishControls(result.state)
+      if (result.message) setNotice(result.message)
+      sacrificedCopies.current.push(...result.sacrificedCopyIds.filter((id) => !sacrificedCopies.current.includes(id)))
+      if (result.state.duel.phase === 'finished') closeDuel(result.state.duel)
+    }
+    if (result.presentation) {
+      // The transaction is already computed exactly once; only its visual publication waits.
+      presentationBusy.current = true
+      activeBlockDrag.current = null
+      controls.current = result.state
+      setPresenting(true)
+      setDuelState(result.presentation)
+      presentationTimer.current = setTimeout(() => {
+        presentationTimer.current = null
+        presentationBusy.current = false
+        setPresenting(false)
+        commit()
+      }, 420)
+    } else commit()
     return true
   }
 
   useEffect(() => {
-    if (isDuelActive) dispatchCombat({ type: 'advance' })
+    if (isDuelActive && !presentationBusy.current) dispatchCombat({ type: 'advance' })
   }, [duel, isDuelActive, selectedCardId, sacrificeIds.length])
 
   useEffect(() => {
@@ -131,7 +154,8 @@ export default function App() {
       const action = collectionShortcut(event, { inCombat: isDuelActive, resultOpen: lastResult !== null, collectionOpen: view === 'collection' }, editing)
       if (action) {
         event.preventDefault()
-        setView(action === 'open' ? 'collection' : 'exploration')
+        if (action === 'open') setView('collection')
+        else closeCollection()
       }
     }
     window.addEventListener('keydown', shortcut)
@@ -184,45 +208,44 @@ export default function App() {
     if (!dispatchCombat({ type: 'begin-attack' })) return
     setAttackerIds([])
     setTargetChoices({})
-    setFocusedAttackerId(null)
   }
 
   function declarePlayerAttacks() {
     if (!dispatchCombat({ type: 'attack', attackerIds, targets: targetChoices })) return
     setAttackerIds([])
     setTargetChoices({})
-    setFocusedAttackerId(null)
     setBlockerChoices({})
-    setFocusedBlockerAttackerId(null)
-  }
-
-  function togglePlayerBlocker(blockerId: string) {
-    if (!focusedBlockerAttackerId) {
-      setNotice('Selecciona primero una criatura atacante enemiga en el campo.')
-      return
-    }
-    try { setBlockerChoices(assignPlayerBlocker(controls.current.duel, blockSelection.current.choices, blockerId, focusedBlockerAttackerId)) } catch (error) { reject(error) }
-  }
-
-  function removeBlocker(blockerId: string) {
-    try { setBlockerChoices(removePlayerBlocker(controls.current.duel, blockSelection.current.choices, blockerId)) } catch (error) { reject(error) }
   }
 
   function moveBlocker(blockerId: string, direction: -1 | 1) {
-    try { setBlockerChoices(movePlayerBlocker(controls.current.duel, blockSelection.current.choices, blockerId, direction)) } catch (error) { reject(error) }
+    if (presentationBusy.current) return
+    try { relationRevision.current++; setBlockerChoices(movePlayerBlocker(controls.current.duel, blockSelection.current.choices, blockerId, direction)) } catch (error) { reject(error) }
+  }
+
+  function moveAttacker(attackerId: string, direction: -1 | 1) {
+    if (presentationBusy.current) return
+    try {
+      const current = { ...attackSelection.current, focusedAttackerId: null }
+      const selection = moveDirectedAttacker(controls.current.duel, current, attackerId, direction)
+      if (selection === current) return
+      activeBlockDrag.current = null
+      relationRevision.current++
+      attackSelection.current = selection
+      setAttackerIds(selection.attackerIds)
+    } catch (error) { reject(error) }
   }
 
   function blockDragContext() {
     const current = controls.current
-    return { origin: blockDragOrigin, duelId: current.duel.id, turn: current.duel.turn, revision: current.revision, selectionRevision: blockSelection.current.revision }
+    return { origin: blockDragOrigin, duelId: current.duel.id, turn: current.duel.turn, revision: current.revision, selectionRevision: relationRevision.current }
   }
 
   function startBlockDrag(event: DragEvent<HTMLButtonElement>, blockerId: string): boolean {
     try {
-      if (renderedRevision !== controls.current.revision) throw new RuleViolation('La decisión cambió. Vuelve a arrastrar la criatura.')
-      const raw = createBlockDrag(controls.current.duel, blockDragContext(), blockerId)
+      if (presentationBusy.current || renderedRevision !== controls.current.revision) throw new RuleViolation('La decisión cambió. Vuelve a arrastrar la criatura.')
+      const raw = createCombatDrag(controls.current.duel, blockDragContext(), blockerId)
       activeBlockDrag.current = raw
-      event.dataTransfer.setData(BLOCK_DRAG_MIME, raw)
+      event.dataTransfer.setData(COMBAT_DRAG_MIME, raw)
       event.dataTransfer.effectAllowed = 'move'
       return true
     } catch (error) { event.preventDefault(); reject(error); return false }
@@ -230,47 +253,35 @@ export default function App() {
 
   function endBlockDrag() { activeBlockDrag.current = null }
 
-  function dropBlocker(event: DragEvent<HTMLElement>, attackerId: string) {
+  function dropRelation(event: DragEvent<HTMLElement>, targetId: string | null) {
     event.preventDefault()
     event.stopPropagation()
-    const raw = event.dataTransfer.getData(BLOCK_DRAG_MIME)
+    const raw = event.dataTransfer.getData(COMBAT_DRAG_MIME)
     const registered = activeBlockDrag.current
     activeBlockDrag.current = null
+    if (presentationBusy.current) return
     try {
-      if (!registered || registered !== raw) throw new RuleViolation('Arrastra una criatura propia de este tablero para bloquear.')
-      setBlockerChoices(applyBlockDrop(controls.current.duel, blockSelection.current.choices, blockDragContext(), raw, attackerId))
-      setFocusedBlockerAttackerId(attackerId)
+      if (!registered || registered !== raw) throw new RuleViolation('Arrastra una criatura propia de este tablero.')
+      const current = controls.current.duel
+      if (current.phase === 'blockers') {
+        setBlockerChoices(applyCombatBlockDrop(current, blockSelection.current.choices, blockDragContext(), raw, targetId))
+      } else {
+        const id = readCombatDrag(current, blockDragContext(), raw)
+        const selection = assignDirectedAttacker(current, { ...attackSelection.current, focusedAttackerId: null }, id, targetId)
+        attackSelection.current = selection
+        setAttackerIds(selection.attackerIds)
+        setTargetChoices(selection.targetChoices)
+      }
+      relationRevision.current++
     } catch (error) { reject(error) }
   }
 
-  function selectEnemyCreature(unitId: string) {
-    if (duel.phase === 'blockers' && duel.activePlayer === 'opponent') {
-      if (!controls.current.duel.attackers.includes(unitId)) return
-      setFocusedBlockerAttackerId((current) => current === unitId ? null : unitId)
-      return
-    }
-    if (duel.mode !== 'skirmish' || duel.phase !== 'attackers' || duel.activePlayer !== 'player') return
-    if (!focusedAttackerId || !attackerIds.includes(focusedAttackerId)) {
-      setNotice('Selecciona primero una criatura propia como atacante.')
-      return
-    }
-    const selection = assignTargetToFocusedAttacker({ attackerIds, targetChoices, focusedAttackerId }, unitId)
-    setTargetChoices(selection.targetChoices)
-    const target = enemy.creatures.find((unit) => unit.id === unitId)
-    setNotice(`${target?.card.name ?? 'Objetivo'} asignado a ${player.creatures.find((unit) => unit.id === focusedAttackerId)?.card.name ?? 'atacante'}.`)
-  }
-
   function selectPlayerAttacker(unitId: string) {
-    const selection = togglePlayerAttacker({ attackerIds, targetChoices, focusedAttackerId }, unitId)
+    if (presentationBusy.current || controls.current.duel.mode !== 'duel' || controls.current.duel.phase !== 'attackers' || controls.current.duel.activePlayer !== 'player') return
+    const selection = togglePlayerAttacker({ ...attackSelection.current, focusedAttackerId: null }, unitId)
+    attackSelection.current = selection
     setAttackerIds(selection.attackerIds)
     setTargetChoices(selection.targetChoices)
-    setFocusedAttackerId(selection.focusedAttackerId)
-  }
-
-  function chooseAttackerTarget(attackerId: string, targetId: string) {
-    const selection = setAttackerTarget({ attackerIds, targetChoices, focusedAttackerId }, attackerId, targetId)
-    setTargetChoices(selection.targetChoices)
-    setFocusedAttackerId(selection.focusedAttackerId)
   }
 
   function cancelSummon() {
@@ -280,11 +291,6 @@ export default function App() {
   function confirmBlocks() {
     if (!dispatchCombat({ type: 'blocks', choices: blockSelection.current.choices })) return
     setBlockerChoices({})
-    setFocusedBlockerAttackerId(null)
-  }
-
-  function focusAttacker(attackerId: string) {
-    if (attackerIds.includes(attackerId)) setFocusedAttackerId(attackerId)
   }
 
   function interactNearby(objectId: string) {
@@ -301,9 +307,7 @@ export default function App() {
         setSacrificeIds([])
         setAttackerIds([])
         setTargetChoices({})
-        setFocusedAttackerId(null)
         setBlockerChoices({})
-        setFocusedBlockerAttackerId(null)
       }
       setNotice(message)
     } catch (error) {
@@ -332,21 +336,21 @@ export default function App() {
   return (
     <main className={`game-shell ${isDuelActive ? 'mode-duel' : 'mode-exploration'}`}>
       {!isDuelActive ? <div className="exploration-world">
-        <ExplorationScene room={ROOMS[adventure.roomId]} initialPose={poses.current[adventure.roomId] ?? ROOMS[adventure.roomId].spawn} objects={objects} disabled={view === 'collection' || lastResult !== null} onInteract={interactNearby} onPoseChange={(pose) => { poses.current[adventure.roomId] = pose }} />
+        <ExplorationScene room={ROOMS[adventure.roomId]} initialPose={poses.current[adventure.roomId] ?? ROOMS[adventure.roomId].spawn} objects={objects} resumeRevision={resumeRevision} disabled={view === 'collection' || lastResult !== null} onInteract={interactNearby} onPoseChange={(pose) => { poses.current[adventure.roomId] = pose }} />
         <div className="exploration-atmosphere" aria-hidden="true" />
         <ExplorationHUD life={session.invokerLife} maxLife={session.invokerMaxLife} mana={usableMana} fatigue={session.fatigue} level={player.level} roomName={ROOMS[adventure.roomId].name} complete={dungeonComplete} onCollection={() => setView('collection')} />
-        {view !== 'collection' && !lastResult && <GameNotice message={notice} revision={noticeRevision} />}
-        {view === 'collection' && <CollectionOverlay session={session} onClose={() => setView('exploration')} onChangeDeck={changeDeck} onReinvoke={recoverType} notice={notice} noticeRevision={noticeRevision} />}
-        {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'}`} onClose={() => setLastResult(null)}>
+        {view !== 'collection' && !lastResult && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} />}
+        {view === 'collection' && <CollectionOverlay session={session} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
+        {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'}`} onClose={closeResult}>
           <span className="result-seal"><Icon name={lastResult.won ? 'check' : 'skull'} /></span>
           <p className="section-kicker">{lastResult.won ? 'Encuentro superado' : 'La aventura continúa'}</p><h1>{lastResult.title}</h1><p className="result-outcome">{lastResult.outcome}</p><p className="result-resources">{lastResult.resources}</p>
           <details open><summary>Heridas, bajas, mejoras y descubrimientos</summary><ul>{lastResult.details.map((detail) => <li key={detail}>{detail}</li>)}</ul></details>
-          <button type="button" className="button button-primary" onClick={() => setLastResult(null)}>Continuar explorando<Icon name="arrow" /></button>
+          <button type="button" className="button button-primary" onClick={closeResult}>Continuar explorando<Icon name="arrow" /></button>
         </GameOverlay>}
       </div> : <CombatView duel={duel} session={session} enemyName={activeEncounter?.enemyName ?? 'Oponente'} enemyMaxLife={activeEncounter?.opponentLife ?? 0}
-        notice={notice} noticeRevision={noticeRevision} selectedCardId={selectedCardId} sacrificeIds={sacrificeIds} attackerIds={attackerIds} targetChoices={targetChoices} blockerChoices={blockerChoices} focusedBlockerAttackerId={focusedBlockerAttackerId} focusedAttackerId={focusedAttackerId} onFocusAttacker={focusAttacker}
-        onSelectCard={selectCard} onAllowFieldDrop={allowFieldDrop} onDropHandCard={dropHandCard} onToggleSacrifice={toggleSacrifice} onSelectEnemy={selectEnemyCreature} onSelectAttacker={selectPlayerAttacker} onSelectBlocker={togglePlayerBlocker} onChooseTarget={chooseAttackerTarget}
-        onStartBlockDrag={startBlockDrag} onEndBlockDrag={endBlockDrag} onDropBlocker={dropBlocker} onRemoveBlocker={removeBlocker} onMoveBlocker={moveBlocker}
+        notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} selectedCardId={selectedCardId} sacrificeIds={sacrificeIds} attackerIds={attackerIds} targetChoices={targetChoices} blockerChoices={blockerChoices} presenting={presenting}
+        onSelectCard={selectCard} onAllowFieldDrop={allowFieldDrop} onDropHandCard={dropHandCard} onToggleSacrifice={toggleSacrifice} onSelectAttacker={selectPlayerAttacker}
+        onStartBlockDrag={startBlockDrag} onEndBlockDrag={endBlockDrag} onDropRelation={dropRelation} onMoveBlocker={moveBlocker} onMoveAttacker={moveAttacker}
         onCancelSummon={cancelSummon} onBeginCombat={beginCombat} onDeclareAttacks={declarePlayerAttacks} onConfirmBlocks={confirmBlocks} />}
     </main>
   )

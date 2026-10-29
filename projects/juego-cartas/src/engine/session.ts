@@ -188,7 +188,7 @@ export function finishSessionDuel(session: GameSession, duel: DuelState, reward?
     activeDeckCopyIds: session.activeDeckCopyIds.filter((id) => !lostIds.has(id)),
     invokerMaxLife,
     invokerLife: invokerMaxLife,
-    fatigue: !won ? session.fatigue + 1 : reward?.reducesFatigue === false ? session.fatigue : Math.max(0, session.fatigue - 1),
+    fatigue: !won ? session.fatigue + 1 : reward?.reducesFatigue === true ? 0 : reward?.reducesFatigue === false ? session.fatigue : Math.max(0, session.fatigue - 1),
     activeDuelId: null,
     activeEncounterId: null,
     settledDuelIds: [...session.settledDuelIds, duel.id],

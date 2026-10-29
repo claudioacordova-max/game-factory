@@ -194,7 +194,7 @@ test('tabla de premios y fatiga aplica una vez, con restauración de vida actual
     const won = terminal(started.duel)
     const after = finishSessionDuel(started.session,won,e)
     const expectedMax = e.id.startsWith('R') && e.id!=='R4' ? 11 : ['B1','B2'].includes(e.id) ? 14 : 20
-    equal([after.invokerMaxLife,after.invokerLife,after.fatigue],[expectedMax,expectedMax,e.reducesFatigue?2:3])
+    equal([after.invokerMaxLife,after.invokerLife,after.fatigue],[expectedMax,expectedMax,e.reducesFatigue?0:3])
     ok(finishSessionDuel(after,won,e) === after,'La liquidación repetida debe ser idéntica')
     const lost = finishSessionDuel(started.session,terminal(started.duel,'opponent'),e)
     equal([lost.invokerMaxLife,lost.invokerLife,lost.fatigue],[10,10,4])
@@ -210,7 +210,7 @@ test('transición única: sesión, progreso, recompensas y bajas idempotentes', 
   const started = beginAdventureEncounter(initial,'B1',MAIN_ENCOUNTERS,PLAYER_CARD_TYPES)
   const won = terminal(started.duel)
   const settled = settleAdventureEncounter(started.state,won,MAIN_ENCOUNTERS,PLAYER_CARD_TYPES)
-  equal([settled.session.invokerMaxLife,settled.session.invokerLife,settled.session.fatigue],[16,16,1])
+  equal([settled.session.invokerMaxLife,settled.session.invokerLife,settled.session.fatigue],[16,16,0])
   equal(settled.progress.completedEncounterIds,['B1'])
   equal(settled.session.unlockedCardIds.slice(-2),['P13','P16'])
   equal(settled.session.copies.slice(-2).map((c) => [c.cardId,c.health]),[['P13',5],['P16',6]])
@@ -338,4 +338,18 @@ test('bucle real B1: perder copia en bloqueo, derrota, reinvocar pagando y reint
   const retry = beginAdventureEncounter({ ...settled,session:recovered },'B1',MAIN_ENCOUNTERS,PLAYER_CARD_TYPES)
   equal([retry.duel.players.player.life,retry.duel.players.player.mana,retry.duel.players.player.hand[0].copyId],[4,0,'copy-2'])
   equal(summonCreature(retry.duel,'P05').players.player.creatures[0].health,3)
+})
+
+test('fatiga acumulada 0/1/4/9 se limpia solo en R4/B1/B2/B3, con reintento y liquidación idempotente', () => {
+  for (const e of DUNGEON_ENCOUNTERS) for (const fatigue of [0, 1, 4, 9]) {
+    const session = { ...createGameSession(PLAYER_DECK), fatigue }
+    const started = beginSessionDuel(session, PLAYER_CARD_TYPES, [], { encounterId: e.id })
+    const won = terminal(started.duel)
+    const after = finishSessionDuel(started.session, won, e)
+    equal(after.fatigue, e.reducesFatigue ? 0 : fatigue)
+    ok(finishSessionDuel(after, won, e) === after)
+    equal(finishSessionDuel(started.session, terminal(started.duel, 'opponent'), e).fatigue, fatigue + 1)
+    const retry = beginSessionDuel(after, PLAYER_CARD_TYPES, [], { encounterId: e.id })
+    equal([retry.duel.players.player.fatigue, retry.duel.players.player.mana], [after.fatigue, Math.max(0, 1 - after.fatigue)])
+  }
 })

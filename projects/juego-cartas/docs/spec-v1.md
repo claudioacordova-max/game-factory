@@ -6,6 +6,8 @@
 
 Esta referencia reúne las partes compatibles de la [especificación original v0.2](history/prototype-spec-v0.2.md), el [plan histórico](history/implementation-plan-v0.1.md), el [anexo aprobado de expedición D01–D12](history/iteration-v1.md) y las iteraciones posteriores allí registradas. Las decisiones posteriores expresamente aprobadas sustituyen solo los comportamientos afectados. El código permite corroborar qué está implementado; no concede por sí solo aprobación de una regla.
 
+Actualización autorizada 2026-10-28: la [iteración UX y fatiga](implementation-plan.md) sustituye las asignaciones carta-a-carta por clic/teclado y la reducción de un punto de D12 por los contratos siguientes. Su continuación autoriza disposición vertical contextual y prioridad de represalia elegida por el jugador, sustituyendo el orden fijo de mesa para ese caso. El diseñador aceptó las mejoras de foco, combate/interfaz y fatiga, y autorizó cerrar con alcance parcialmente aceptado: el scroll de colección sigue defectuoso, conocido y diferido según el [estado vigente](status.md), sin nueva corrección autorizada ni fecha comprometida. El cierre no valida ese comportamiento.
+
 | Fuente y cierre comprobado en Git | Autoridad que se conserva |
 |---|---|
 | Especificación original y siete hitos; validación `caf6309` | Combate, consecuencias persistentes, catálogo/colección/baraja, fatiga y continuidad compatibles con las decisiones posteriores. |
@@ -43,14 +45,15 @@ B1–B3 y R4 tienen invocador rival, mano, mazo y fase principal. Pierde un invo
 
 ### Escaramuzas R1–R3 (D03)
 
-Todas las enemigas empiezan desplegadas: sin invocador, vida rival, mano, mazo ni invocación enemigos. Cada atacante propio requiere un objetivo enemigo válido; varios pueden compartir objetivo y la represalia se reparte según el orden de mesa vigente. En turno enemigo las supervivientes atacan al invocador propio, que puede bloquear con las reglas compatibles. Se gana al eliminar el grupo manteniendo vivo al invocador. Si mueren las últimas criaturas de ambos lados y el invocador vive, hay victoria con las bajas propias conservadas; invocador a cero implica derrota.
+Todas las enemigas empiezan desplegadas: sin invocador, vida rival, mano, mazo ni invocación enemigos. Cada atacante propio requiere un objetivo enemigo válido; varios pueden compartir objetivo y el jugador puede adelantar/retrasar su prioridad de recepción de represalia dentro de ese grupo. El motor conserva el orden de atacantes declarado y reparte la represalia de cada objetivo según esa subsecuencia, manteniendo daño letal antes de pasar al siguiente. Las flechas sólo cambian prioridad, nunca asignan objetivos. Un arrastre nuevo/reasignado se añade al final del grupo de destino; repetir destino conserva su prioridad. En turno enemigo las supervivientes atacan al invocador propio, que puede bloquear con las reglas compatibles. Se gana al eliminar el grupo manteniendo vivo al invocador. Si mueren las últimas criaturas de ambos lados y el invocador vive, hay victoria con las bajas propias conservadas; invocador a cero implica derrota.
 
 ### Controles y automatización de fases aprobados
 
 - Intentar invocación arrastrando al campo o activando la carta por clic/teclado, incluso si los recursos son insuficientes; conservar rechazo atómico.
 - Si se exigen sacrificios, mostrar carta y progreso de selección. Se pueden desmarcar criaturas mientras falten, o cancelar con Esc/Cancelar. **La última selección requerida ejecuta la invocación y pierde permanentemente los sacrificios**, con aviso visible y sin confirmación adicional.
-- Clic propio selecciona/deselecciona atacantes; en escaramuzas se eligen objetivos sobre las cartas. Confirmar ataques exige objetivos completos. No decidir atacantes ni bloqueos automáticamente.
-- Arrastrar criatura propia sobre atacante enemigo asigna o reasigna bloqueo. Admitir retirada, orden y varias criaturas por atacante, conexiones visibles y alternativas de teclado/clic.
+- En duelos, clic propio selecciona/deselecciona participantes del ataque directo al invocador; el invocador no es un destino de carta. En R1–R3, arrastrar una propia sobre una enemiga selecciona al atacante y asigna su objetivo explícito. Varios atacantes pueden compartir objetivo. Confirmar ataques exige objetivos completos. No decidir atacantes ni bloqueos automáticamente.
+- Arrastrar criatura propia sobre atacante enemigo asigna o reasigna bloqueo. Cada bloqueador es exclusivo y varios pueden compartir atacante. Tanto en escaramuza como en defensa, arrastrar a otro enemigo reasigna y arrastrar a «Sin asignar» retira la relación; drop inválido o cancelación conservan la decisión anterior. No existen rutas paralelas de asignación por clic, selectores o teclado. Se conservan los controles de prioridad de bloqueadores.
+- El tablero agrupa cartas por relaciones y refleja el orden real del motor. En situaciones tácticas las propias disponibles se centran debajo de los grupos, sin anexarse a sus costados; al asignar suben al grupo y al retirar regresan a la fila inferior. Fuera de esas situaciones ambos lados recuperan sus filas normales centradas. No se crean dos zonas permanentes ni destinos artificiales; se conservan conexiones y espacios existentes. Los ataques directos no bloqueados son participantes, aunque no tengan conexión carta-a-carta. No hay flecha provisional siguiendo el cursor ni posicionamiento manual. Los bloqueos enemigos reales se muestran brevemente antes del daño visible y continúan automáticamente, sin recalcular IA, duplicar consecuencias ni introducir otra decisión. Turno, fase y decisión propia se señalan por separado.
 - Avanzar principal automáticamente solo cuando no existe una invocación legal ni selección pendiente. Resolver ataque propio encadena turno enemigo; resolver defensa inicia turno propio. No existe paso manual «Terminar turno».
 - Omitir una defensa sin atacantes enemigos; cuando los hay, conservar la confirmación incluso de cero bloqueadores. Liquidar victoria/derrota antes de cualquier mantenimiento posterior. No duplicar robo, pagos o premios por activaciones repetidas.
 
@@ -68,7 +71,7 @@ Reinvocar requiere estar fuera de combate, conocer el tipo y no poseer su copia,
 
 ## 6. Progresión, fatiga y sanación
 
-Cada derrota suma 1 fatiga. Solo victorias R4/B1/B2/B3 restan exactamente 1, mínimo cero; R1–R3 no reducen fatiga (D12). No aplicar además una reducción genérica duplicada.
+Cada derrota suma 1 fatiga. Una victoria R4/B1/B2/B3 deja toda la fatiga en 0, independientemente de su valor previo; R1–R3 no reducen fatiga. Esta regla autorizada en la iteración UX y fatiga sustituye únicamente la reducción de un punto de D12. No aplicar además una reducción genérica duplicada.
 
 R1–R3 ganados aumentan máximo en 1 y B1/B2 en 4, siempre hasta 20. R4/B3 restauran máximo a 20. Tras victoria o derrota, aplicar recompensas y restaurar vida actual al máximo persistente vigente (D09), sin curar criaturas. Cada intento, recompensa y baja se asienta una sola vez.
 
@@ -123,10 +126,10 @@ Los valores siguientes pertenecen al baseline implementado y aprobado para prueb
 | R1 Ratas · 1 | Grupo, sin invocador | E01 | Ninguno | Máximo +1 |
 | R2 Ratas · 2 | Grupo, sin invocador | E01/E03 | Ninguno | Máximo +1 |
 | R3 Ratas · 3 | Grupo, sin invocador | E01/E02/E04 | Ninguno | Máximo +1 |
-| R4 Señora de las ratas | Duelo, 12 | Vacío | E01/E05 | Máximo 20, fatiga −1; habilita cofre único P08/P12 |
-| B1 Centinela del umbral | Duelo, 17 | Vacío | E08/E07/E09 | Máximo +4, fatiga −1, P13/P16 y acceso sector 2 |
-| B2 Custodia de catacumbas | Duelo, 22 | Vacío | E08/E09/E07/E11/E10 | Máximo +4, fatiga −1, P15/P17 y acceso sector 3 |
-| B3 Guardián de la cripta | Duelo, 30 | E06 | E11/E13/E08/E09/E14/E12 | Máximo 20, fatiga −1 y final de demo |
+| R4 Señora de las ratas | Duelo, 12 | Vacío | E01/E05 | Máximo 20, fatiga a 0; habilita cofre único P08/P12 |
+| B1 Centinela del umbral | Duelo, 17 | Vacío | E08/E07/E09 | Máximo +4, fatiga a 0, P13/P16 y acceso sector 2 |
+| B2 Custodia de catacumbas | Duelo, 22 | Vacío | E08/E09/E07/E11/E10 | Máximo +4, fatiga a 0, P15/P17 y acceso sector 3 |
+| B3 Guardián de la cripta | Duelo, 30 | E06 | E11/E13/E08/E09/E14/E12 | Máximo 20, fatiga a 0 y final de demo |
 
 R1–R4 son repetibles por visita; B1–B3 no. Los cofres de sectores entregan P09, P10 y P14/P18 y no requieren combate adicional. Cofres y primeros descubrimientos son únicos durante la sesión. Fuente literal: [cartas propias](history/iteration-v1/rpg_cartas_jugador_v01.csv), [enemigas](history/iteration-v1/rpg_cartas_enemigos_v01.csv) y [encuentros](history/iteration-v1/rpg_encuentros_v01.csv), contrastados con [contenido implementado](../src/engine/content.ts) y [mundo](../src/engine/world.ts).
 
@@ -135,6 +138,8 @@ R1–R4 son repetibles por visita; B1–B3 no. Los cofres de sectores entregan P
 Tres sectores y ala opcional de cuatro salas. Acceso voluntario desde sector 1, avance secuencial R1→R4 y salida voluntaria desde cada sala al sector 1. Solo salir realmente y entrar otra vez reinicia los cuatro encuentros; derrota, menú o retorno de combate conserva los completados de esa visita (D07). La salida no reinicia salud, pérdidas, mejoras, máximo, fatiga, cofres ni santuarios.
 
 Movimiento WASD/flechas y controles accesibles de ayuda; orientación, cámara elevada, colisiones y acercamiento antes de interactuar con E o botón equivalente. No iniciar combates por simple contacto. Menús y combate suspenden movimiento, limpian entradas y preservan posición. Retorno a la misma sala y punto seguro, sin activar encuentros involuntarios. Las puertas abiertas tras victoria permanecen disponibles y se puede retroceder.
+
+Al cerrar una superposición y retornar a exploración, el control del avatar recupera foco sin clic adicional y sin reutilizar teclas retenidas. Un aviso dentro de otro modal no devuelve foco al mundo. La exclusividad de arrastre para vincular cartas elimina deliberadamente la posibilidad de completar esas asignaciones solo con teclado; se conservan etiquetas, foco y controles accesibles de las demás acciones.
 
 Exploración llena el área; HUD compacto, colección superpuesta con I/Esc, mensajes y resultados internos. Combate con mano inferior, campos por lados, vida de invocadores y acción contextual; R1–R3 sin recursos rivales ficticios. Filas/listas sin límite disponen de desplazamiento y controles accesibles. Referencias: [interfaz](design/interface-v1.md) y [exploración 3D](design/exploration-3d-v1.md). Los PNG son referencias conceptuales, no datos de cartas ni capturas que acrediten la implementación.
 

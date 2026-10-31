@@ -1,10 +1,12 @@
 # Duelo en la cripta — estado vigente
 
-Propósito: describir el prototipo implementado de `projects/juego-cartas/`. Revisión documental: 2026-10-28. Corte de código y registros: `54955677ec9430695b233c99a8fb4067b103a86d`. Esta consolidación no modifica el diseño ni constituye una nueva validación integral; distingue los cierres históricos de la regresión técnica reejecutada durante la migración.
+Propósito: describir el prototipo implementado de `projects/juego-cartas/`. Revisión operativa: 2026-10-31. El corte de la consolidación documental anterior fue `54955677ec9430695b233c99a8fb4067b103a86d`; el baseline de M0 es `8fb9c4f023d08f2b60013502e13e591c9c8d8eb1`. Las verificaciones nuevas se distinguen de los cierres históricos.
 
 Iteración UX y fatiga cerrada con alcance parcialmente aceptado por decisión expresa del diseñador: foco/cierres, arrastre/reasignación, bloqueos múltiples, prioridades de bloqueadores y atacantes, distribución contextual, conexiones/transiciones, presentación enemiga, turnos/fases y fatiga aceptados. Se conserva la eliminación técnicamente verificada de transiciones hover en botones de colección; el diseñador confirmó que no resolvió la onda durante scroll. Esa incidencia queda no resuelta y diferida, sin mantener activa la iteración. El [plan vivo](implementation-plan.md) registra evidencia y cierre con commit exclusivamente local, sin push.
 
 ## Propuesta y experiencia
+
+Migración V0.4B: M0 implementado, comprobado, revisado sin hallazgos y **aceptado formalmente por el diseñador**, quien autoriza su commit local seguro y la ejecución posterior de M1; no autoriza commit de M1, M2–M8 ni push. Los datos P/E, iniciales y siete encuentros residen en `src/engine/content/legacy.ts`; `src/engine/content.ts` conserva sus exports mediante selección estática `ACTIVE_CONTENT = LEGACY_CONTENT` (`legacy-v1`). No hay conmutación de reglas/mundo. El [registro operativo](iterations/2026-10-31-migracion-v04b.md) contiene las decisiones futuras y preparación M1, pendiente de iniciar tras verificar el cierre M0. Evidencia de la entrega aceptada: coordinador 179/179 + spatial y build correctos; reviewer suite compilada 179/179 + spatial. El contenido jugable y las reglas descritos a continuación siguen siendo los del legado; no se han incorporado las 21 cartas nuevas, las 19 salas, el orbe ni los diez encuentros nuevos.
 
 RPG de invocaciones que combina exploración de una cripta 3D, colección y preparación de criaturas con combates por cartas. Las decisiones conservan consecuencias: las supervivientes mantienen heridas, morir o sacrificarse elimina su copia y recuperar una criatura puede reducir la vida máxima del invocador. El ala opcional permite reconstruirse y entrenar antes de continuar.
 

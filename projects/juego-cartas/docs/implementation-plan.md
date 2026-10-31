@@ -1,8 +1,16 @@
 # Duelo en la cripta — continuidad de implementación
 
-Propósito: punto vivo de planificación, decisiones, verificaciones y cierres de `projects/juego-cartas/`. Revisión: 2026-10-28. Corte de migración: `54955677ec9430695b233c99a8fb4067b103a86d`. El usuario aceptó la migración y su limpieza final y autorizó el commit de cierre el 2026-10-28; el ejecutor seguro ya admite las bajas verificadas necesarias para ese cierre.
+Propósito: punto vivo de planificación, decisiones, verificaciones y cierres de `projects/juego-cartas/`. Revisión operativa: 2026-10-31. El corte de migración documental del 2026-10-28 fue `54955677ec9430695b233c99a8fb4067b103a86d`; sus autorizaciones y cierres se conservan como antecedentes.
 
-## Estado al corte
+## Estado operativo actual — migración V0.4B
+
+El diseñador aprobó la estructura M0–M8 y **aceptó formalmente M0**, autorizando su cierre documental y un commit local exclusivamente con sus siete archivos mediante el ejecutor seguro. Autoriza ejecutar M1 después de verificar ese commit; **M2–M8, el commit de M1 y cualquier push no están autorizados**.
+
+El [registro de migración V0.4B](iterations/2026-10-31-migracion-v04b.md) reúne el brief, baseline, decisiones MIG-D01–MIG-D07, clasificación de compatibilidad, hoja de ruta, definición propuesta de M1 y evidencia efectiva de M0. Este prefijo distingue las nuevas decisiones D01–D07 del encargo de los D01–D12 históricos de expedición.
+
+M0 implementado, comprobado, revisado sin hallazgos y **aceptado por el diseñador**. Coordinador: 179/179 pruebas + spatial y build correctos; reviewer: suite compilada 179/179 + spatial correcta. Baseline: `8fb9c4f023d08f2b60013502e13e591c9c8d8eb1`, rama `main`, nueve commits por delante de `origin/main`. Preflight de cierre confirma los siete archivos M0, índice vacío y ausencia de cambios ajenos. El hash del commit de cierre se obtiene y verifica después de ejecutarlo, sin insertarlo circularmente aquí. M1 autorizado pero no iniciado antes de verificar el cierre. El juego activo continúa siendo el legado de siete salas; se preservan el cierre UX/fatiga y la incidencia de scroll diferida.
+
+## Estado al corte documental del 2026-10-28
 
 No hay implementación jugable activa ni un siguiente hito autorizado. Los siete hitos originales y las iteraciones siguientes constan cerrados; la última iteración UX y fatiga tiene cierre con alcance parcialmente aceptado e incidencia conocida de scroll diferida por decisión expresa del diseñador. El registro final de cierre al pie sustituye los pendientes de sus entregas anteriores, conservados como antecedentes de ejecución. Esta referencia sustituye al plan antiguo como punto de continuidad, sin reabrir hitos, casillas o validaciones dispensadas ni inventar roadmap. El [plan original completo](history/implementation-plan-v0.1.md) conserva los briefs, autorizaciones, rutas históricas, revisiones, correcciones, pruebas y aprobaciones humanas.
 

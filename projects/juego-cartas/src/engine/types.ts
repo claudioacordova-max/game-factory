@@ -6,7 +6,7 @@ export type EntityKind = 'real' | 'token'
 export interface PendingAbility {
   id: string
   description: string
-  implementation: 'pending-m2' | 'pending-m3'
+  implementation: 'pending-m2' | 'pending-m3' | 'domain-m2'
 }
 
 export type TurnPhase = 'main' | 'attackers' | 'blockers' | 'resolve' | 'resolved' | 'finished'
@@ -51,6 +51,8 @@ export interface Creature {
   owner: PlayerId
   health: number
   summonedTurn: number
+  /** Offensive bonus fixed when declaring attackers; cleared after that resolution. */
+  attackBonus?: number
 }
 
 export interface Invoker {
@@ -60,6 +62,8 @@ export interface Invoker {
   fatigue: number
   life: number
   mana: number
+  /** Included in mana; spent first and expires when leaving the current main phase. */
+  temporaryMana?: number
   hand: CreatureCard[]
   deck: CreatureCard[]
   creatures: Creature[]

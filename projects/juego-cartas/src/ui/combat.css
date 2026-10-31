@@ -133,3 +133,9 @@
 .combat-phase-track .is-current { color: #d9e8c4; border-bottom-color: #a5d8b9; background: #71c5bc0b; }
 @media (max-width: 1100px) { .combat-phase-track small { display: none; } }
 @media (max-width: 700px) { .combat-phase-track { display: none; } }
+
+.combat-view .combat-r01-activation { width: 100%; margin-top: 4px; padding: 5px 4px; border: 1px solid #94b99c; border-radius: 4px; background: #1e3d3c; color: #ede4c9; font: 10px/1.2 system-ui; cursor: pointer; }
+.combat-r01-activation small { display: block; margin-top: 3px; color: #d4c399; font-size: 9px; line-height: 1.2; }
+.combat-view .combat-r01-activation:hover:not(:disabled) { background: #315348; border-color: #c3dbab; }
+.combat-view .combat-r01-activation:focus-visible { outline: 2px solid #b5dec2; outline-offset: 2px; }
+.combat-view .combat-r01-activation:disabled { opacity: .5; cursor: not-allowed; }

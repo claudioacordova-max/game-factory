@@ -26,7 +26,7 @@ export function CollectionView({ session, cardTypes = PLAYER_CARD_TYPES, onChang
   return <section className="collection-view stone-panel" aria-labelledby="collection-title">
     <header className="panel-heading"><div><p className="section-kicker">Tus invocaciones</p><h2 id="collection-title">Colección <span>{session.copies.length}</span></h2></div><span className="subtle">{discoveredCardIds(session).length} tipos descubiertos</span></header>
     <p className="collection-help">{session.collectionProfile === 'v04b' ? 'Cada copia tiene identidad y salud propias. Solo puedes recuperar cupos ya obtenidos; perder una copia conserva su cupo. ' : 'Una copia por tipo, incluida la reserva. '}Reinvocar una perdida crea una copia básica en reserva y consume vida máxima del invocador (mínimo 1). Las semillas se recuperan gratis.</p>
-    {session.collectionProfile === 'v04b' && <p className="collection-help">Preparación M1: catálogo y copias. Los efectos indicados como pendientes M2–M3 todavía no se ejecutan.</p>}
+    {session.collectionProfile === 'v04b' && <p className="collection-help">Catálogo aislado: efectos de motor M2 disponibles; efectos M3 pendientes.</p>}
     <div className="collection-grid">
       {discoveredCardIds(session).flatMap((cardId) => {
         const type = cardTypes.find((entry) => entry.id === cardId)

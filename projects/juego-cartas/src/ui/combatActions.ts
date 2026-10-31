@@ -1,4 +1,4 @@
-import { advanceMainPhaseIfNoLegalSummons, cardInstanceId, findHandCard, declareAttackers, declareBlockers, endTurn, resolveCombat, RuleViolation, startCombat, summonAvailability, summonCreature } from '../engine/rules.js'
+import { activateR01, advanceMainPhaseIfNoLegalSummons, cardInstanceId, findHandCard, declareAttackers, declareBlockers, endTurn, resolveCombat, RuleViolation, startCombat, summonAvailability, summonCreature } from '../engine/rules.js'
 import { chooseEnemyBlockers, runEnemyTurn } from '../engine/enemy.js'
 import type { CreatureCard, DuelState } from '../engine/types.js'
 
@@ -13,6 +13,7 @@ export interface CombatControls { duel: DuelState; pending: PendingSummon | null
 export type CombatAction =
   | { type: 'summon'; cardId: string }
   | { type: 'sacrifice'; creatureId: string }
+  | { type: 'activate-r01'; creatureId: string }
   | { type: 'cancel' }
   | { type: 'begin-attack' }
   | { type: 'attack'; attackerIds: string[]; targets: Record<string, string> }
@@ -63,6 +64,15 @@ export function applyCombatAction(current: CombatControls, action: CombatAction,
       pending = null
       message = 'Invocación cancelada; no se perdió ninguna criatura.'
       next = continueToPlayerDecision(duel)
+    } else if (action.type === 'activate-r01') {
+      requirePlayerPhase(duel, 'main')
+      if (pending) throw new RuleViolation('Completa o cancela el sacrificio pendiente antes de activar una criatura.')
+      const source = duel.players.player.creatures.find((unit) => unit.id === action.creatureId)
+      next = continueToPlayerDecision(activateR01(duel, action.creatureId))
+      sacrificedCopyIds = source?.copyId ? [source.copyId] : []
+      message = next.phase === 'main'
+        ? 'Runa inestable se sacrificó: +2 de maná temporal hasta terminar la fase principal.'
+        : 'Runa inestable se sacrificó: +2 de maná temporal. El sobrante expiró al pasar al ataque.'
     } else if (action.type === 'summon') {
       requirePlayerPhase(duel, 'main')
       if (pending) throw new RuleViolation('Completa o cancela el sacrificio pendiente antes de jugar otra carta.')

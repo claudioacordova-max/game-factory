@@ -1,4 +1,4 @@
-# Duelo en la cripta — migración V0.4B: M0 y M1
+# Duelo en la cripta — migración V0.4B: M0, M1 y M2
 
 Propósito: conservar la autorización, decisiones y continuidad de la migración desde el prototipo legado. Fecha del registro: 2026-10-31. Punto de entrada: [plan vivo](../implementation-plan.md). Este registro no sustituye la [especificación implementada del legado](../spec-v1.md) ni presenta reglas futuras como instaladas.
 
@@ -91,7 +91,7 @@ Además del catálogo extraído, permanecen datos legados identificados en `worl
 
 Las categorías se aplican por contrato/caso, no clasifican una suite mixta entera como obsoleta. No se elimina ninguna prueba por anticipado. Que `tests/activation.ts` pase no prueba habilidades R01/N01: cubre activación de UI.
 
-## Hoja de ruta aprobada en estructura, no en ejecución futura
+## Hoja de ruta registrada en M0 (autorizaciones de aquel momento)
 
 | Hito | Entrega y dependencias | Estado de autorización |
 |---|---|---|
@@ -294,3 +294,157 @@ Autoriza registrar esa aceptación, cerrar M1 con el ejecutor seguro y exactamen
 Preflight del cierre: `HEAD be974b9b424a52db9653ab73c485fb71a6327991`, rama `main`, índice vacío, exactamente 16 M y tres untracked propios de M1, sin trabajo ajeno. Los 16 hashes de producto/tests siguen coincidiendo con la entrega revisada; en este tramo solo se editan los tres registros operativos para la aceptación. Las verificaciones técnicas/visuales y revisiones aceptadas siguen vigentes; no se repiten suite/build/navegador ni se modifica producto. El ejecutor instalado y fuente coinciden en SHA-256 `758fa50726a64fd33b07a9485e04d5d358376a0c517e6ed29eefbd11401aefdf`. Se revisan diff/manifiesto y formato de los 19 paths, con revisión independiente documental antes del ejecutor; su resultado y el hash efectivo se registran al verificarlos. No hay staging directo ni inicio M2 anticipado.
 
 Revisión independiente de cierre: reviewer nativo en contexto nuevo, **aprobado para commit local M1, sin hallazgos**. Verificó manifiesto exacto, 16 hashes intactos, tres cambios documentales, aceptación humana, restricciones, HEAD/main +10/índice, diff-check y preflight 19/19 y hashes del ejecutor. No editó ni repitió suite/build/navegador. Se repite la comprobación final inmediata antes del ejecutor con los mismos 19 paths explícitos. La revisión no ratifica P5 ni autoriza commit M2 o push. El hash se obtiene después del commit que incorpora este registro, sin insertarlo circularmente en su propio contenido.
+
+Resultado efectivo: preflight final 19/19; ejecutor seguro produjo **`3ec644a5bd2705e2c6ed6353f6e568b9e6b4bcf4`**, mensaje `juego-cartas: cerrar M1 de catalogo y copias independientes V0.4B`. `diff-tree --no-renames` confirmó exactamente 16 M y tres A del manifiesto M1; índice y árbol posteriores limpios, `main` +11 sobre referencia local origin/main. No hubo push. M1 cerrado y aceptado, sin enmienda a su commit.
+
+## M2 — ejecución autorizada y condicionamiento P5
+
+Baseline anterior a cualquier edición M2: `HEAD 3ec644a5bd2705e2c6ed6353f6e568b9e6b4bcf4`, `main` +11, índice/unstaged/untracked vacíos. No hay cambios ajenos. Evidencia de partida: resultados aceptados M1, sin repetirlos durante el cierre documental. Instrucciones/fuentes: AGENTS, workflow, `game-iteration`, especificación legado y decisiones posteriores; v1.2 del ZIP externo leído en memoria (secciones de recursos, fichas y ofensiva) con catálogo oficial M1 como autoridad de nombres. No se extraen ni modifican especificaciones aprobadas.
+
+Brief: cambio funcional amplio ya autorizado por el diseñador; mantener prototipo legado activo y añadir solo recursos/fichas/activaciones básicas del perfil V0.4B. Dominio independiente: fatiga 0–1; renovable `max(0,1+R02 vivas−fatiga)` sin maná inmediato al invocar R02; R01 voluntaria principal, sacrificio atómico y +2 temporal con expiración al salir de principal; fichas 1/1 A02/A04 después del pago, entidades explícitas sin colección/cupos/recuperación ni persistencia; sacrificios generales permiten fichas, futuros requisitos reales las rechazan; A04 suma otras atacantes declaradas, incluidas fichas, solo en esa ofensiva y sin cambiar base/persistencia. Sin topes arbitrarios ni cambios del robo o estrategia rival.
+
+Plan acotado: implementer nativo posee motor/sesión, metadatos y presentación mínima independiente, pruebas dirigidas y regresiones; coordinador registra, inspecciona diff, ejecuta checks, valida superficies afectadas y obtiene revisión independiente nueva. No tocar avance automático ni interfaz de activación R01 hasta ratificar P5. No se implementan escudos, curación, A03/N01/H04, IA/robo experimental, orbe, mapa, premios, puzle ni scroll diferido. H04 puede recibir el filtro de materiales reales como contrato de coste preparado, pero no el efecto ritual. Sin dependencias nuevas, commit M2 o push. Ciclos de corrección M2 iniciales: 0/2.
+
+### P5 — propuesta de la entrega parcial (ratificada posteriormente)
+
+Se remitió al diseñador para ratificación mediante pregunta pendiente, antes de editar automatización o su interfaz:
+
+1. Solo en V0.4B, mantener principal si existe invocación o activación voluntaria legal, o selección pendiente. El legado conserva su criterio actual.
+2. Conservar «Ir al ataque» para pasar sin activar; no pasar durante selección pendiente.
+3. Junto a cada R01 propia viva, botón «Activar Runa inestable» con indicación de sacrificar esa copia y +2 temporales hasta salir de principal; sin confirmación añadida.
+4. Durante selección de sacrificios, completar/cancelar antes de activar R01.
+5. Recalcular acciones tras invocar, activar o cancelar; si no queda ninguna y no hay selección, pasar automáticamente al ataque y eliminar sobrante temporal.
+6. Caso límite explícito: activar última R01 con mano vacía es legal; sin otra acción se avanza y expira su maná. Dos R01 pueden activarse sucesivamente mientras existan. N01 se incorporará más adelante al mismo criterio solo con objetivo válido; no implementarla ahora.
+
+La propuesta cubre los puntos donde `continueToPlayerDecision` llama al criterio actual `advanceMainPhaseIfNoLegalSummons` (avance, cancelación, invocación, cierre de selección y transiciones de turnos). Sin respuesta no hay aprobación; continuar únicamente dominio independiente y entregar esa limitación. El dominio puede probar activación explícita sin exponer una UI provisional. Validación humana de flujo/controles M2 deberá realizarse después de implementarlos y antes de un cierre futuro; no repetir aceptación M1.
+
+### M2 — dominio independiente implementado
+
+Implementer nativo completó la parte independiente de P5. Motor común con perfil V0.4B; no se cambia el bootstrap legado. `Invoker.mana` sigue siendo el total utilizable, con `temporaryMana` incluido como porción temporal. Se paga temporal primero: conserva renovable no gastado y no cambia costes/acciones aprobados. `baseMana(invoker, profile='legacy')` mantiene compatibilidad y usa en V0.4B nivel fijo 1 más R02 propias reales/vivas menos fatiga; R02 no concede al entrar ni retira retroactivamente recursos renovados. Fatiga en sesión V0.4B solo 0/1, derrotas repetidas capadas, victoria ordinaria la conserva; bandera explícita de restauración puede limpiarla sin añadir orbe o premios nuevos.
+
+`activateR01(state, creatureId)` requiere principal del dueño activo, criatura real R01 propia viva y contexto V0.4B; elimina solo esa identidad y añade +2 total/temporal en una transacción pura. No se invoca desde muerte ni sacrificio de otra carta; permite preparar el motor de ambos lados sin IA nueva. `startCombat` elimina el temporal sobrante y `endTurn` renueva sin acumular; el **criterio** de avance automático permanece sin cambios, pendiente P5.
+
+Invocar A02/A04 legalmente crea después del pago una `Ficha de rata` 1/1 con `entityKind: token`, `Creature.id` e `instanceId` distintos y sin `copyId`. No se crea al cargar un campo inicial. Validación rechaza tokens en mano/mazo/colección y tokens con identidad persistente; no confunde enemigos reales sin copyId. Fichas atacan, bloquean y pagan sacrificios generales, sin límites nuevos. `sacrificeCandidates` prepara la restricción real de H04, **sin implementar su ritual**; pruebas de pago genérico 3S usan fixture de coste, sin alterar catálogo. Al terminar combate natural se eliminan fichas de ambos campos; liquidación nunca crea copias/cupos/pérdidas por ellas.
+
+A04 captura `attackBonus` al declarar atacantes según número de otras aliadas declaradas, incluidas fichas. `effectiveAttack` se utiliza en daños/presentación; se limpia al resolver simultáneamente, sin modificar ATQ impreso, salud, defensa ni mejoras persistentes. Metadatos `domain-m2` describen lo disponible en motor; R01 conserva aviso de interfaz pendiente P5. A04 ofensiva pasa al alcance M2 por la autorización actual; N01 queda marcado pendiente M3 conforme a su exclusión expresa del encargo. Ningún nombre, estadística, coste o límite del catálogo cambia.
+
+Paths M2 relativos a `projects/juego-cartas/` (**13: 12 M, uno nuevo**):
+
+| Superficie | Archivos y motivo |
+|---|---|
+| Motor/modelo | `src/engine/rules.ts`, `session.ts`, `types.ts`: recursos/fatiga, activación pura, tokens/identidades, coste y bono temporal. |
+| Datos descriptivos | `src/engine/content/v04b.ts`: estado de habilidades y hito, sin cifras nuevas. |
+| Presentación mínima | `src/ui/CardViews.tsx`, `CombatView.tsx`: ficha temporal, ATQ efectivo, porción temporal y fórmula por perfil; `CollectionViews.tsx`: solo nota global honesta del sandbox. |
+| Pruebas | `tests/m2.tsx` nuevo; `tests/run.ts`: registrar suite; `tests/m1.tsx`: adaptar explícitamente expectativas de A02 y metadatos ahora operativos, manteniendo cobertura de identidad y datos oficiales. |
+| Continuidad | `docs/implementation-plan.md`, `docs/status.md`, este registro: cierre M1 y estado parcial M2. |
+
+`App.tsx`, `combatActions.ts`, `enemy.ts`, criterio `advanceMainPhaseIfNoLegalSummons`, datos/fachada legados, mundo/spatial, prioridades, relaciones/conexiones, CSS, assets, dependencias/configuración y herramientas Factory intactos. Las expectativas generales/legadas siguen; no se eliminan casos históricos para pasar tests. Sin segundo motor, nuevo selector ni ruta permanente de depuración.
+
+### Verificaciones M2 y corrección previa a revisión
+
+Primera entrega implementer y repetición efectiva del coordinador: **234/234 + spatial** y build correctos. Coordinador encontró después un fallo de entrada reproducible: `createDuel({collectionProfile:'v04b',playerDeck:[],opponentDeck:[],playerFatigue:0.5})` producía fatiga/maná 0.5. Implementer añadió rechazo de fracciones/no finitos antes de construir V0.4B, manteniendo el clamp de enteros a 0/1 y el legado; regresión 0.5/NaN/Infinity sin mutación. Corrección anterior a primera revisión, no consume ciclo de reviewer.
+
+Verificaciones finales realmente repetidas, tanto por implementer como por coordinador, tras esa corrección:
+
+- `npm.cmd test`: exit 0, **235/235 + spatial** (204 previas adaptadas donde corresponden los efectos autorizados, **31 nuevas M2**). Cubre matriz R02 0/1/2 × fatiga 0/1, no ingreso inmediato ni reversión de maná renovado, activación R01 única/atómica/propia, gasto/expiración, bajas/sacrificios sin activación involuntaria, identidad/pérdida de copia R01, tokens de ambos lados, ataque/bloqueo/sacrificios 1/2/3, cancelación/rechazos sin pago, limpieza/persistencia/reserva y A04 con 0/1/3 otras atacantes, simultaneidad, defensa y combate posterior.
+- `npm.cmd run build`: exit 0, **67 módulos**, JS **1.257,41 kB/gzip 348,47 kB**, CSS sin cambios **68,63 kB/gzip 14,85 kB**. Persisten avisos conocidos de Three y bundle >500 kB; no se incorporan dependencias ni optimizaciones ajenas. Los avisos stderr aparecen también envueltos por PowerShell al redirigirlos; el código de salida efectivo de npm es 0.
+- Implementer: diff-check y preflight de sus diez paths correctos; corrección final preflight 2/2. Coordinador inspeccionó diff y suite, antes de preflight de los 13 paths y revisión independiente. Sin commit M2.
+
+### Presentación M2 — inspección renderizada dirigida
+
+Procedimiento `game-ui-ux`, CLI temporal **0.1.22 ya disponible** y Chrome instalado, sin otra descarga. Recursos externos nuevos: `C:/Users/klaud/AppData/Local/Temp/game-factory-m2-render-2c841cd7-977b-4ad4-889b-fa5aa5370810/`. Contiene `server.mjs`, `fixture.tsx`, `probe.js`/`probe-output.txt`, logs efectivos `coordinator-tests-final.txt`/`coordinator-build-final.txt` y PNG. Servidor propio `127.0.0.1:5188`, sesión distinta `m2-render`, sin tocar procesos del diseñador ni las evidencias M1. Importa Vite/componentes/dependencias existentes; rutas de fixture solo en memoria, ninguna escritura de instalación/configuración.
+
+Probe y diez PNG abiertos por el coordinador: **1440×900 y 1024×768**, cinco estados cada uno:
+
+- `m2-tokens-*`: A02/A04 y dos fichas 1/1 con cuatro IDs de campo distintos; «Ficha temporal» diferenciada de copy-1/copy-2. Controles y estadísticas legibles, sin solapamiento observado.
+- `m2-mana-*`: dos R02 con identidad propia, fatiga 1 y R01 activada por API de dominio; total 2, porción temporal 2 explícita y renovación futura 2. La fixture no llama al controlador ni decide P5.
+- `m2-bonus-*`: A04 ATQ impreso 1, bonus 3 por tres otras atacantes, ATQ efectivo visible 4, sin cambiar salud 2.
+- `m2-collection-*`: 39 copias y nota de motor M2/pendientes M3/P5, sin cambios de gestión o layout.
+- `m2-legacy-*`: raíz App real, escena y HUD; canvas WebGL activo 1440×900/1024×768. I abre colección de ocho; Esc la cierra. Legado sigue activo.
+
+Resultado del probe completo: `errors: []`, `warnings: []` para errores de ejecución/consola y avisos React capturados. Persisten avisos conocidos de Three fuera de ese filtro y favicon 404 inicial. Son **estados preparados con dominio y componentes reales, handlers tácticos inertes en la fixture V0.4B**, no prueba interactiva de R01/P5, ni nueva IA, expedición, balance o playtesting humano M2. No se investigó la onda de scroll. No hubo correcciones visuales. La corrección posterior de fatiga inválida no cambia ninguno de estos estados válidos o componentes, por lo que no se repitió esa matriz.
+
+Estado previo a revisión: dominio independiente y presentación mínima comprobados; revisión independiente M2 pendiente. P5 sin respuesta/ratificación, automatización/controlador y UI de activación intactos. No se considera M2 completo ni listo para cierre humano integral; siguiente paso depende de ratificar P5 e implementar/verificar esa parte. Sin commit M2 ni M3–M8/push.
+
+### Revisión independiente y entrega parcial M2
+
+Reviewer nativo en contexto independiente, posterior a implementación/corrección y checks finales: **aprobado para este dominio y presentación mínima, sin hallazgos reproducibles**. Inspeccionó código/diff/tests/contratos y adaptaciones M1; reejecutó suite compilada **235/235 + spatial**, exit 0, y contrastó build del coordinador sin regenerarlo. Abrió seis capturas representativas de ambos tamaños, cotejó probe y handlers inertes de la fixture, sin solapamientos observados. Confirmó manifiesto 13 paths, HEAD M1, índice vacío, diff-check y preflight **13/13**, ausencia de cambios en App/controlador/criterio/IA/robo/CSS/datos legados. No editó ni ejecutó navegador. La revisión no concede aceptación humana de M2 ni autoriza P5, commit o siguientes hitos. Ciclos de corrección de reviewer usados: **0/2**.
+
+Coordinador cerró únicamente CLI `m2-render` y servidor temporal propio identificado por ruta completa (PID 28892); confirmó ausencia de proceso y listener5188. Las evidencias permanecen en temporal con `RESULTADOS.md` y protocolo de reproducción, fuera de Git. Nada de M1 se reabre ni se altera su commit. La última actualización de documentación no cambia el código revisado; se repite preflight13/13 y manifiesto/índice, sin repetir suite/build o visual innecesariamente. Artefactos `.test-dist`, `dist` y `tsconfig.tsbuildinfo` confirmados ignorados.
+
+Estado final de esta entrega: `HEAD 3ec644a5bd2705e2c6ed6353f6e568b9e6b4bcf4`, `main` +11, índice vacío, **12 M y un nuevo** (suite M2) de los 13 paths listados, sin cambios ajenos. Solo se creó el commit M1 autorizado; **no hay commit M2 ni push**. M2 parcial técnicamente revisado; **detenido en la dependencia funcional P5 pendiente de ratificación expresa**. Para completarlo: ratificar/revisar el contrato de arriba, implementar controlador y UI R01 en un paso acotado, verificar eventos obsoletos/pendientes/paso voluntario/expiración, inspeccionar interacciones y solicitar evaluación humana de M2. No se inicia M3 ni se interpreta el silencio como aprobación.
+
+### Continuación M2 — P5 ratificado y finalización autorizada
+
+El diseñador **ratifica expresamente los siete puntos P5** de la entrega y autoriza completar M2. Esta decisión sustituye la condición pendiente de los párrafos anteriores, conservados como historial. Autoriza permanencia en principal por activación legal, paso voluntario sin activar, acción explícita R01 que comunica sacrificio/+2 temporal sin confirmación, bloqueo durante selección pendiente, recálculo tras cada acción/cancelación, activación con mano vacía y de dos R01 sucesivas, y compatibilidad legada/preparación de criterio futuro N01 sin implementarla. No permite vetar acciones legales por criterio estratégico ni activar automáticamente R01.
+
+Baseline de continuación: mismo `HEAD 3ec644a5bd2705e2c6ed6353f6e568b9e6b4bcf4`, `main` +11, índice vacío, los mismos 13 paths M2 (12 M, uno nuevo), sin cambios ajenos. Los diez SHA-256 de producto/tests coinciden con la entrega revisada; se preserva íntegra su implementación. Se releyeron AGENTS, workflow, habilidad UI y los registros vigentes; no se rehace M2. Copia de estado y hashes de los 13 en `C:/Users/klaud/AppData/Local/Temp/game-factory-m2-p5-14ba3e27-e00b-40b6-ab8d-72a832daabd6/` antes de editar.
+
+Plan autorizado de continuación: implementer nativo amplía criterio de acciones legales y transacción de activación con revisión de eventos, conecta handler real de App y botón R01 por identidad en CombatView, con ajustes de presentación/textos estrictamente necesarios y pruebas de integración. Coordinador conserva documentos, inspecciona diff/alcance, ejecuta pruebas/build y navegador con controles reales, después solicita revisión independiente nueva. Se reutilizan las evidencias de dominio/estados que no cambien; la inspección inerte anterior no acredita esta integración. Mantener el contador M2 de reviewer 0/2; no crear una iteración o motor adicional. M3, commit M2 y push siguen prohibidos; evaluación humana posterior requerida para aceptar M2.
+
+### P5 implementado — controles y transacciones reales
+
+`r01ActivationAvailability` identifica activaciones legales por contexto/propiedad/tipo/vida; `hasLegalActivation` y `hasLegalMainPhaseAction` constituyen el criterio común preparado para futuras activaciones sin implementar N01. El export histórico `advanceMainPhaseIfNoLegalSummons` conserva su nombre y la compatibilidad: en V0.4B ya no sale de principal si queda R01 legal, aunque la mano esté vacía. No evalúa conveniencia estratégica ni activa por sí mismo. Una selección pendiente sigue frenando el avance.
+
+`applyCombatAction` añade `activate-r01` por ID de criatura y revisión capturada: exige principal propia y ausencia de selección, llama al dominio R01, registra solo el copyId sacrificado y recalcula acciones mediante el flujo real existente. Errores, eventos obsoletos y repetidos no pagan ni cambian estado. App conecta `activateRune` a esa transacción y publica su resultado por el mismo mecanismo aceptado; el mensaje distingue maná disponible de sobrante que expiró al pasar automáticamente.
+
+CombatView incorpora `onActivateR01` y un `R01ActivationButton` separado de la baldosa, evitando botones anidados y conflicto con la selección de sacrificios. Identifica copyId, comunica «Activar Runa inestable» y «Sacrifica [copia] · +2 maná temporal», con explicación de pérdida/expiración, sin confirmación adicional. Usa la protección existente de clic múltiple y teclado repetido. Solo aparece para R01 legal en principal propia y queda deshabilitado durante selección. «Ir al ataque» permanece disponible sin activar cuando no hay selección; se conserva el bloqueo/acción de cancelar mientras la hay. CSS añadido solo al nuevo control; no se rediseñan filas, prioridades, drag o conexiones. Se retiran los avisos obsoletos de P5 pendiente del catálogo.
+
+Manifiesto total M2 actualizado: **16 paths (15 M y uno nuevo)**. Son los 13 de la entrega parcial más `src/App.tsx`, `src/ui/combatActions.ts` y `src/ui/combat.css`. El dominio previo y sus pruebas se preservan, ampliados por el criterio P5. No cambian IA/robo, mapa, recompensas, catálogo numérico, assets, dependencias o configuración. H04/N01/A03, escudos y sanación M3 permanecen pendientes como estaba previsto.
+
+### Verificaciones finales de integración M2
+
+Implementer y coordinador ejecutaron por separado, sobre la integración terminada:
+
+- `npm.cmd test`: exit 0, **243/243 + spatial**, las 235 de la parte anterior más ocho P5. Incluyen permanencia sin cartas, paso voluntario, mano vacía/expiración, dos R01, maná que habilita invocación, pendientes/cancelación sin pago, clic múltiple/Enter repetido/revisión obsoleta, controles reales por copia y ausencia de activación en legado/N01 pendiente.
+- `npm.cmd run build`: exit 0, **67 módulos**, JS **1.259,60 kB/gzip 349,00 kB**, CSS **69,19 kB/gzip 14,95 kB**. Solo se incrementa la presentación necesaria. Se conservan los avisos conocidos de Three y bundle >500 kB; no se amplía alcance para optimizarlos.
+- Implementer: preflight13/13 de sus paths y diff-check correctos. Coordinador inspeccionó código, pruebas y diff; preflight con los 16 paths antes de revisión independiente.
+
+Inspección nueva con CLI temporal 0.1.22 ya disponible y Chrome instalado, **sin descargas**: servidor propio `127.0.0.1:5189`, sesión `m2-p5`, recursos en `C:/Users/klaud/AppData/Local/Temp/game-factory-m2-p5-14ba3e27-e00b-40b6-ab8d-72a832daabd6/`. `server.mjs` sirve App real en memoria cambiando solo sus dos inicializadores de sesión/duelo y una asignación diagnóstica de estado para observación. `entry.tsx` conserva StrictMode; los componentes, handlers, efectos de avance y transacciones son los del producto. No sustituye callbacks por funciones inertes ni modifica archivos fuente. La mano/colocación se fija solo al preparar cada caso; no se altera el robo real. No es la aventura V0.4B integrada y no se prueban premios o cierre de encuentros nuevos.
+
+`probe.js` y resultados finales `probe-output.txt`/`probe-summary.json`: **16 resultados resumidos (ocho casos × 1440×900/1024×768)**, además de comprobaciones intermedias y avance sin acciones. Todos satisfactorios, `errors: []`, `warnings: []` para errores/avisos capturados. Gestos y resultados reales:
+
+| Caso en App | Verificación efectiva en ambos tamaños |
+|---|---|
+| Activación y nueva invocación | Con fatiga 1, intento de R03 sin maná rechazado sin mutar; principal conserva R01. Clic en su botón sacrifica copy-1, da 2 temporales y mantiene principal. Arrastre de R03 paga esos dos y entra copy-2; autoavanza con 0 temporal. |
+| Paso voluntario | «Ir al ataque» conserva R01 viva y no registra sacrificio ni concede maná. |
+| Dos R01 | Dos controles por copyId visibles. Enter inicial/repetido activa solo copy-1; copy-2 queda disponible y mantiene principal. Segundo clic deja cuatro temporales e invocación legal R04; al pagar, temporal 0. No se prueba Escudo de R04. |
+| Mano vacía | Última R01 activable; tras activarla autoavanza y expira el temporal, con mensaje correspondiente. Con dos R01 y mano vacía, la primera mantiene principal y la segunda produce el avance/expiración final. |
+| Selección y cancelación | Al elegir N04, R01 queda deshabilitada y no existe paso al ataque. Esc cancela conservando criaturas/maná. Activación posterior y pago combinado N04/N05 dejan solo copy-3 en campo, maná renovable 1 y temporal 0. |
+| Sacrificio general R01 | Elegirla como material de N04 no concede +2; se pierde esa copia y se paga el coste normal. |
+| Ausencia de acciones y legado | Sin acciones legales, se avanza automáticamente. App con preparación legada no muestra activación y conserva invocaciones P01 por clic/P02 por Enter, identidades y recursos. |
+
+Se generaron **22 PNG**, con capturas representativas de ambos tamaños abiertas: `p5-ready-*`, `p5-two-ready-*`, `p5-first-of-two-*`, `p5-funded-*`, `p5-pending-*`, `p5-cancelled-*`, `p5-empty-expired-*`, `p5-summoned-*`, `p5-legacy-combat-*`. Controles/identidades/coste legibles y accionables; el tablero mantiene su desplazamiento interno cuando es necesario. Las capturas finales esperan 400 ms a las transiciones existentes; las inmediatas anteriores podían mostrar posiciones intermedias solapadas, que no persisten al estabilizarse. No se cambió animación o geometría del producto para ese caso.
+
+Incidencias exclusivas del harness: import virtual relativa inicialmente no resuelta y vida inicial de rival de fixture discordante con su máximo mostrado; corregidas solo en temporal antes de repetir la matriz/capturas finales. No se encontraron defectos reproducibles nuevos del producto en esta continuación y no hubo correcciones de gameplay o balance. La escena/WebGL y estados de dominio anteriores se conservan como evidencia cuando no cambiaron; no se repitió inspección genérica de mapas ni scroll diferido. Pruebas de callbacks/SSR, gestos reales y píxeles se distinguen; nada acredita balance, IA estratégica o playtesting humano M2.
+
+Estado anterior a la revisión final: **alcance M2 implementado y comprobado, P5 ya resuelto**. Revisión independiente nueva pendiente; aceptación humana M2 todavía pendiente. No hay otro bloqueo funcional identificado para M2; no se hace commit ni se inicia M3.
+
+### Resultado final M2 — listo para aceptación humana, sin commit
+
+Reviewer nativo en contexto nuevo tras implementación/checks: **aprobado técnicamente sin hallazgos reproducibles ni bloqueantes**. Inspeccionó los 16 paths, contratos y cobertura; reejecutó suite compilada **243/243 + spatial**, exit 0, y contrastó build del coordinador sin regenerarlo. Cotejó App/StrictMode/handlers reales del harness y abrió siete capturas de ambos tamaños, sin solapamiento persistente que impida operar. Verificó preflight16/16, diff-check, índice vacío y HEAD M1; no editó ni ejecutó navegador/instalaciones/commits. Ratificación P5 y límites documentales coherentes; sin ampliación a M3 u otros sistemas. Ciclos de corrección de reviewer en todo M2: **0/2**.
+
+Finalización de recursos: se cerró solo `m2-p5` y se identificó/detuvo el servidor propio PID49976 por su ruta completa, Terminate retornó 0 y listener5189 ausente. No se tocaron procesos del diseñador. `HUMAN-CHECK.md` del temporal permite reiniciar el servidor y probar resource/two/empty/empty-two/pending/none/legacy con controles reales; no requiere instalación. `RESULTADOS.md`, `tests.txt`, `build.txt`, `probe-summary.json`, guiones y capturas permanecen fuera de Git. Se preservan las evidencias previas M1/M2 de estados y sus límites.
+
+Entrega final: `HEAD 3ec644a5bd2705e2c6ed6353f6e568b9e6b4bcf4`, main +11 sobre referencia local origin/main; índice vacío, **15 archivos modificados y uno nuevo (`tests/m2.tsx`)**, exclusivamente los 16 del manifiesto actualizado. Sin cambios ajenos, commit M2, push o ejecutor de cierre. La última actualización es documental: se repite formato/estado final sin repetir tests/build ya vigentes. **M2 completo técnicamente, pendiente únicamente de evaluación/aceptación humana del hito**, sin balance ni aventura V0.4B integrada acreditados. No hay decisión P5 pendiente. No continuar automáticamente ni cerrar/commitear M2 o iniciar M3 antes de instrucciones expresas del diseñador.
+
+### Cierre M2 — aceptación humana y autorización expresa
+
+El diseñador **acepta formalmente M2 dentro del alcance implementado y verificado**, tras completar personalmente los nueve escenarios del protocolo: activación R01, invocación con maná temporal, paso sin activar, dos R01 consecutivas, mano vacía, cancelación pendiente, R01 como sacrificio sin habilidad, avance sin acciones y compatibilidad del combate legado. La evaluación humana estuvo centrada en P5; los demás comportamientos M2 se aceptan con sus comprobaciones técnicas registradas, sin afirmar pruebas humanas adicionales. No hay correcciones solicitadas ni validación de balance/expedición integrada.
+
+Se conservan como evidencia vigente 243/243 + spatial, build correcto, inspección App/handlers reales en 1440×900/1024×768, revisión independiente sin hallazgos y preflight16/16. Corrección de producto realizada durante M2: rechazo de fatiga fraccionaria/no finita V0.4B con regresión, anterior a la primera revisión. Las incidencias de import/vida preparada/transición de captura pertenecían solo a fixtures temporales y se corrigieron allí; no se reabren M0/M1 ni gameplay aceptado. Cero ciclos de corrección de reviewer usados en M2.
+
+Autoriza exactamente registrar aceptación, commit local seguro M2, verificarlo y establecer su hash real como baseline para **planificar** M3. No autoriza código M3, nuevos sistemas, balance, M4+ ni push; tampoco commit adicional de la preparación M3. D2/P2a y D1 siguen aprobados; P3/P4/P8 continúan pendientes de ratificación antes de su implementación.
+
+Baseline verificado de cierre: `HEAD 3ec644a5bd2705e2c6ed6353f6e568b9e6b4bcf4`, rama main +11, índice vacío, exactamente los 16 paths registrados, 15 M y uno nuevo, sin ajenos ni herramientas/evidencias temporales. Diff/estado/código inspeccionados contra la entrega y sus registros; los cambios de producto conservan las cifras de diff aceptadas y fechas anteriores a las comprobaciones vigentes. Se capturaron hashes y estado inicial de los 16 en `C:/Users/klaud/AppData/Local/Temp/game-factory-m2-close-6e4a58d6-cdf8-4ae5-8113-93cc068cc68b/` para verificar que este cierre solo cambie documentación. No se modifica producción/pruebas ni se repiten verificaciones extensivas vigentes.
+
+Manifiesto exacto del commit M2, relativo a `projects/juego-cartas/`:
+
+- `docs/implementation-plan.md`, `docs/iterations/2026-10-31-migracion-v04b.md`, `docs/status.md`.
+- `src/App.tsx`, `src/engine/content/v04b.ts`, `src/engine/rules.ts`, `src/engine/session.ts`, `src/engine/types.ts`.
+- `src/ui/CardViews.tsx`, `src/ui/CollectionViews.tsx`, `src/ui/CombatView.tsx`, `src/ui/combat.css`, `src/ui/combatActions.ts`.
+- `tests/m1.tsx`, `tests/run.ts`, `tests/m2.tsx` (alta).
+
+El ejecutor instalado y su fuente conservan SHA-256 coincidente `758fa50726a64fd33b07a9485e04d5d358376a0c517e6ed29eefbd11401aefdf`. Se ejecutan preflight16/16 y revisión documental independiente antes del ejecutor, más comprobación final inmediata de paths/índice/diff. El hash efectivo y el estado posterior se registran después de crear/verificar el commit; no se inventa un hash anticipado ni se incluye circularmente en su propio contenido.
+
+Revisión independiente de cierre: reviewer nativo en contexto nuevo, **aprobado para commit local seguro M2, sin hallazgos**. Contrastó instrucciones, tres registros, código/pruebas, aceptación humana delimitada y logs vigentes; confirmó los 13 hashes de producto/tests intactos desde el inicio del cierre, manifiesto16/16, HEAD/main+11/índice y ejecutores con hashes coincidentes. Diff-check y preflight16/16 satisfactorios. No editó ni repitió tests/build/navegador ni preparó staging. M3 sigue sin ejecución autorizada. Se repite la misma lista en comprobación inmediata read-only antes de invocar el ejecutor.

@@ -48,6 +48,7 @@ export function unlockedSlotsForType(session: GameSession, cardId: string): numb
 /** Guard every management boundary; type limits are checked when a catalogue is available. */
 export function validateSessionCopies(session: GameSession, cardTypes?: readonly CreatureCard[]): void {
   const catalogue = cardTypes ?? (session.collectionProfile === 'v04b' ? V04B_CARD_TYPES : undefined)
+  if (session.collectionProfile === 'v04b' && ![0, 1].includes(session.fatigue)) throw new RuleViolation('La fatiga V0.4B solo puede ser 0 o 1.')
   if (new Set(session.copies.map((copy) => copy.id)).size !== session.copies.length
     || session.copies.some((copy) => !copy.id || copy.health <= 0)
     || new Set(session.activeDeckCopyIds).size !== session.activeDeckCopyIds.length
@@ -66,7 +67,7 @@ export function validateSessionCopies(session: GameSession, cardTypes?: readonly
     const limit = session.collectionProfile === 'legacy' ? 1 : type?.maxCopies ?? 2
     if (!Number.isInteger(slots) || slots < 0 || slots > limit
       || session.copies.filter((copy) => copy.cardId === id).length > slots
-      || (catalogue && !type)) throw new RuleViolation('Las copias deben respetar los cupos obtenidos y el límite del tipo.')
+      || (catalogue && (!type || type.entityKind === 'token'))) throw new RuleViolation('Las copias deben respetar los cupos obtenidos y el límite del tipo.')
   }
 }
 
@@ -84,6 +85,7 @@ export function effectiveCopyCard(card: CreatureCard, copy: CreatureCopy): Creat
 }
 
 export function createGameSession(cards: CreatureCard[]): GameSession {
+  if (cards.some((card) => card.entityKind === 'token')) throw new RuleViolation('Las fichas temporales no pertenecen a la colección.')
   const uniqueCards = [...new Map(cards.map((card) => [card.id, card])).values()]
   const copies = uniqueCards.map((card, index) => basicCopy(card, index + 1))
   return {
@@ -131,7 +133,7 @@ export function grantCreatureCopies(session: GameSession, eventId: string, cardI
   let nextCopyNumber = session.nextCopyNumber
   for (const id of cardIds) {
     const card = cardTypes.find((entry) => entry.id === id)
-    if (!card || !card.maxCopies) throw new RuleViolation('Tipo de carta no válido para la concesión.')
+    if (!card || !card.maxCopies || card.entityKind === 'token') throw new RuleViolation('Tipo de carta no válido para la concesión.')
     const slots = (unlockedCopySlots[id] ?? 0) + 1
     if (slots > card.maxCopies) throw new RuleViolation('La concesión supera el límite de copias del tipo.')
     unlockedCopySlots[id] = slots
@@ -240,7 +242,7 @@ export function finishSessionDuel(session: GameSession, duel: DuelState, reward?
   const participatingIds = new Set(duel.participantCopyIds)
   // There are no returns from the field: a living owned field copy proves it was summoned.
   const remainingCreatures = new Map(duel.players.player.creatures
-    .filter((creature) => creature.owner === 'player' && creature.copyId !== undefined && creature.health > 0)
+    .filter((creature) => creature.owner === 'player' && creature.entityKind !== 'token' && creature.copyId !== undefined && creature.health > 0)
     .map((creature) => [creature.copyId as string, creature]))
   const survivingIds = new Set<string>([
     ...duel.players.player.hand.flatMap((card) => card.copyId ? [card.copyId] : []),
@@ -272,7 +274,9 @@ export function finishSessionDuel(session: GameSession, duel: DuelState, reward?
     activeDeckCopyIds: session.activeDeckCopyIds.filter((id) => !lostIds.has(id)),
     invokerMaxLife,
     invokerLife: invokerMaxLife,
-    fatigue: !won ? session.fatigue + 1 : reward?.reducesFatigue === true ? 0 : reward?.reducesFatigue === false ? session.fatigue : Math.max(0, session.fatigue - 1),
+    fatigue: session.collectionProfile === 'v04b'
+      ? !won ? Math.min(1, session.fatigue + 1) : reward?.reducesFatigue === true ? 0 : session.fatigue
+      : !won ? session.fatigue + 1 : reward?.reducesFatigue === true ? 0 : reward?.reducesFatigue === false ? session.fatigue : Math.max(0, session.fatigue - 1),
     activeDuelId: null,
     activeEncounterId: null,
     settledDuelIds: [...session.settledDuelIds, duel.id],

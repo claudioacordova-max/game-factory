@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, DragEvent } from 'react'
 import type { CreatureCard, DuelState, GameSession } from '../engine/index.js'
-import { baseMana, cardInstanceId, findHandCard } from '../engine/index.js'
-import { CreatureTile, HandCard } from './CardViews.js'
+import { baseMana, cardInstanceId, findHandCard, r01ActivationAvailability } from '../engine/index.js'
+import { CreatureTile, HandCard, R01ActivationButton } from './CardViews.js'
 import { GameNotice } from './GameNotice.js'
 import { Icon } from './GameIcons.js'
 import { attacksReady } from './encounterSummary.js'
@@ -28,6 +28,7 @@ export interface CombatViewProps {
   targetChoices: Record<string, string>
   blockerChoices: Record<string, string[]>
   onSelectCard: (card: CreatureCard) => void
+  onActivateR01?: (creatureId: string) => void
   onAllowFieldDrop: (event: DragEvent<HTMLElement>) => void
   onDropHandCard: (event: DragEvent<HTMLElement>) => void
   onToggleSacrifice: (id: string) => void
@@ -155,6 +156,7 @@ export function CombatView(props: CombatViewProps) {
           {assignment && <span className="combat-block-order" aria-label={`Orden de bloqueo ${blockOrder + 1}`}>{blockOrder + 1}</span>}
           <CreatureTile creature={unit} selected={selected} onClick={onClick} hint={hint} draggable={relationPhase}
             onDragStart={relationPhase ? (event) => { if (props.onStartBlockDrag(event, unit.id)) setDraggingBlocker(unit.id) } : undefined} onDragEnd={finishDrag} />
+          {main && r01ActivationAvailability(duel, unit.id).allowed && <R01ActivationButton creature={unit} disabled={selectedCardId !== null} onActivate={props.onActivateR01} />}
           {defense && assignment && <div className="combat-block-tools" role="group" aria-label={`Bloqueo de ${unit.card.name}`}><button type="button" aria-label={`Adelantar en daño a ${unit.card.name}`} title="Recibir daño antes" disabled={blockOrder === 0} onClick={() => props.onMoveBlocker(unit.id, -1)}>↑</button><button type="button" aria-label={`Retrasar en daño a ${unit.card.name}`} title="Recibir daño después" disabled={blockOrder === assignment[1].length - 1} onClick={() => props.onMoveBlocker(unit.id, 1)}>↓</button></div>}
           {attackOrder >= 0 && <div className="combat-block-tools combat-attack-tools" role="group" aria-label={`Prioridad de ataque de ${unit.card.name}`}><button type="button" aria-label={`Adelantar en represalia a ${unit.card.name}`} title="Recibir represalia antes" disabled={attackOrder === 0} onClick={() => props.onMoveAttacker(unit.id, -1)}>↑</button><button type="button" aria-label={`Retrasar en represalia a ${unit.card.name}`} title="Recibir represalia después" disabled={attackOrder === attackGroup.length - 1} onClick={() => props.onMoveAttacker(unit.id, 1)}>↓</button></div>}
         </div>
@@ -164,11 +166,11 @@ export function CombatView(props: CombatViewProps) {
     {relationPhase && <div className={`combat-unassign-zone${draggingBlocker ? ' accepts-relation' : ''}${hoveredAttacker === 'unassigned' ? ' is-over' : ''}`} aria-label="Sin asignar; arrastra aquí para retirar el vínculo" onDragOver={(event) => acceptDrag(event, true, 'unassigned')} onDragLeave={() => setHoveredAttacker(null)} onDrop={(event) => { props.onDropRelation(event, null); finishDrag() }}>Sin asignar <small>arrastra aquí para retirar</small></div>}
 
     <div className="combat-controls">
-      <section className="combat-own-resources" aria-label="Recursos propios"><div className="combat-mana"><Icon name="mana" /><strong>{player.mana}<small>/{baseMana(player)}</small></strong><span>Maná</span></div><div className="combat-fatigue"><Icon name="skull" /><span>Fatiga <strong>{session.fatigue}</strong></span></div></section>
+      <section className="combat-own-resources" aria-label="Recursos propios"><div className="combat-mana" title={player.temporaryMana ? `${player.temporaryMana} de maná temporal incluido; expira al terminar la fase principal.` : undefined}><Icon name="mana" /><strong>{player.mana}<small>/{baseMana(player, duel.collectionProfile)}</small></strong><span>Maná{Boolean(player.temporaryMana) && <small> · {player.temporaryMana} temporal</small>}</span></div><div className="combat-fatigue"><Icon name="skull" /><span>Fatiga <strong>{session.fatigue}</strong></span></div></section>
       <InvokerIdentity name="Tu invocador" life={player.life} maxLife={session.invokerMaxLife} />
       <div className="combat-action" aria-label="Acción contextual del combate">
         {choosingSacrifice && <button type="button" className="combat-cancel" onClick={props.onCancelSummon}>Cancelar sacrificio <kbd>Esc</kbd></button>}
-        {main && !selectedCard && <button type="button" className="button button-primary" onClick={(event) => activateOnce(event, props.onBeginCombat)} onKeyDown={preventRepeatedActivationKey}>Ir al ataque<Icon name="arrow" /></button>}
+        {main && selectedCardId === null && <button type="button" className="button button-primary" onClick={(event) => activateOnce(event, props.onBeginCombat)} onKeyDown={preventRepeatedActivationKey}>Ir al ataque<Icon name="arrow" /></button>}
         {attack && <><span>{attackerIds.length} atacante{attackerIds.length === 1 ? '' : 's'} elegido{attackerIds.length === 1 ? '' : 's'}</span><button type="button" className="button button-primary" disabled={!attacksReady(duel, attackerIds, targetChoices)} onClick={(event) => activateOnce(event, props.onDeclareAttacks)} onKeyDown={preventRepeatedActivationKey}>{attackerIds.length ? 'Confirmar ataques' : 'Pasar sin atacar'}<Icon name="sword" /></button></>}
         {defense && <><span>{Object.values(blockerChoices).flat().length} bloqueadores elegidos</span><button type="button" className="button button-primary" onClick={(event) => activateOnce(event, props.onConfirmBlocks)} onKeyDown={preventRepeatedActivationKey}>Resolver bloqueos<Icon name="shield" /></button></>}
       </div>

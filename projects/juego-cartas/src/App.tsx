@@ -81,7 +81,7 @@ export default function App() {
   const player = duel.players.player
   const isPlayerMain = duel.phase === 'main' && duel.activePlayer === 'player'
   const canManageBetweenDuels = !isDuelActive
-  const usableMana = canManageBetweenDuels ? Math.max(0, player.level - session.fatigue) : baseMana(player)
+  const usableMana = canManageBetweenDuels ? Math.max(0, player.level - session.fatigue) : baseMana(player, duel.collectionProfile)
 
   function publishControls(next: CombatControls) {
     const previous = controls.current.duel
@@ -203,6 +203,10 @@ export default function App() {
 
   function toggleSacrifice(creatureId: string) {
     dispatchCombat({ type: 'sacrifice', creatureId })
+  }
+
+  function activateRune(creatureId: string) {
+    dispatchCombat({ type: 'activate-r01', creatureId })
   }
 
   function beginCombat() {
@@ -350,7 +354,7 @@ export default function App() {
         </GameOverlay>}
       </div> : <CombatView duel={duel} session={session} enemyName={activeEncounter?.enemyName ?? 'Oponente'} enemyMaxLife={activeEncounter?.opponentLife ?? 0}
         notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} selectedCardId={selectedCardId} sacrificeIds={sacrificeIds} attackerIds={attackerIds} targetChoices={targetChoices} blockerChoices={blockerChoices} presenting={presenting}
-        onSelectCard={selectCard} onAllowFieldDrop={allowFieldDrop} onDropHandCard={dropHandCard} onToggleSacrifice={toggleSacrifice} onSelectAttacker={selectPlayerAttacker}
+        onSelectCard={selectCard} onActivateR01={activateRune} onAllowFieldDrop={allowFieldDrop} onDropHandCard={dropHandCard} onToggleSacrifice={toggleSacrifice} onSelectAttacker={selectPlayerAttacker}
         onStartBlockDrag={startBlockDrag} onEndBlockDrag={endBlockDrag} onDropRelation={dropRelation} onMoveBlocker={moveBlocker} onMoveAttacker={moveAttacker}
         onCancelSummon={cancelSummon} onBeginCombat={beginCombat} onDeclareAttacks={declarePlayerAttacks} onConfirmBlocks={confirmBlocks} />}
     </main>

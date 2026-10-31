@@ -58,12 +58,12 @@ test('21 nombres, cifras, límites y costes oficiales; 7/7/7/18 copias sin rarez
   ok(V04B_CARD_TYPES.every((c) => !c.rarity && !c.growth && !c.instanceId && !c.copyId))
 })
 
-test('metadatos explícitamente pendientes describen efectos sin ejecutarlos en M1', () => {
+test('metadatos distinguen el dominio M2 incorporado de efectos todavía pendientes M3', () => {
   equal(V04B_CARD_TYPES.filter((c) => c.abilities?.length).map((c) => c.id), ['A02','A03','A04','R01','R02','R03','R04','H02','H03','H04','N01'])
-  ok(V04B_CARD_TYPES.flatMap((c) => c.abilities ?? []).every((a) => a.description.length > 50 && /^pending-m[23]$/.test(a.implementation)))
+  ok(V04B_CARD_TYPES.flatMap((c) => c.abilities ?? []).every((a) => a.description.length > 50 && /^(domain-m2|pending-m3)$/.test(a.implementation)))
   let duel = startSessionDuel(prepare('A02','R01','R02'), V04B_CARD_TYPES, [], { random: ordered })
   for (const c of [...duel.players.player.hand]) duel = summonCreature(duel, cardInstanceId(c))
-  equal([duel.players.player.creatures.length,duel.players.player.mana,duel.players.player.creatures.map((u) => u.entityKind)], [3,1,['real','real','real']])
+  equal([duel.players.player.creatures.length,duel.players.player.mana,duel.players.player.creatures.map((u) => u.entityKind)], [4,1,['real','token','real','real']])
 })
 
 test('inicio aislado de ocho identidades y siete tipos frente al sandbox de 39, sin activar legado', () => {
@@ -249,10 +249,12 @@ test('duplicados enemigos reales tienen instancias propias sin copyId y la IA ex
   const hand = requireInvoker(duel.players.opponent).hand
   ok(hand[0].instanceId !== hand[1].instanceId && hand.every((c) => c.entityKind === 'real' && !c.copyId))
   duel = playEnemyCards(duel)
-  equal(duel.players.opponent.creatures.length,3)
-  equal(new Set(duel.players.opponent.creatures.map((c) => c.card.instanceId)).size,3)
-  equal(new Set(duel.players.opponent.creatures.map((c) => c.id)).size,3)
-  ok(duel.players.opponent.creatures.every((c) => c.entityKind === 'real' && !c.copyId))
+  equal(duel.players.opponent.creatures.length,5)
+  equal(new Set(duel.players.opponent.creatures.map((c) => c.card.instanceId)).size,5)
+  equal(new Set(duel.players.opponent.creatures.map((c) => c.id)).size,5)
+  equal(duel.players.opponent.creatures.filter((c) => c.entityKind === 'real').length,3)
+  equal(duel.players.opponent.creatures.filter((c) => c.entityKind === 'token').length,2)
+  ok(duel.players.opponent.creatures.every((c) => !c.copyId))
 })
 
 test('rechaza IDs persistentes/de baraja/instancias/participantes/campo duplicados sin mutar entradas', () => {
@@ -341,7 +343,7 @@ test('mano duplicada renderizada selecciona solo una instancia y muestra copia, 
   const markup = renderToStaticMarkup(<CombatView {...props} />)
   equal((markup.match(/class="hand-card is-selected/g) ?? []).length,1)
   ok(markup.includes('copy-1') && markup.includes('copy-2') && markup.includes('is-wounded'))
-  const pendingSession = prepare('A02')
+  const pendingSession = prepare('A03')
   const pendingMarkup = renderToStaticMarkup(<CollectionView session={pendingSession} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} />)
-  ok(pendingMarkup.includes('Efectos pendientes M2–M3') && pendingMarkup.includes('todavía no se ejecutan'))
+  ok(pendingMarkup.includes('Efectos pendientes M3') && pendingMarkup.includes('efectos M3 pendientes'))
 })

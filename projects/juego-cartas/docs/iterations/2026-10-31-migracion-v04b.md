@@ -1,4 +1,4 @@
-# Duelo en la cripta — migración V0.4B: M0 y preparación de M1
+# Duelo en la cripta — migración V0.4B: M0 y M1
 
 Propósito: conservar la autorización, decisiones y continuidad de la migración desde el prototipo legado. Fecha del registro: 2026-10-31. Punto de entrada: [plan vivo](../implementation-plan.md). Este registro no sustituye la [especificación implementada del legado](../spec-v1.md) ni presenta reglas futuras como instaladas.
 
@@ -95,8 +95,8 @@ Las categorías se aplican por contrato/caso, no clasifican una suite mixta ente
 
 | Hito | Entrega y dependencias | Estado de autorización |
 |---|---|---|
-| M0 | Baseline, aislamiento legado, compatibilidad, decisiones y definición M1. | Ejecutar en este encargo; sin commit. |
-| M1 | Catálogo/cupos/copias, identidades de combate, colección y sandbox; después de M0. | Solo preparación técnica. |
+| M0 | Baseline, aislamiento legado, compatibilidad, decisiones y definición M1. | Aceptado y cerrado en `be974b9b424a52db9653ab73c485fb71a6327991`. |
+| M1 | Catálogo/cupos/copias, identidades de combate, colección y sandbox; después de M0. | Ejecución autorizada después del cierre M0; entrega sin commit, ver sección de ejecución. |
 | M2 | Recursos, fichas, activaciones y fatiga; después de M1; P5 y MIG-D02 donde corresponda. | No ejecutar. |
 | M3 | Efectos avanzados, escudos MIG-D04, curación, ritual/objetivos; después de M2 y decisiones P3/P4/P8. | No ejecutar. |
 | M4 | Diez encuentros aislados e IA; después de M3; MIG-D02/MIG-D07 y convención predesplegada. | No ejecutar. |
@@ -107,7 +107,9 @@ Las categorías se aplican por contrato/caso, no clasifican una suite mixta ente
 
 Contenidos inalterados de ensayo: 19 salas, 21 tipos/39 copias, 23 principales/16 opcionales, diez combates. Señora de las Ratas: 10 PV y `A02, N03, N02 | A02, N03`, sin A04. Escaramuzas: 04 H01+N02+N05; 07 A02×2; 08 A02+N03; 16 N05+N06+N07; 17 H01+N04+R03. Las cifras/mazos son experimentales; ningún resultado de M0 acredita balance nuevo.
 
-## M1 — definición técnica propuesta, NO implementada
+## M1 — definición técnica registrada en M0 (antecedente)
+
+La sección siguiente conserva la propuesta entregada en M0; la autorización e implementación posteriores se registran en «M1 — ejecución autorizada». Sus límites M2–M8 se mantienen. Las menciones a falta de autorización de M1 al final de esta propuesta describen aquel momento, no el estado actual.
 
 ### Alcance e interfaces
 
@@ -182,3 +184,113 @@ Preflight del cierre: HEAD `8fb9c4f023d08f2b60013502e13e591c9c8d8eb1`, rama main
 Antes de invocar el ejecutor se comprueban el diff completo, los siete paths, preflight sin modificaciones y revisión independiente del cierre documental. El hash real y el estado posterior se registrarán en la continuidad de M1 y en la entrega después de ejecutar y verificar, sin escribir un hash circular en su propio commit.
 
 Revisión independiente del cierre: reviewer nativo en contexto nuevo, **aprobado apto para cierre, sin hallazgos**. Inspeccionó los siete paths, comparó las 49 líneas legadas con HEAD y confirmó alcance/índice, aceptación y autorizaciones. Utiliza los tests/build aceptados y preflight 7/7; no editó ni repitió pruebas. Sin correcciones requeridas. La última comprobación de formato se repite inmediatamente antes del ejecutor; solo se autoriza el commit M0, nunca push ni commit M1.
+
+Resultado real del cierre: ejecutor instalado y fuente con hashes coincidentes, preflight 7/7 satisfactorio, commit **`be974b9b424a52db9653ab73c485fb71a6327991`**, mensaje `juego-cartas: cerrar M0 de migracion V0.4B y aislar legado`. Verificación `diff-tree --no-renames`: exactamente los siete paths M0 listados, cuatro M y tres A, sin artefactos. Después: índice y árbol limpios, `main` +10 sobre `origin/main` (referencia local `f401a0ed719d7b61cc41d95b789389e3df8813eb`), ningún push. M0 cerrado y aceptado; no se altera su commit al registrar esta continuación.
+
+## M1 — ejecución autorizada, entrega sin commit
+
+El encargo posterior autoriza implementar la definición técnica anterior: 21 tipos oficiales, 39 copias, identidades persistentes/de combate inequívocas, MIG-D01, recuperación 0/1/5 con suelo 1 y preparaciones aisladas de inicio/sandbox. Autoriza adaptar únicamente las superficies necesarias de colección, reserva, baraja, mano y selección, con inspección renderizada dirigida. No autoriza M2–M8, commit M1 ni push. Este encargo sustituye únicamente los estados anteriores «M1 no autorizado/no iniciado»; no cambia los contratos o pendientes de otros hitos.
+
+Baseline M1: `HEAD be974b9b424a52db9653ab73c485fb71a6327991`, `main` +10, índice/unstaged/untracked vacíos tras el commit M0; no hay trabajo ajeno que separar. Evidencia técnica inicial: código idéntico al M0 aceptado, 179/179 + spatial y build registrados arriba; no se atribuye una nueva ejecución a este baseline. Implementer nativo posee código/pruebas M1; coordinador posee documentación, comprobaciones e inspección visual. No se delegan decisiones creativas. Revisión independiente posterior a implementación, con máximo dos ciclos de corrección; contador M1 inicial 0/2.
+
+Brief de ejecución: mantener el legado jugable y sus datos intactos; añadir modelo y catálogo nuevo mediante adaptación simple del motor común, sin segundo motor/plugins. No activar el inicio nuevo. Pruebas deben acreditar cupos históricos, identidad correcta en cada operación, aislamiento y compatibilidad, sin presentar habilidades todavía ausentes como funcionales. Sandbox puede ser fixture y harness temporal; sin interfaz de depuración permanente. La validación humana de la gestión de copias queda pendiente de la entrega al diseñador; ninguna automatización la sustituye.
+
+Plan acotado: (1) catálogo/metadatos y preparaciones aisladas; (2) cupos y recuperación, identidades de cartas/criaturas y liquidación; (3) adaptación mínima de UI y pruebas de duplicados; (4) regresiones/build, inspección renderizada, revisión independiente y entrega sin commit. M1 no implementará robo enemigo experimental, fichas/activaciones/escudos/curación/ritual, fatiga 0–1, IA nueva, orbe/restauración, mapa, cofres o puzle.
+
+Estado al iniciar: implementación M1 en curso; verificaciones posteriores e inspección/revisión pendientes. Las secciones de definición y hoja de ruta anteriores se conservan como planificación y evidencias de autorizaciones previas, no como afirmación del estado presente.
+
+### Inspección renderizada: limitación inicial de herramientas (antecedente)
+
+Se aplican `game-ui-ux` y `computer-use` al alcance acotado de duplicados, sin rediseño. Intento offline de la CLI fijada `@playwright/cli@0.1.22`: `ENOTCACHED`, sin descarga, instalación ni dependencia nueva. El inventario CUA informa que el host de acceso a navegadores no está disponible. Se intenta el fallback nativo de Chrome; tras refrescar ventanas, Computer Use termina el acceso en este turno porque no puede determinar con suficiente confianza la URL actual para aplicar su política. **No se continúa por otro canal para eludir ese bloqueo.**
+
+Se preparó un harness temporal externo con componentes reales y viewports internos previstos de 1440×900/1024×768, sin modificar el producto ni añadir ruta de depuración permanente. Servidor propio `127.0.0.1:5187` detenido tras el bloqueo; sin inspección de píxeles o gestos de las superficies M1. No se generaron capturas de M1 y no se afirma que SSR/pruebas equivalgan a validación visual. **Inspección renderizada y aceptación humana quedan pendientes; esta limitación impide declarar el cierre integral de M1.**
+
+Evidencia temporal externa: `C:/Users/klaud/AppData/Local/Temp/game-factory-m1-9e66e422-a8c5-46cd-a658-95d68f211548/`, con `server.mjs`, `fixture.tsx` y oráculo extraído en memoria de la tabla oficial del ZIP. La comparación independiente del coordinador (`catalog-oracle-result.json`) coteja las 21 definiciones compiladas contra nombres, estadísticas, M/S, clase, límite y coste de recuperación del documento oficial: **21 filas exactas y 39 copias**. Es una comprobación de datos, no inspección visual ni balance.
+
+### M1 implementado: contratos y archivos
+
+- Tipo: `CreatureCard.id` sigue siendo A/R/H/N o P/E. El nuevo catálogo conserva nombre oficial, grupo interno, ATQ/VID, M/S, `maxCopies`, especial/semilla, recuperación y habilidades con implementación `pending-m2`/`pending-m3`. Sin efectos, rarezas o crecimiento heredado añadido.
+- Copia persistente: `CreatureCopy.id`/`copyId`, salud, pertenencia a baraja/reserva y destino individuales. Sesiones con `collectionProfile` explícito `legacy`/`v04b`, mismo motor. La adaptación de perfil solo aplica contratos M1; no introduce reglas futuras.
+- Carta de combate: `instanceId` único en mano/mazo y conservado al desplegarse; propio enlaza copyId, enemigo no necesita copyId. `Creature.id` identifica la entidad de campo. `entityKind` identifica explícitamente entidades reales, preparando fichas sin generarlas. En M1 solo se construyen reales.
+- Cupos: `unlockedCopySlots` es autoridad del contexto V0.4B; descubrimientos se derivan de cupos positivos. `unlockedCardIds` permanece como proyección de compatibilidad. `grantedCopyEventIds` evita duplicar concesiones; no representa cofres espaciales nuevos.
+- Concesión `grantCreatureCopies`: valida todo y concede cupos/copias sanas en reserva una vez por evento. Recuperación no modifica cupos, paga coste 0/1/5 y suelo 1, crea identidad nueva sana en reserva y conserva superviviente. Perfil legado mantiene descubrimiento único y costes anteriores.
+- UI: catálogos opcionales en componentes de colección con default legado; artículos/controles por copyId, mano por instanceId y payload de arrastre por instancia. Copias muestran identidad/salud y cupos/vacantes; habilidades pendientes están señaladas. No cambian asignaciones, prioridades, conexiones, preview, foco ni CSS.
+- Preparaciones `createV04BInitialSession()` y `createV04BCatalogSandbox()`: respectivamente ocho copias equipadas/siete tipos/ocho cupos y 39 copias/21 tipos/39 cupos. Estados independientes. No se invocan desde el bootstrap principal ni se añade interfaz de depuración permanente.
+
+Paths M1, todos relativos a `projects/juego-cartas/`:
+
+| Superficie | Paths y motivo |
+|---|---|
+| Catálogo/preparación nuevos | `src/engine/content/v04b.ts`, `src/engine/v04bPreparations.ts`: datos oficiales y fixtures aisladas. |
+| Modelo y dominio | `src/engine/types.ts`, `session.ts`, `rules.ts`, `index.ts`: perfiles/cupos, concesión/recuperación, instancias y exports. |
+| Adaptación IA/App | `src/engine/enemy.ts`, `src/App.tsx`: referenciar instancias de mano, sin estrategia ni robo nuevos. |
+| UI mínima | `src/ui/CardViews.tsx`, `CollectionOverlay.tsx`, `CollectionViews.tsx`, `CombatView.tsx`, `combatActions.ts`: duplicados, props y payload. |
+| Pruebas | `tests/m1.tsx` nuevo; `tests/run.ts`, `tests/contentCompatibility.ts`: registrar casos y adaptar expectativas de representaciones ahora instanciadas. |
+| Documentación | `docs/implementation-plan.md`, `docs/status.md`, este registro: aceptación/commit M0, autorización/implementación/evidencia M1 y pendientes. |
+
+Total: **19 paths**, 16 modificados y tres nuevos (dos módulos y una suite). Declaraciones de datos legados y `ACTIVE_CONTENT` intactos; mundo, mapas, exploración, CSS, assets, dependencias y herramientas Factory sin cambios. Los 179 casos previos se conservan; se adaptaron comparaciones literales de cartas para comprobar sus datos más las nuevas instancias, sin retirar expectativas de gameplay.
+
+### Comprobaciones efectivas M1 y corrección previa a revisión
+
+Implementer nativo completó código/pruebas y checks. Coordinador inspeccionó los diffs y archivos nuevos, incluidos datos y pruebas. Detectó un caso reproducible en la preparación pura de sesiones: un duelo legado podía liquidarse en sesión V0.4B con copyId coincidente y sin intento activo. Implementer añadió rechazo explícito de perfiles diferentes antes de idempotencia/consecuencias y regresión en ambos sentidos sin mutación de entradas. Es corrección técnica M1 anterior al reviewer; no consume un ciclo de corrección de revisión independiente.
+
+- Implementer final: `npm.cmd test` **204/204 + spatial**, exit 0; `npm.cmd run build` correcto; preflight de sus 16 paths código/pruebas satisfactorio, índice intacto.
+- Coordinador repitió sobre ese estado: `npm.cmd test` **204/204 + spatial**, exit 0 (**179 previas + 25 M1**). Incluye MIG-D01 A02 completo; concesión atómica/única; matriz 0/1/5 con máximo 20/6/5/2/1; duplicados heridos en mezcla/reparto/robo/campo, clic/teclado/payload de arrastre mediante helpers reales, sacrificio/cancelación/eventos obsoletos, reserva, liquidación idempotente, rechazo de identidades y perfiles cruzados, y markup SSR de colección/mano.
+- Coordinador repitió build: exit 0, **67 módulos**; JS 1.254,32 kB/gzip 347,62 kB; CSS 68,63 kB/gzip 14,85 kB. Se mantienen avisos previos de Three y bundle >500 kB; no se modifican dependencias ni optimizaciones fuera de alcance.
+- Comparación independiente con catálogo oficial: 21 filas/39 copias, sin discrepancias de los datos cotejados. `git diff --check` correcto. Sin diff en fachada/datos legados, mundo/spatial, estilos ni package/lock. Artefactos de test/build siguen ignorados.
+
+Estado técnico: implementación, checks y **revisión independiente aprobados sin hallazgos**. Inspección renderizada/humana pendientes por el bloqueo documentado; ningún resultado SSR acredita píxeles, gestos nativos o balance. M1 se entrega sin commit y no se inicia M2.
+
+### Revisión independiente y estado de entrega M1
+
+Reviewer nativo en contexto nuevo, después de implementación y comprobaciones del coordinador: inspeccionó los 19 paths, incluidas las tres altas, contra alcance/criterios y matriz oficial del ZIP. Verificó cupos, recuperación, identidades, reserva, sacrificios, liquidación, preparaciones, compatibilidad y cobertura previa. Reejecutó suite compilada **204/204 + spatial**, exit 0; comprobó diff-check, HEAD `be974b9b424a52db9653ab73c485fb71a6327991` e índice vacío. No editó ni repitió build o inspección de navegador; usa el build efectivo del coordinador. **Veredicto técnico aprobado, sin hallazgos bloqueantes ni no bloqueantes. Ciclos de corrección de reviewer usados: 0 de 2.**
+
+Preflight del coordinador sobre los 19 paths explícitos: **19/19 correctos, índice intacto**. Manifiesto completo 19/19 y 35 destinos Markdown locales válidos. El cambio final para registrar este resultado es solo documental; no cambia el código revisado ni justifica repetir tests/build. Se repite comprobación de formato/estado final.
+
+Entrega **sin commit M1**, HEAD igual al cierre M0, rama `main` +10, índice vacío; 16 modificados y tres nuevos del alcance, sin trabajo ajeno. Sin push ni ejecutor adicional después de M0. Servidor temporal de inspección detenido. Funcionalidad técnica lista para evaluación del diseñador, pero **cierre integral pendiente de inspección renderizada y aceptación humana**. No se declara balance ni funcionamiento avanzado de las 21 cartas. Detenerse tras esta entrega; cualquier continuación y M2 requieren autorización expresa.
+
+### Preparación de M2, sin ejecución
+
+M2 puede partir de las identidades/entidades explícitas y metadatos existentes para fichas, recursos y activaciones. Antes de ejecutarlo se requiere la evaluación de M1 y su autorización expresa. P5 sigue pendiente: contrato de avance de principal cuando quedan activaciones voluntarias R01/N01 y opción de pasar sin usarlas. No sustituirlo por una decisión implícita del implementer. La fatiga 0–1 y R01/R02 pertenecen al alcance futuro aprobado; aún no se ejecutan. MIG-D02 deberá introducirse en el hito motor/IA correspondiente y no se aplicó en M1. P3/P4/P8 corresponden a efectos/UX posteriores; la convención A02 predesplegada se ratifica antes de los encuentros. D04/P2a ya está resuelto, sin reabrirlo. La continuación siguiente resuelve la inspección renderizada; la aceptación humana sigue pendiente.
+
+### Continuación M1 — inspección renderizada y recuperación tras límite de uso
+
+Autorización posterior del diseñador: completar únicamente la validación visual pendiente; descargar `@playwright/cli@0.1.22` de npm a caché temporal y utilizar Chrome existente, sin instalaciones globales, navegadores nuevos ni cambios de dependencias/configuración. La reanudación tras el límite de uso conserva esa autorización y prohíbe M2, commit M1 y push. No constituye una nueva iteración ni cambia las reglas. El bloqueo anterior de Computer Use se conserva como antecedente; el procedimiento temporal de CLI está documentado por `game-ui-ux` y fue autorizado expresamente.
+
+Estado recuperado: mismo HEAD `be974b9b424a52db9653ab73c485fb71a6327991`, rama `main` +10, índice vacío y exactamente los 19 paths M1 anteriores (16 M y tres nuevos). Los SHA-256 de los 19 coincidían con `baseline-files.json` de la continuación interrumpida. No se detectó trabajo ajeno ni se reconstruyó M1. Se releyeron AGENTS, workflow, habilidad UI y los tres documentos operativos. La denegación anterior fue un fallo de revisión automática por límite de uso; no ejecutó el comando ni acreditó defecto o inseguridad del proyecto. La reanudación volvió a pasar las solicitudes de ejecución por la revisión del entorno.
+
+Recursos externos reutilizados: `C:/Users/klaud/AppData/Local/Temp/game-factory-m1-render-8e20da46-dd05-49c9-84fc-058176ee825b/`. Contiene CLI/caché npm, daemon, `server.mjs`, `fixture.tsx`, scripts/resultados y PNG. Se comprobó CLI **0.1.22**, Node **22.17.1** y Chrome instalado **156.0.8078.76**. No hubo otra descarga en la reanudación. Se identificaron por ruta/command line el servidor propio PID 43864 en `127.0.0.1:5187` y daemon propio PID 23428; se reutilizaron. El navegador propio se reinició durante el diagnóstico de entrada y se mantuvo el servidor. Las evidencias permanecen fuera del árbol del proyecto y del índice.
+
+Procedimiento: CLI ejecutada desde temporal mediante su entrada Node ya descargada, `PWTEST_DAEMON_SESSION_DIR` y `PLAYWRIGHT_BROWSERS_PATH` apuntando al temporal; sesión `m1-render`, `--browser=chrome --headed`. Operaciones CLI/navegador autorizadas con los permisos requeridos, sin alterar políticas ni descargar binarios de navegador. Servidor Vite temporal importa las dependencias existentes y sirve `/` con App real. Rutas `/__m1-fixture?mode=…` existen solo en memoria del servidor de inspección, no en producto. El catálogo nuevo emplea `CollectionOverlay`, `CombatView`, funciones de sesión y `combatActions` reales. Las variantes tácticas legadas cambian solo inicializadores de App servidos en memoria; sus handlers son los originales. La selección aleatoria se fija exclusivamente en las fixtures para reproducir identidades; el bootstrap jugable continúa mezclando normalmente.
+
+| Comprobación renderizada/interactiva | Evidencia y resultado en 1440×900 y 1024×768 |
+|---|---|
+| Legado real: escena, colección y reserva | `probe-legacy.js`/`probe-legacy-output.txt` de la continuación previa: ocho copias, baraja 8→7→8 por retirar/añadir, apertura con I y cierre. PNG `legacy-scene-*` y `legacy-collection-*` abiertos: escena/HUD, cartas y controles legibles. Reutilizados sin repetir la matriz. |
+| Preparación inicial V0.4B | `probe-collections-output.txt`: ocho copias/siete tipos, dos A01 con IDs distintos; capturas `v04b-initial-*`. No se activa como aventura principal. |
+| Sandbox completo y desplazamiento | 39 artículos con **39 copyIds únicos**, 21 tipos; últimas cartas y lista de baraja accesibles. Scroll interno hasta el fondo: 3777,6 px (1440) y 6084 px (1024); sin overflow horizontal de página. Capturas `v04b-full-top-*`, `full-bottom-*`, `full-deck-bottom-*`; se inspeccionaron píxeles representativos de ambos tamaños. No se investiga ni se declara resuelta la onda de scroll diferida. |
+| Dos copias con salud distinta | Fixture `pair`: N02 copy-1 1/2 y copy-2 2/2. Retirar copy-1 deja copy-2 elegida; reincorporar copy-1 y retirar copy-2 conserva copy-1 herida en baraja. Conteo 4→3→4→3, salud e identidades intactas. `v04b-pair-before-*`, `pair-reserve-*`, `pair-second-reserve-*`. |
+| Recuperación interactiva | Fixture `vacancy`: N05 copy-30 perdida con cupo conservado, copy-31 superviviente. Botón real crea copy-40 sana en reserva; máximo 20→19, colección 38→39 y baraja permanece 38, sin reemplazar copy-31. `v04b-vacancy-before-*`/`after-*`. Esta prueba visual cubre coste 1; costes 0/5 y suelo 1 mantienen cobertura de dominio de las 204 pruebas, no se atribuyen a este gesto visual. |
+| Mano, campo y sacrificio por identidad | `probe-combat-output.txt`: H01 copy-1 herida 1/3 y copy-2 sana 3/3 visibles juntas en mano; arrastre nativo invoca copy-1 y Enter invoca copy-2, con IDs de criatura distintos. Clic en N03 y elección de copy-2 sacrifica solo esa identidad; sobrevive copy-1 con 1/3 y entra N03 copy-3. Capturas `v04b-hand-*`, `field-duplicates-*`, `sacrifice-pending-*`, `sacrifice-result-*`. Componentes/handlers reales en preparación controlada, sin flujo de aventura nueva. |
+| Regresión táctica en App legado | `probe-legacy-tactics-output.txt`: invocar por arrastre/clic; defensa y escaramuza con tres relaciones repartidas 2+1, prioridad invertida, reasignación al segundo enemigo y retirada a «Sin asignar», quedando dos relaciones. Controles, grupos y conexiones responden. PNG `legacy-hand-*`, `invocation-*`, `defense-*`, `skirmish-*` representativos abiertos. |
+
+Los tres probes de colección, combate duplicado y táctica completos terminaron con **`errors: []` y `warnings: []`** para sus errores de ejecución/consola y avisos React de claves; sin confusión de identidades observada. El último retorno a `/` confirmó de nuevo colección/baraja 8/8 y foco `exploration-viewport exploration-focused` al cerrar con Esc. `probe-final-ready-output.txt` confirma canvas **1024×768 con WebGL activo**; se abrió la captura de escena. El muestreo inicial de ese probe había leído el canvas transitorio 300×150 antes de que R3F lo dimensionara, por lo que se esperó al tamaño final. Persisten los dos avisos conocidos de Three (`Clock` y fallback de `PCFSoftShadowMap`); una petición inicial de favicon de las fixtures devolvió 404. No se presentan como defectos M1.
+
+Incidencias de la preparación: se corrigieron únicamente rutas/imports virtuales del harness que provocaban doble `createRoot`, y su recarga de fixtures; la repetición final de colección quedó sin avisos React. Un guion de arrastre usó coordenada vertical 45 en una zona de retirada de menor altura: el log informó intercepción de controles. Tras restablecer solo Chrome propio y dirigir el gesto al centro del destino, la matriz táctica completa pasó. Hubo también un intento que dejó de registrar eventos de entrada; no se atribuye causa de producto a ese estado del navegador. Los intentos incompletos no se cuentan como pruebas aprobadas. **No se encontró un defecto reproducible de M1 y no se modificó código, CSS, tests, configuración, instalación ni dependencias del proyecto.**
+
+Alcance y límites: esta evidencia es inspección de píxeles e interacciones de navegador, distinta de SSR y pruebas puras. No prueba una expedición V0.4B completa, habilidades M2–M3, IA nueva ni balance. La liquidación idempotente y heridas/pérdidas persistentes siguen acreditadas por las pruebas de dominio ya aceptadas; aquí se verificó la identidad hasta el campo y el sacrificio. No se repiten suite/build al permanecer sus archivos byte a byte iguales; se conservan los resultados efectivos anteriores 204/204 + spatial y build, y la revisión técnica sin hallazgos. Solo se actualizan estos tres documentos operativos.
+
+Revisión independiente de esta continuación: reviewer nativo en contexto nuevo, **aprobada sin hallazgos pendientes**. Leyó instrucciones/alcance, cotejó UI/tests pertinentes, harness, probes y registros; abrió 17 capturas representativas de ambos tamaños, sin regresión demostrable. Confirmó los 16 SHA-256 de código/pruebas intactos, solo tres docs actualizados, HEAD e índice y preflight read-only **19/19**. No ejecutó navegador, suite ni build; conserva sus resultados previos. Una remisión auxiliar a `RESULTADOS.md`, creado concurrentemente durante la revisión, se volvió a comprobar con el archivo ya disponible y quedó resuelta. No hubo corrección de producto ni ciclo adicional de corrección de reviewer: **0 de 2 usados**.
+
+Finalización: CLI cerró exclusivamente `m1-render`. El primer intento de detener el servidor propio devolvió error interno de PowerShell; se volvió a verificar PID/ruta exacta, se usó el método Terminate de CIM (retorno 0) y se confirmó ausencia del PID 43864 y de listener en 5187. No se detuvieron procesos ajenos. Se conservaron las evidencias y el protocolo `HUMAN-CHECK.md`/`RESULTADOS.md` en temporal. Comprobación de alcance: los 16 paths de producto/tests siguen byte a byte iguales al baseline de esta continuación; solo los tres documentos difieren. HEAD permanece `be974b9b424a52db9653ab73c485fb71a6327991`, main +10, índice vacío y mismos 19 paths (16 M, tres nuevos), sin cambios ajenos ni archivos temporales incorporados. Formato final comprobado con la misma lista explícita; no se invoca ejecutor de commit.
+
+Estado de entrega visual: **M1 listo para aceptación humana**, sin corrección de producto requerida en los estados inspeccionados. El diseñador debe evaluar personalmente la claridad/gestión de duplicados y aceptar el hito; la automatización no concede esa aceptación. `HUMAN-CHECK.md` del temporal ofrece el recorrido reproducible. La inspección renderizada ya no es un bloqueo; el cierre/commit M1 y cualquier avance M2 requieren autorización expresa posterior. Sin staging, commit ni push.
+
+### Cierre M1 — aceptación humana y commit local autorizados
+
+Decisión posterior del diseñador: **M1 expresamente aceptado**, tras completar personalmente las pruebas en el entorno temporal. Confirma catálogo 21/39, identidades/cupos/recuperación, gestión de duplicados heridos/sanos, mano/invocaciones/sacrificios específicos y compatibilidad legado. Acepta las 204/204 + spatial, build, inspección renderizada 1440×900/1024×768 y revisión independiente sin hallazgos; no solicita correcciones. No equivale a aceptar efectos M2–M3, balance o una expedición V0.4B integrada.
+
+Autoriza registrar esa aceptación, cerrar M1 con el ejecutor seguro y exactamente sus 19 paths, verificar hash/archivos/estado y usar el resultado como baseline de M2. Autoriza después implementar M2 solo donde no dependa de P5; no autoriza commit M2, M3–M8 ni push. La propuesta P5 no está ratificada y se debe presentar antes de modificar automatización o su interfaz. No se incluyen evidencias, fixtures ni herramientas temporales en Git.
+
+Preflight del cierre: `HEAD be974b9b424a52db9653ab73c485fb71a6327991`, rama `main`, índice vacío, exactamente 16 M y tres untracked propios de M1, sin trabajo ajeno. Los 16 hashes de producto/tests siguen coincidiendo con la entrega revisada; en este tramo solo se editan los tres registros operativos para la aceptación. Las verificaciones técnicas/visuales y revisiones aceptadas siguen vigentes; no se repiten suite/build/navegador ni se modifica producto. El ejecutor instalado y fuente coinciden en SHA-256 `758fa50726a64fd33b07a9485e04d5d358376a0c517e6ed29eefbd11401aefdf`. Se revisan diff/manifiesto y formato de los 19 paths, con revisión independiente documental antes del ejecutor; su resultado y el hash efectivo se registran al verificarlos. No hay staging directo ni inicio M2 anticipado.
+
+Revisión independiente de cierre: reviewer nativo en contexto nuevo, **aprobado para commit local M1, sin hallazgos**. Verificó manifiesto exacto, 16 hashes intactos, tres cambios documentales, aceptación humana, restricciones, HEAD/main +10/índice, diff-check y preflight 19/19 y hashes del ejecutor. No editó ni repitió suite/build/navegador. Se repite la comprobación final inmediata antes del ejecutor con los mismos 19 paths explícitos. La revisión no ratifica P5 ni autoriza commit M2 o push. El hash se obtiene después del commit que incorpora este registro, sin insertarlo circularmente en su propio contenido.

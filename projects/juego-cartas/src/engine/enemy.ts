@@ -1,4 +1,4 @@
-import { declareAttackers, declareBlockers, resolveCombat, RuleViolation, startCombat, summonCreature } from './rules.js'
+import { cardInstanceId, declareAttackers, declareBlockers, resolveCombat, RuleViolation, startCombat, summonCreature } from './rules.js'
 import type { DuelState } from './types.js'
 
 /** Plays every affordable card, choosing the first available creatures for sacrifice. */
@@ -17,7 +17,7 @@ export function playEnemyCards(state: DuelState): DuelState {
     if (!playable) return next
 
     const sacrifices = enemy.creatures.slice(0, playable.cost.sacrifices).map((creature) => creature.id)
-    next = summonCreature(next, playable.id, sacrifices)
+    next = summonCreature(next, cardInstanceId(playable), sacrifices)
   }
 }
 

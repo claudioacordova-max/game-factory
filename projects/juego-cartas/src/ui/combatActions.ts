@@ -1,7 +1,13 @@
-import { advanceMainPhaseIfNoLegalSummons, declareAttackers, declareBlockers, endTurn, resolveCombat, RuleViolation, startCombat, summonAvailability, summonCreature } from '../engine/rules.js'
+import { advanceMainPhaseIfNoLegalSummons, cardInstanceId, findHandCard, declareAttackers, declareBlockers, endTurn, resolveCombat, RuleViolation, startCombat, summonAvailability, summonCreature } from '../engine/rules.js'
 import { chooseEnemyBlockers, runEnemyTurn } from '../engine/enemy.js'
-import type { DuelState } from '../engine/types.js'
+import type { CreatureCard, DuelState } from '../engine/types.js'
 
+export function writeHandCardDrag(dataTransfer: Pick<DataTransfer, 'setData' | 'effectAllowed'>, card: CreatureCard): void {
+  dataTransfer.setData('text/plain', cardInstanceId(card))
+  dataTransfer.effectAllowed = 'move'
+}
+
+/** cardId is a combat instance reference, never a V04B type ID. */
 export interface PendingSummon { cardId: string; sacrificeIds: string[] }
 export interface CombatControls { duel: DuelState; pending: PendingSummon | null; revision: number }
 export type CombatAction =
@@ -60,30 +66,31 @@ export function applyCombatAction(current: CombatControls, action: CombatAction,
     } else if (action.type === 'summon') {
       requirePlayerPhase(duel, 'main')
       if (pending) throw new RuleViolation('Completa o cancela el sacrificio pendiente antes de jugar otra carta.')
-      const card = duel.players.player.hand.find((candidate) => candidate.id === action.cardId)
-      const availability = summonAvailability(duel.players.player, action.cardId)
-      if (!card || !availability.allowed) throw new RuleViolation(availability.reason)
+      const card = findHandCard(duel.players.player.hand, action.cardId, duel.collectionProfile === 'legacy')
+      if (!card) throw new RuleViolation('La instancia de carta ya no está en tu mano.')
+      const availability = summonAvailability(duel.players.player, cardInstanceId(card))
+      if (!availability.allowed) throw new RuleViolation(availability.reason)
       if (card.cost.sacrifices > 0) {
-        pending = { cardId: card.id, sacrificeIds: [] }
+        pending = { cardId: cardInstanceId(card), sacrificeIds: [] }
         message = `Elige ${card.cost.sacrifices} criatura(s). La última selección ejecuta la invocación y su pérdida permanente.`
       } else {
-        next = continueToPlayerDecision(summonCreature(duel, card.id))
+        next = continueToPlayerDecision(summonCreature(duel, cardInstanceId(card)))
         message = `${card.name} entra en juego.`
       }
     } else if (action.type === 'sacrifice') {
       requirePlayerPhase(duel, 'main')
       if (!pending) throw new RuleViolation('No hay un sacrificio pendiente.')
       const player = duel.players.player
-      const card = player.hand.find((candidate) => candidate.id === pending!.cardId)
+      const card = findHandCard(player.hand, pending!.cardId, duel.collectionProfile === 'legacy')
       if (!card) throw new RuleViolation('La carta ya no está en tu mano.')
-      const availability = summonAvailability(player, card.id)
+      const availability = summonAvailability(player, cardInstanceId(card))
       if (!availability.allowed) throw new RuleViolation(availability.reason)
       if (!player.creatures.some((unit) => unit.id === action.creatureId) || pending.sacrificeIds.some((id) => !player.creatures.some((unit) => unit.id === id))) throw new RuleViolation('Solo puedes elegir criaturas propias que sigan en el campo.')
       const ids = pending.sacrificeIds.includes(action.creatureId) ? pending.sacrificeIds.filter((id) => id !== action.creatureId) : [...pending.sacrificeIds, action.creatureId]
       if (ids.length < card.cost.sacrifices) {
         pending = { ...pending, sacrificeIds: ids }
       } else {
-        next = summonCreature(duel, card.id, ids)
+        next = summonCreature(duel, cardInstanceId(card), ids)
         sacrificedCopyIds = player.creatures.filter((unit) => ids.includes(unit.id)).flatMap((unit) => unit.copyId ? [unit.copyId] : [])
         pending = null
         next = continueToPlayerDecision(next)

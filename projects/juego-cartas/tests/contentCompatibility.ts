@@ -50,10 +50,14 @@ export const contentCompatibilityTests = [
     const enemyDeck = MAIN_ENCOUNTERS[1].opponentDeck
     const sample = createDuel({ playerDeck: [], opponentDeck: enemyDeck })
     const firstHand = requireInvoker(sample.players.opponent).hand
-    ok(firstHand.length === 3 && firstHand.every((card, index) => card === enemyDeck[index]), 'Mano enemiga inicial ordenada de tres')
+    ok(firstHand.length === 3 && firstHand.every((card, index) => card.id === enemyDeck[index].id
+      && card.attack === enemyDeck[index].attack && card.maxHealth === enemyDeck[index].maxHealth
+      && card.cost.mana === enemyDeck[index].cost.mana && card.cost.sacrifices === enemyDeck[index].cost.sacrifices
+      && card.instanceId && card.entityKind === 'real'), 'Mano enemiga inicial ordenada de tres con instancias reales')
     const enemyTurn = endTurn(resolveCombat(declareBlockers(declareAttackers(startCombat(sample), []), {})))
     const afterMaintenance = requireInvoker(enemyTurn.players.opponent)
-    ok(afterMaintenance.hand.length === 4 && afterMaintenance.hand[3] === enemyDeck[3]
+    ok(afterMaintenance.hand.length === 4 && afterMaintenance.hand[3].id === enemyDeck[3].id
+      && afterMaintenance.hand[3].instanceId && afterMaintenance.hand.slice(0, 3).every((card, index) => card === firstHand[index])
       && afterMaintenance.deck.length === enemyDeck.length - 4, 'M0 conserva el mantenimiento legado; D02 corresponde a un hito posterior')
   } },
 ]

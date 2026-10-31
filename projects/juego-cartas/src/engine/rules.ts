@@ -39,20 +39,75 @@ function shuffle(deck: CreatureCard[], random: () => number): CreatureCard[] {
   return shuffled
 }
 
+/** UI keys and payloads use instance identity. The fallback supports authored legacy fixtures. */
+export function cardInstanceId(card: CreatureCard): string {
+  return card.instanceId ?? card.id
+}
+
+export function findHandCard(hand: readonly CreatureCard[], reference: string, allowLegacyType = true): CreatureCard | undefined {
+  const instance = hand.find((card) => card.instanceId === reference)
+  if (instance) return instance
+  const byType = allowLegacyType ? hand.filter((card) => card.id === reference) : []
+  return byType.length === 1 ? byType[0] : undefined
+}
+
+/** Reject ambiguous identities before actions or settlement can affect a different copy. */
+export function validateCombatIdentities(state: DuelState): void {
+  const creatures = [...state.players.player.creatures, ...state.players.opponent.creatures]
+  const cards = [state.players.player, state.players.opponent].flatMap((side) => [
+    ...(side.kind === 'invoker' ? [...side.hand, ...side.deck] : []), ...side.creatures.map((unit) => unit.card),
+  ])
+  const instances = cards.flatMap((card) => card.instanceId ? [card.instanceId] : [])
+  const copyIds = [...state.players.player.hand, ...state.players.player.deck, ...state.players.player.creatures.map((unit) => unit.card)]
+    .flatMap((card) => card.copyId ? [card.copyId] : [])
+  if (new Set(instances).size !== instances.length || new Set(creatures.map((unit) => unit.id)).size !== creatures.length
+    || new Set(copyIds).size !== copyIds.length || new Set(state.participantCopyIds).size !== state.participantCopyIds.length
+    || (state.collectionProfile === 'v04b' && cards.some((card) => !card.instanceId || card.entityKind !== 'real'))
+    || creatures.some((unit) => unit.copyId !== unit.card.copyId
+      || (state.collectionProfile === 'v04b' && unit.entityKind !== 'real')
+      || (unit.entityKind !== undefined && unit.card.entityKind !== undefined && unit.entityKind !== unit.card.entityKind))) {
+    throw new RuleViolation('Las cartas y criaturas de combate requieren identidades únicas y coherentes.')
+  }
+}
+
 export function createDuel(setup: DuelSetup): DuelState {
   const mode = setup.mode ?? 'duel'
   if ((setup.playerLife ?? INITIAL_LIFE) <= 0 || (mode === 'duel' && (setup.opponentLife ?? INITIAL_LIFE) <= 0)) throw new RuleViolation('Un invocador requiere vida positiva.')
   if (mode === 'skirmish' && (setup.opponentDeck.length || !setup.opponentInitialField?.length)) throw new RuleViolation('Una escaramuza requiere grupo inicial y ninguna baraja enemiga.')
   const firstPlayer = setup.firstPlayer ?? 'player'
-  const playerDeck = shuffle(setup.playerDeck, setup.random ?? Math.random)
+  const collectionProfile = setup.collectionProfile ?? 'legacy'
   const participantCopyIds = setup.playerDeck.flatMap((card) => card.copyId ? [card.copyId] : [])
   if (new Set(participantCopyIds).size !== participantCopyIds.length
-    || new Set(setup.playerDeck.map((card) => card.id)).size !== setup.playerDeck.length) {
+    || (collectionProfile === 'legacy' && new Set(setup.playerDeck.map((card) => card.id)).size !== setup.playerDeck.length)) {
     throw new RuleViolation('La baraja propia no puede contener copias o tipos duplicados.')
   }
+  if (collectionProfile === 'v04b' && setup.playerDeck.some((card) => !card.maxCopies
+    || setup.playerDeck.filter((entry) => entry.id === card.id).length > card.maxCopies)) {
+    throw new RuleViolation('La baraja propia supera el límite de copias del tipo o no pertenece al catálogo V0.4B.')
+  }
   const initialField = setup.opponentInitialField ?? []
+  const allCards = [...setup.playerDeck, ...setup.opponentDeck, ...initialField]
+  const explicitIds = allCards.flatMap((card) => card.instanceId ? [card.instanceId] : [])
+  if (new Set(explicitIds).size !== explicitIds.length || allCards.some((card) => card.instanceId === '' || card.entityKind === 'token')) {
+    throw new RuleViolation('Las cartas requieren instancias únicas; las fichas no forman parte de los mazos ni del campo inicial en M1.')
+  }
+  const duelId = `duel-${nextDuelNumber++}`
+  const usedIds = new Set(explicitIds)
+  let nextInstanceNumber = 1
+  const instantiate = (card: CreatureCard): CreatureCard => {
+    let instanceId = card.instanceId
+    if (!instanceId) {
+      do { instanceId = `${duelId}-card-${nextInstanceNumber++}` } while (usedIds.has(instanceId))
+      usedIds.add(instanceId)
+    }
+    return { ...card, cost: { ...card.cost }, instanceId, entityKind: 'real' }
+  }
+  const playerDeck = shuffle(setup.playerDeck.map(instantiate), setup.random ?? Math.random)
+  const opponentDeck = setup.opponentDeck.map((card) => instantiate({ ...card, copyId: undefined, startingHealth: undefined }))
+  const opponentField = initialField.map((card) => instantiate({ ...card, copyId: undefined, startingHealth: undefined }))
   return {
-    id: `duel-${nextDuelNumber++}`,
+    id: duelId,
+    collectionProfile,
     mode,
     targets: {},
     participantCopyIds,
@@ -60,9 +115,9 @@ export function createDuel(setup: DuelSetup): DuelState {
     players: {
       player: makeInvoker(playerDeck, setup.playerFatigue ?? 0, setup.playerLife ?? INITIAL_LIFE),
       opponent: {
-        ...(mode === 'skirmish' ? { kind: 'group' as const } : makeInvoker(setup.opponentDeck, 0, setup.opponentLife ?? INITIAL_LIFE)),
-        creatures: initialField.map((card, index) => ({
-          id: `creature-${index + 1}`, card, owner: 'opponent', health: card.maxHealth, summonedTurn: 0,
+        ...(mode === 'skirmish' ? { kind: 'group' as const } : makeInvoker(opponentDeck, 0, setup.opponentLife ?? INITIAL_LIFE)),
+        creatures: opponentField.map((card, index) => ({
+          id: `creature-${index + 1}`, entityKind: 'real', card, owner: 'opponent', health: card.maxHealth, summonedTurn: 0,
         })),
       },
     },
@@ -93,7 +148,7 @@ export interface SummonAvailability {
 
 /** Checks the two current summon costs without changing combat state. */
 export function summonAvailability(invoker: Invoker, cardId: string): SummonAvailability {
-  const card = invoker.hand.find((candidate) => candidate.id === cardId)
+  const card = findHandCard(invoker.hand, cardId)
   if (!card) return { allowed: false, reason: 'La carta no está en la mano del jugador activo.' }
   if (invoker.mana < card.cost.mana) return { allowed: false, reason: 'No hay maná suficiente.' }
   if (invoker.creatures.length < card.cost.sacrifices) return { allowed: false, reason: 'Faltan criaturas para sacrificar.' }
@@ -101,7 +156,7 @@ export function summonAvailability(invoker: Invoker, cardId: string): SummonAvai
 }
 
 export function hasLegalSummon(invoker: Invoker): boolean {
-  return invoker.hand.some((card) => summonAvailability(invoker, card.id).allowed)
+  return invoker.hand.some((card) => summonAvailability(invoker, cardInstanceId(card)).allowed)
 }
 
 function requireOngoing(state: DuelState): void {
@@ -121,9 +176,11 @@ function updateSide(state: DuelState, player: PlayerId, side: CombatSide): DuelS
 
 export function summonCreature(state: DuelState, cardId: string, sacrificeIds: string[] = []): DuelState {
   requirePhase(state, 'main')
+  validateCombatIdentities(state)
   const owner = state.activePlayer
   const invoker = requireInvoker(state.players[owner])
-  const cardIndex = invoker.hand.findIndex((card) => card.id === cardId)
+  const selected = findHandCard(invoker.hand, cardId, state.collectionProfile === 'legacy')
+  const cardIndex = selected ? invoker.hand.indexOf(selected) : -1
   if (cardIndex < 0) throw new RuleViolation('La carta no está en la mano del jugador activo.')
   const card = invoker.hand[cardIndex]
   if (sacrificeIds.length !== card.cost.sacrifices) {
@@ -141,6 +198,7 @@ export function summonCreature(state: DuelState, cardId: string, sacrificeIds: s
 
   const creature: Creature = {
     id: `creature-${state.nextCreatureNumber}`,
+    entityKind: card.entityKind ?? 'real',
     copyId: card.copyId,
     card,
     owner,

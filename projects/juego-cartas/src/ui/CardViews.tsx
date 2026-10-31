@@ -4,9 +4,13 @@ import { CreaturePortrait, Icon } from './GameIcons.js'
 import { activateOnce, preventRepeatedActivationKey } from './activation.js'
 
 export function RarityLabel({ card, compact = false }: { card: CreatureCard; compact?: boolean }) {
-  if (!card.rarity) return null
+  if (!card.rarity) return card.maxCopies ? <span className="card-rarity" title={card.abilities?.length ? `Efectos pendientes M2–M3: ${card.abilities.map((ability) => ability.description).join(' ')}` : undefined}>{compact && card.copyId ? card.copyId : card.special ? 'Especial' : card.seed ? 'Semilla' : 'Normal'}{compact && Boolean(card.abilities?.length) ? ' · Pendiente' : ''}</span> : null
   const label = card.rarity === 'epic' ? '◆ Épica' : card.rarity === 'rare' ? '◇ Rara' : '● Común'
   return <span className={`card-rarity rarity-${card.rarity}`}>{label}{card.seed ? ' · Semilla' : ''}{card.growth ? compact ? ` · +${card.growthProgress ?? 0}/${card.growthCap ?? 3} ${card.growth === 'attack' ? 'ATQ' : 'VID'}` : ` · ${card.growth === 'attack' ? 'ATQ' : 'VID'} +${card.growthProgress ?? 0}/${card.growthCap ?? 3} por victoria` : ''}</span>
+}
+
+export function PendingAbilities({ card }: { card: CreatureCard }) {
+  return card.abilities?.length ? <span className="growth-note" title={card.abilities.map((ability) => `${ability.description} (Pendiente ${ability.implementation === 'pending-m2' ? 'M2' : 'M3'})`).join('\n')}>Efectos pendientes M2–M3</span> : null
 }
 
 export function CardStats({ attack, health, maxHealth }: { attack: number; health: number; maxHealth: number }) {

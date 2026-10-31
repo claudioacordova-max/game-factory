@@ -4,6 +4,7 @@ import {
   reinvokeCreatureType,
   addCopyToActiveDeck,
   baseMana,
+  cardInstanceId,
   RuleViolation,
   startSessionDuel,
   removeCopyFromActiveDeck,
@@ -180,7 +181,7 @@ export default function App() {
   }
 
   function selectCard(card: CreatureCard) {
-    dispatchCombat({ type: 'summon', cardId: card.id })
+    dispatchCombat({ type: 'summon', cardId: cardInstanceId(card) })
   }
 
   function attemptSummonDrop(cardId: string) {

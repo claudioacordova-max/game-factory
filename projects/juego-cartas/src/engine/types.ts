@@ -1,5 +1,13 @@
 export type PlayerId = 'player' | 'opponent'
 export type RandomSource = () => number
+export type CollectionProfile = 'legacy' | 'v04b'
+export type EntityKind = 'real' | 'token'
+
+export interface PendingAbility {
+  id: string
+  description: string
+  implementation: 'pending-m2' | 'pending-m3'
+}
 
 export type TurnPhase = 'main' | 'attackers' | 'blockers' | 'resolve' | 'resolved' | 'finished'
 
@@ -9,6 +17,7 @@ export interface SummonCost {
 }
 
 export interface CreatureCard {
+  /** Stable type ID, shared by all copies of this definition. */
   id: string
   name: string
   attack: number
@@ -23,10 +32,19 @@ export interface CreatureCard {
   /** Temporary duel reference to an owned copy; absent from opponent cards. */
   copyId?: string
   startingHealth?: number
+  /** Definitions have no instance ID; every combat representation receives one. */
+  instanceId?: string
+  entityKind?: EntityKind
+  group?: 'aggro' | 'ramp' | 'healing' | 'neutral'
+  maxCopies?: 1 | 2
+  special?: boolean
+  abilities?: readonly PendingAbility[]
 }
 
 export interface Creature {
+  /** Field identity, distinct from both the persistent copy and the card instance. */
   id: string
+  entityKind?: EntityKind
   /** Persistent identity of the owned copy represented by this duel creature. */
   copyId?: string
   card: CreatureCard
@@ -54,6 +72,7 @@ export interface CreatureGroup {
 export type CombatSide = Invoker | CreatureGroup
 
 export interface DuelState {
+  collectionProfile: CollectionProfile
   mode: 'duel' | 'skirmish'
   targets: Record<string, string>
   /** Unique identity used to make session outcome settlement idempotent. */
@@ -73,6 +92,7 @@ export interface DuelState {
 }
 
 export interface DuelSetup {
+  collectionProfile?: CollectionProfile
   mode?: 'duel' | 'skirmish'
   playerDeck: CreatureCard[]
   opponentDeck: CreatureCard[]

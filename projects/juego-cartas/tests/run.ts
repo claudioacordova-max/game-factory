@@ -1,5 +1,6 @@
 import { iterationUxTests } from './iterationUx.js'
 import { contentCompatibilityTests } from './contentCompatibility.js'
+import { m1Tests } from './m1.js'
 import { requireInvoker } from '../src/engine/rules.js'
 import { addCopyToActiveDeck, advanceMainPhaseIfNoLegalSummons, baseMana, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, hasLegalSummon, removeCopyFromActiveDeck, resolveCombat, RuleViolation, startCombat, summonAvailability, summonCreature, unlockCreatureType } from '../src/engine/index.js'
 import { createDuel as createShuffledDuel, startSessionDuel as startShuffledSessionDuel } from '../src/engine/index.js'
@@ -455,7 +456,9 @@ test('conserva heridas de combate en la misma copia al iniciar el duelo siguient
   const continued = finishSessionDuel(session, completed)
   const nextDuel = startSessionDuel(continued, [card], cards('enemy-next', 3))
   equal(continued.copies, [{ id: 'copy-1', cardId: 'persistent', health: 3, bonusAttack: 0, bonusHealth: 0 }])
-  equal(nextDuel.players.player.hand[0], { ...card, copyId: 'copy-1', startingHealth: 3 })
+  const { instanceId, entityKind, ...persistedCard } = nextDuel.players.player.hand[0]
+  equal(persistedCard, { ...card, copyId: 'copy-1', startingHealth: 3 })
+  truthy(instanceId && entityKind === 'real', 'La copia persistente debe recibir una instancia de combate real.')
 })
 
 test('una criatura muerta se elimina permanentemente y no vuelve al duelo siguiente', () => {
@@ -741,6 +744,7 @@ test('el aviso distingue la victoria final de una victoria que habilita el sigui
 })
 
 tests.push(...contentCompatibilityTests, ...iterationUxTests, ...h1Tests, ...h2Tests, ...h3Tests, ...worldTests, ...presentationTests, ...expeditionTests, ...explorationUiTests, ...combatPresentationTests, ...combatActionTests, ...blockAssignmentTests, ...boardGeometryTests, ...blockDragTests, ...activationTests, ...cryptVisualTests, ...cryptRenderingTests)
+tests.push(...m1Tests)
 let failed = 0
 for (const entry of tests) {
   try {

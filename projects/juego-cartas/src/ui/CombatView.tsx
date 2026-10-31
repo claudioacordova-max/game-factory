@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, DragEvent } from 'react'
 import type { CreatureCard, DuelState, GameSession } from '../engine/index.js'
-import { baseMana } from '../engine/index.js'
+import { baseMana, cardInstanceId, findHandCard } from '../engine/index.js'
 import { CreatureTile, HandCard } from './CardViews.js'
 import { GameNotice } from './GameNotice.js'
 import { Icon } from './GameIcons.js'
@@ -11,6 +11,7 @@ import { combatBoardLinks } from './boardLinks.js'
 import { COMBAT_DRAG_MIME } from './blockDrag.js'
 import { combatLayout, COMBAT_CARD_WIDTH } from './combatLayout.js'
 import { activateOnce, preventRepeatedActivationKey } from './activation.js'
+import { writeHandCardDrag } from './combatActions.js'
 
 export interface CombatViewProps {
   duel: DuelState
@@ -57,7 +58,7 @@ export function CombatView(props: CombatViewProps) {
   const attack = !props.presenting && duel.phase === 'attackers' && duel.activePlayer === 'player'
   const defense = !props.presenting && duel.phase === 'blockers' && duel.activePlayer === 'opponent'
   const directed = duel.mode === 'skirmish' && attack
-  const selectedCard = player.hand.find((card) => card.id === selectedCardId)
+  const selectedCard = selectedCardId ? findHandCard(player.hand, selectedCardId, duel.collectionProfile === 'legacy') : undefined
   const choosingSacrifice = main && Boolean(selectedCard?.cost.sacrifices)
   const board = useRef<HTMLDivElement>(null)
   const tableScroll = useRef<HTMLDivElement>(null)
@@ -174,7 +175,7 @@ export function CombatView(props: CombatViewProps) {
     </div>
 
     <section className="combat-hand" aria-label="Tu mano"><div className="combat-hand-label"><Icon name="cards" /><span>Tu mano <strong>{player.hand.length}</strong></span><small>{player.deck.length} en mazo</small></div><div className="combat-hand-row">
-      {player.hand.length ? player.hand.map((card) => <HandCard key={card.id} card={card} selected={selectedCardId === card.id} unavailableReason={main ? '' : 'Fuera de fase principal'} draggable={main} onDragStart={(event) => { event.dataTransfer.setData('text/plain', card.id); event.dataTransfer.effectAllowed = 'move' }} onClick={() => props.onSelectCard(card)} />) : <p className="combat-empty"><Icon name="cards" /><span>{player.deck.length ? 'Robarás en tu próximo turno' : 'No quedan cartas en mano o mazo'}</span></p>}
+      {player.hand.length ? player.hand.map((card) => <HandCard key={cardInstanceId(card)} card={card} selected={selectedCard === card} unavailableReason={main ? '' : 'Fuera de fase principal'} draggable={main} onDragStart={(event) => writeHandCardDrag(event.dataTransfer, card)} onClick={() => props.onSelectCard(card)} />) : <p className="combat-empty"><Icon name="cards" /><span>{player.deck.length ? 'Robarás en tu próximo turno' : 'No quedan cartas en mano o mazo'}</span></p>}
     </div></section>
     <BoardConnections boardRef={board} links={links} />
     <GameNotice message={props.notice} revision={props.noticeRevision} expiresAt={props.noticeExpiresAt} onClear={props.onClearNotice} />

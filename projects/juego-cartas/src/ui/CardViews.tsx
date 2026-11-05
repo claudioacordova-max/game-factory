@@ -1,6 +1,6 @@
 import type { DragEvent, MouseEvent } from 'react'
 import type { Creature, CreatureCard } from '../engine/index.js'
-import { effectiveAttack } from '../engine/index.js'
+import { effectiveAttack, effectiveMaxHealth } from '../engine/index.js'
 import { CreaturePortrait, Icon } from './GameIcons.js'
 import { activateOnce, preventRepeatedActivationKey } from './activation.js'
 
@@ -15,7 +15,7 @@ export function PendingAbilities({ card }: { card: CreatureCard }) {
   const abilities = card.abilities ?? []
   if (!abilities.length) return null
   const pending = abilities.filter((ability) => ability.implementation.startsWith('pending'))
-  return <span className="growth-note" title={abilities.map((ability) => `${ability.description} (${ability.implementation === 'domain-m2' ? 'Motor M2' : 'Pendiente M3'})`).join('\n')}>{pending.length ? 'Efectos pendientes M3' : 'Efectos de motor M2'}</span>
+  return <span className="growth-note" title={abilities.map((ability) => ability.description).join('\n')}>{pending.length ? 'Habilidades pendientes' : 'Habilidades'}</span>
 }
 
 /** Kept separate from the creature tile so sacrifice selection never nests buttons. */
@@ -34,14 +34,25 @@ export function R01ActivationButton({ creature, disabled = false, onActivate }: 
 export function CardStats({ attack, health, maxHealth }: { attack: number; health: number; maxHealth: number }) {
   return <span className="card-stats"><span title="Ataque"><Icon name="sword" />{attack}<small>ATQ</small></span><span className={health < maxHealth ? 'wounded-stat' : ''} title="Vida actual / máxima"><Icon name="heart" />{health}<small>/ {maxHealth} VID</small></span></span>
 }
+export function N01ActivationButton({ creature, disabled = false, onActivate }: {
+  creature: Creature; disabled?: boolean; onActivate?: (creatureId: string) => void
+}) {
+  const reference = creature.copyId ?? creature.id
+  return <button type="button" className="combat-n01-activation" disabled={disabled || !onActivate}
+    aria-label={`Activar Urna maldita ${reference}`} data-activation-copy-id={reference}
+    title={`Elige una criatura enemiga; al confirmar el objetivo, ${reference} se sacrifica y destruye esa criatura, ignorando escudos.`}
+    onClick={(event) => { if (!disabled && onActivate) activateOnce(event, () => onActivate(creature.id)) }} onKeyDown={preventRepeatedActivationKey}>
+    <span>Activar Urna maldita</span><small>Sacrifica {reference} · destruye una enemiga</small>
+  </button>
+}
 export function CreatureTile({ creature, selected = false, onClick, hint, draggable = false, onDragStart, onDragEnd }: {
   creature: Creature; selected?: boolean; onClick?: (event: MouseEvent<HTMLButtonElement>) => void; hint?: string
   draggable?: boolean; onDragStart?: (event: DragEvent<HTMLButtonElement>) => void; onDragEnd?: () => void
 }) {
-  const wounded = creature.health < creature.card.maxHealth
-  const content = <><CreaturePortrait cardId={creature.card.id} /><strong>{creature.card.name}</strong><RarityLabel card={creature.card} compact /><CardStats attack={effectiveAttack(creature)} health={creature.health} maxHealth={creature.card.maxHealth} /><span className="tile-state">{selected ? '✓ ' : ''}{hint || (wounded ? 'Herida' : 'En mesa')}</span></>
+  const wounded = creature.health < effectiveMaxHealth(creature)
+  const content = <><CreaturePortrait cardId={creature.card.id} /><strong>{creature.card.name}</strong><RarityLabel card={creature.card} compact /><CardStats attack={effectiveAttack(creature)} health={creature.health} maxHealth={effectiveMaxHealth(creature)} />{creature.shieldCharges !== undefined && <span className="creature-shield" aria-label={`Escudo: ${creature.shieldCharges}`}><Icon name="shield" />Escudo: {creature.shieldCharges}</span>}<span className="tile-state">{selected ? '✓ ' : ''}{hint || (wounded ? 'Herida' : 'En mesa')}</span></>
   const className = `creature-tile${selected ? ' is-selected' : ''}${wounded ? ' is-wounded' : ''}`
-  return onClick || draggable ? <button type="button" className={className} onClick={onClick} aria-pressed={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd}>{content}</button> : <article className={className}>{content}</article>
+  return onClick || draggable ? <button type="button" className={className} onClick={onClick ? (event) => activateOnce(event, () => onClick(event)) : undefined} onKeyDown={preventRepeatedActivationKey} aria-pressed={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd}>{content}</button> : <article className={className}>{content}</article>
 }
 export function HandCard({ card, selected, unavailableReason, draggable, onDragStart, onClick }: {
   card: CreatureCard

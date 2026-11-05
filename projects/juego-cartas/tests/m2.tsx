@@ -243,7 +243,7 @@ test('fichas pagan sacrificios generales 1/2 y pagos inválidos no consumen recu
   }
 })
 
-test('coste de tres materiales conserva selección/cancelación atómica; H04 solo admite reales sin implementar ritual', () => {
+test('coste de tres materiales conserva selección/cancelación atómica; H04 solo admite reales', () => {
   let duel = play(play(duelOf('A02', 'A02', 'H04'), 'A02'), 'A02')
   const ritual = duel.players.player.hand[0], before = JSON.stringify(duel)
   equal([sacrificeCandidates(duel.players.player, ritual).length, summonAvailability(duel.players.player, cardInstanceId(ritual)).allowed], [2, false])
@@ -359,7 +359,7 @@ test('presentación distingue ficha temporal, ATQ de esa ofensiva y metadatos de
   const pending = renderToStaticMarkup(<PendingAbilities card={card('N01')} />)
   const available = renderToStaticMarkup(<PendingAbilities card={card('A02')} />)
   const activation = renderToStaticMarkup(<PendingAbilities card={card('R01')} />)
-  ok(pending.includes('Efectos pendientes M3') && available.includes('Efectos de motor M2') && activation.includes('Efectos de motor M2') && !activation.includes('pendiente P5'))
+  ok(pending.includes('Habilidades') && available.includes('Habilidades') && activation.includes('Habilidades') && !activation.includes('pendiente P5'))
 })
 
 test('P5 conserva principal por una R01 legal sin cartas, permite pasar sin activarla y no activa automáticamente', () => {
@@ -508,7 +508,7 @@ test('P5 vista real muestra dos controles identificados y coste explícito; los 
   ok(!attacking.includes('combat-r01-activation'))
 })
 
-test('P5 solo conserva activaciones realmente legales; N01 futura y perfil legado no cambian su automatización', () => {
+test('P5 solo conserva activaciones realmente legales; N01 sin objetivos y perfil legado no cambian su automatización', () => {
   const legacy = play(createDuel({ playerDeck: [card('R01')], opponentDeck: [] }), 'R01')
   equal([hasLegalActivation(legacy), continueToPlayerDecision(legacy).phase], [false, 'attackers'])
   const pendingEffect = play(duelOf('N01'), 'N01')

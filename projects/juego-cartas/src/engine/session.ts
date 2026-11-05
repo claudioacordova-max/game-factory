@@ -260,6 +260,7 @@ export function finishSessionDuel(session: GameSession, duel: DuelState, reward?
       if (!participatingIds.has(copy.id)) return [copy]
       if (lostIds.has(copy.id)) return []
       const creature = remainingCreatures.get(copy.id)
+      if (session.collectionProfile === 'v04b' && creature?.card.id === 'H04') return [{ ...copy, health: 1, bonusAttack: 0, bonusHealth: 0 }]
       const survived = { ...copy, health: creature?.health ?? copy.health }
       if (!won || !creature || creature.card.rarity !== 'epic' || !creature.card.growth) return [survived]
       const cap = Math.min(3, creature.card.growthCap ?? 3)

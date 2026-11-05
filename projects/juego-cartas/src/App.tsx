@@ -140,7 +140,7 @@ export default function App() {
     const cancel = (event: KeyboardEvent) => {
       const target = event.target
       const editing = target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select') !== null)
-      if (!isDuelActive || !selectedCardId || !cancelSummonShortcut(event, editing)) return
+      if (!isDuelActive || !controls.current.pending || controls.current.pending.kind === 'healing' || !cancelSummonShortcut(event, editing)) return
       event.preventDefault()
       dispatchCombat({ type: 'cancel' })
     }
@@ -354,6 +354,8 @@ export default function App() {
         </GameOverlay>}
       </div> : <CombatView duel={duel} session={session} enemyName={activeEncounter?.enemyName ?? 'Oponente'} enemyMaxLife={activeEncounter?.opponentLife ?? 0}
         notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} selectedCardId={selectedCardId} sacrificeIds={sacrificeIds} attackerIds={attackerIds} targetChoices={targetChoices} blockerChoices={blockerChoices} presenting={presenting}
+        pending={controls.current.pending} onActivateN01={(creatureId) => dispatchCombat({ type: 'activate-n01', creatureId })}
+        onChooseEffectTarget={(creatureId) => dispatchCombat({ type: 'effect-target', creatureId })} onConfirmRitual={() => dispatchCombat({ type: 'confirm-ritual' })} onEditRitual={() => dispatchCombat({ type: 'edit-ritual' })}
         onSelectCard={selectCard} onActivateR01={activateRune} onAllowFieldDrop={allowFieldDrop} onDropHandCard={dropHandCard} onToggleSacrifice={toggleSacrifice} onSelectAttacker={selectPlayerAttacker}
         onStartBlockDrag={startBlockDrag} onEndBlockDrag={endBlockDrag} onDropRelation={dropRelation} onMoveBlocker={moveBlocker} onMoveAttacker={moveAttacker}
         onCancelSummon={cancelSummon} onBeginCombat={beginCombat} onDeclareAttacks={declarePlayerAttacks} onConfirmBlocks={confirmBlocks} />}

@@ -58,9 +58,9 @@ test('21 nombres, cifras, límites y costes oficiales; 7/7/7/18 copias sin rarez
   ok(V04B_CARD_TYPES.every((c) => !c.rarity && !c.growth && !c.instanceId && !c.copyId))
 })
 
-test('metadatos distinguen el dominio M2 incorporado de efectos todavía pendientes M3', () => {
+test('metadatos distinguen el dominio M2 incorporado de efectos incorporados M3', () => {
   equal(V04B_CARD_TYPES.filter((c) => c.abilities?.length).map((c) => c.id), ['A02','A03','A04','R01','R02','R03','R04','H02','H03','H04','N01'])
-  ok(V04B_CARD_TYPES.flatMap((c) => c.abilities ?? []).every((a) => a.description.length > 50 && /^(domain-m2|pending-m3)$/.test(a.implementation)))
+  ok(V04B_CARD_TYPES.flatMap((c) => c.abilities ?? []).every((a) => a.description.length > 50 && /^(domain-m2|domain-m3)$/.test(a.implementation)))
   let duel = startSessionDuel(prepare('A02','R01','R02'), V04B_CARD_TYPES, [], { random: ordered })
   for (const c of [...duel.players.player.hand]) duel = summonCreature(duel, cardInstanceId(c))
   equal([duel.players.player.creatures.length,duel.players.player.mana,duel.players.player.creatures.map((u) => u.entityKind)], [4,1,['real','token','real','real']])
@@ -329,7 +329,7 @@ test('colección y reserva renderizan ambas identidades, salud/cupos y recuperac
   validateSessionCopies(legacy)
 })
 
-test('mano duplicada renderizada selecciona solo una instancia y muestra copia, salud y pendientes de efectos', () => {
+test('mano duplicada renderizada selecciona solo una instancia y muestra copia, salud y efectos disponibles', () => {
   const initial = prepare('N03','N03')
   const session = { ...initial,copies:initial.copies.map((c,i) => ({ ...c,health:i === 0 ? 1 : 2 })) }
   const duel = startSessionDuel(session,V04B_CARD_TYPES,[],{random:ordered})
@@ -345,5 +345,5 @@ test('mano duplicada renderizada selecciona solo una instancia y muestra copia, 
   ok(markup.includes('copy-1') && markup.includes('copy-2') && markup.includes('is-wounded'))
   const pendingSession = prepare('A03')
   const pendingMarkup = renderToStaticMarkup(<CollectionView session={pendingSession} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} />)
-  ok(pendingMarkup.includes('Efectos pendientes M3') && pendingMarkup.includes('efectos M3 pendientes'))
+  ok(pendingMarkup.includes('Habilidades') && pendingMarkup.includes('Habilidades disponibles'))
 })

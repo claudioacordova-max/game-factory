@@ -6,7 +6,7 @@ export type EntityKind = 'real' | 'token'
 export interface PendingAbility {
   id: string
   description: string
-  implementation: 'pending-m2' | 'pending-m3' | 'domain-m2'
+  implementation: 'pending-m2' | 'pending-m3' | 'domain-m2' | 'domain-m3'
 }
 
 export type TurnPhase = 'main' | 'attackers' | 'blockers' | 'resolve' | 'resolved' | 'finished'
@@ -53,6 +53,10 @@ export interface Creature {
   summonedTurn: number
   /** Offensive bonus fixed when declaring attackers; cleared after that resolution. */
   attackBonus?: number
+  /** Combat-only charges; healing never restores these. */
+  shieldCharges?: number
+  /** Combat-only H04 stat bonus, independent of the offensive A04 bonus. */
+  ritualBonus?: number
 }
 
 export interface Invoker {
@@ -93,6 +97,8 @@ export interface DuelState {
   blockers: Record<string, string[]>
   winner: PlayerId | null
   nextCreatureNumber: number
+  /** Captured once on main entry, consumed in stable field order before other actions. */
+  mainHealing?: { sourceIds: string[]; index: number }
 }
 
 export interface DuelSetup {

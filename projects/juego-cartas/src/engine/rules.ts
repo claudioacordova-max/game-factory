@@ -111,7 +111,7 @@ export function createDuel(setup: DuelSetup): DuelState {
   const playerDeck = shuffle(setup.playerDeck.map(instantiate), setup.random ?? Math.random)
   const opponentDeck = setup.opponentDeck.map((card) => instantiate({ ...card, copyId: undefined, startingHealth: undefined }))
   const opponentField = initialField.map((card) => instantiate({ ...card, copyId: undefined, startingHealth: undefined }))
-  return {
+  const state: DuelState = {
     id: duelId,
     collectionProfile,
     mode,
@@ -124,6 +124,7 @@ export function createDuel(setup: DuelSetup): DuelState {
         ...(mode === 'skirmish' ? { kind: 'group' as const } : makeInvoker(opponentDeck, 0, setup.opponentLife ?? INITIAL_LIFE, collectionProfile)),
         creatures: opponentField.map((card, index) => ({
           id: `creature-${index + 1}`, entityKind: 'real', card, owner: 'opponent', health: card.maxHealth, summonedTurn: 0,
+          ...shieldState(card, collectionProfile),
         })),
       },
     },
@@ -135,6 +136,7 @@ export function createDuel(setup: DuelSetup): DuelState {
     winner: null,
     nextCreatureNumber: initialField.length + 1,
   }
+  return enterMainHealing(state)
 }
 
 export function requireInvoker(side: CombatSide): Invoker {
@@ -154,7 +156,89 @@ export function sacrificeCandidates(invoker: Invoker, card: CreatureCard): Creat
 }
 
 export function effectiveAttack(creature: Creature): number {
-  return creature.card.attack + (creature.attackBonus ?? 0)
+  return creature.card.attack + (creature.attackBonus ?? 0) + (creature.ritualBonus ?? 0)
+}
+
+export function effectiveMaxHealth(creature: Creature): number {
+  return creature.card.maxHealth + (creature.ritualBonus ?? 0)
+}
+
+function shieldState(card: CreatureCard, profile: CollectionProfile): Pick<Creature, 'shieldCharges'> {
+  return profile === 'v04b' && ['R03', 'R04'].includes(card.id) ? { shieldCharges: card.id === 'R03' ? 1 : 2 } : {}
+}
+
+/** The damage map is already distributed. Cancel the whole positive group, never redistribute. */
+function applyGroupedDamage(state: DuelState, damage: ReadonlyMap<string, number>, clearOffense = false): DuelState {
+  let next = state
+  for (const owner of ['player', 'opponent'] as const) {
+    const side = next.players[owner]
+    next = updateSide(next, owner, { ...side, creatures: side.creatures.map((unit) => {
+      const amount = damage.get(unit.id) ?? 0
+      const shielded = amount > 0 && (unit.shieldCharges ?? 0) > 0
+      const changed = { ...unit, health: unit.health - (shielded ? 0 : amount),
+        ...(shielded ? { shieldCharges: unit.shieldCharges! - 1 } : {}) }
+      if (clearOffense) delete changed.attackBonus
+      return changed
+    }).filter((unit) => unit.health > 0) })
+  }
+  return next
+}
+
+/** Shared terminal rule for combat and completed main-phase effects. */
+function finishIfTerminal(state: DuelState): DuelState {
+  const enemy = state.players.opponent
+  const winner: PlayerId | null = state.players.player.life <= 0 ? 'opponent'
+    : state.mode === 'skirmish' ? enemy.creatures.length === 0 ? 'player' : null
+      : enemy.kind === 'invoker' && enemy.life <= 0 ? 'player' : null
+  if (!winner) return state
+  const next = removeFinishedTokens(state)
+  return { ...next, phase: 'finished', winner, attackers: [], blockers: {}, targets: {}, mainHealing: undefined }
+}
+
+export function healingCandidates(state: DuelState, sourceId?: string): Creature[] {
+  return state.players[state.activePlayer].creatures.filter((unit) => unit.id !== sourceId && unit.health > 0 && unit.health < effectiveMaxHealth(unit))
+}
+
+function heal(state: DuelState, targetId: string, amount: number): DuelState {
+  const side = state.players[state.activePlayer]
+  return updateSide(state, state.activePlayer, { ...side, creatures: side.creatures.map((unit) => unit.id === targetId
+    ? { ...unit, health: Math.min(effectiveMaxHealth(unit), unit.health + amount) } : unit) })
+}
+
+function enterMainHealing(state: DuelState): DuelState {
+  if (state.collectionProfile !== 'v04b' || state.phase !== 'main') return state
+  return settleAutomaticMainHealing({ ...state, mainHealing: { index: 0,
+    sourceIds: state.players[state.activePlayer].creatures.filter((unit) => unit.card.id === 'H02' && unit.health > 0 && unit.entityKind === 'real').map((unit) => unit.id) } })
+}
+
+export function mainHealingSource(state: DuelState): Creature | undefined {
+  const id = state.mainHealing?.sourceIds[state.mainHealing.index]
+  return state.players[state.activePlayer].creatures.find((unit) => unit.id === id && unit.health > 0)
+}
+
+/** Resolve deterministic steps only. Multiple legal targets remain a mandatory choice. */
+export function settleAutomaticMainHealing(state: DuelState): DuelState {
+  let next = state
+  while (next.mainHealing && next.mainHealing.index < next.mainHealing.sourceIds.length) {
+    const source = mainHealingSource(next)
+    const candidates = source ? healingCandidates(next, source.id) : []
+    if (candidates.length > 1) break
+    if (candidates.length === 1) next = heal(next, candidates[0].id, 2)
+    next = { ...next, mainHealing: { ...next.mainHealing!, index: next.mainHealing!.index + 1 } }
+  }
+  return next
+}
+
+export function resolveMainHealing(state: DuelState, targetId: string): DuelState {
+  requirePhase(state, 'main')
+  const source = mainHealingSource(state)
+  if (!source || !healingCandidates(state, source.id).some((unit) => unit.id === targetId)) throw new RuleViolation('El objetivo de sanación ya no es válido.')
+  const next = heal(state, targetId, 2)
+  return settleAutomaticMainHealing({ ...next, mainHealing: { ...next.mainHealing!, index: next.mainHealing!.index + 1 } })
+}
+
+function requireMainChoicesComplete(state: DuelState): void {
+  if (mainHealingSource(state)) throw new RuleViolation('Resuelve primero la sanación obligatoria de comienzo de fase.')
 }
 
 export interface SummonAvailability {
@@ -179,6 +263,7 @@ export function hasLegalSummon(invoker: Invoker): boolean {
 export function r01ActivationAvailability(state: DuelState, creatureId: string): SummonAvailability {
   if (state.collectionProfile !== 'v04b') return { allowed: false, reason: 'Esta activación pertenece al catálogo V0.4B.' }
   if (state.phase !== 'main' || state.winner !== null) return { allowed: false, reason: 'Activa la Runa inestable durante tu fase principal.' }
+  if (mainHealingSource(state)) return { allowed: false, reason: 'Resuelve primero la sanación obligatoria.' }
   const side = state.players[state.activePlayer]
   const source = side.creatures.find((unit) => unit.id === creatureId)
   if (side.kind !== 'invoker' || !source || source.owner !== state.activePlayer || source.entityKind !== 'real' || source.card.id !== 'R01' || source.health <= 0) {
@@ -188,7 +273,7 @@ export function r01ActivationAvailability(state: DuelState, creatureId: string):
 }
 
 export function hasLegalActivation(state: DuelState): boolean {
-  return state.players[state.activePlayer].creatures.some((unit) => r01ActivationAvailability(state, unit.id).allowed)
+  return state.players[state.activePlayer].creatures.some((unit) => r01ActivationAvailability(state, unit.id).allowed || n01ActivationAvailability(state, unit.id).allowed)
 }
 
 /** P5: strategic convenience never removes an otherwise legal voluntary action. */
@@ -213,8 +298,9 @@ function updateSide(state: DuelState, player: PlayerId, side: CombatSide): DuelS
     : { ...state, players: { ...state.players, opponent: side } }
 }
 
-export function summonCreature(state: DuelState, cardId: string, sacrificeIds: string[] = []): DuelState {
+export function summonCreature(state: DuelState, cardId: string, sacrificeIds: string[] = [], targetId?: string): DuelState {
   requirePhase(state, 'main')
+  requireMainChoicesComplete(state)
   validateCombatIdentities(state)
   const owner = state.activePlayer
   const invoker = requireInvoker(state.players[owner])
@@ -235,14 +321,27 @@ export function summonCreature(state: DuelState, cardId: string, sacrificeIds: s
   }
   if (invoker.mana < card.cost.mana) throw new RuleViolation('No hay maná suficiente.')
 
+  const advanced = state.collectionProfile === 'v04b'
+  const healingTargets = advanced && card.id === 'H03' ? healingCandidates(state).filter((unit) => !sacrificeSet.has(unit.id)) : []
+  const entryTarget = advanced && card.id === 'A03' && state.mode === 'skirmish'
+    ? state.players[opponentOf(owner)].creatures.find((unit) => unit.id === targetId && unit.health > 0) : undefined
+  if (advanced && card.id === 'A03' && state.mode === 'skirmish' && !entryTarget) throw new RuleViolation('Elige una criatura enemiga viva antes de invocar.')
+  if (advanced && card.id === 'H03' && ((targetId !== undefined && !healingTargets.some((unit) => unit.id === targetId)) || (healingTargets.length > 1 && targetId === undefined))) {
+    throw new RuleViolation('Elige una aliada herida válida antes de invocar.')
+  }
+  const healingTarget = healingTargets.find((unit) => unit.id === targetId) ?? (healingTargets.length === 1 ? healingTargets[0] : undefined)
+  const ritualBonus = advanced && card.id === 'H04' ? sacrifices.reduce((sum, unit) => sum + unit.health, 0) : undefined
+
   const creature: Creature = {
     id: `creature-${state.nextCreatureNumber}`,
     entityKind: card.entityKind ?? 'real',
     copyId: card.copyId,
     card,
     owner,
-    health: card.startingHealth ?? card.maxHealth,
+    health: ritualBonus !== undefined ? 1 + ritualBonus : card.startingHealth ?? card.maxHealth,
     summonedTurn: state.turn,
+    ...shieldState(card, state.collectionProfile),
+    ...(ritualBonus !== undefined ? { ritualBonus } : {}),
   }
   const temporarySpent = Math.min(invoker.temporaryMana ?? 0, card.cost.mana)
   const nextInvoker: Invoker = {
@@ -254,6 +353,21 @@ export function summonCreature(state: DuelState, cardId: string, sacrificeIds: s
   }
   let next = { ...updateSide(state, owner, nextInvoker), nextCreatureNumber: state.nextCreatureNumber + 1 }
   if (state.collectionProfile === 'v04b' && ['A02', 'A04'].includes(card.id)) next = createRatToken(next, owner)
+  if (advanced && card.id === 'A03') {
+    const enemyOwner = opponentOf(owner)
+    const enemy = next.players[enemyOwner]
+    if (state.mode === 'duel') next = updateSide(next, enemyOwner, { ...requireInvoker(enemy), life: requireInvoker(enemy).life - 2 })
+    else next = applyGroupedDamage(next, new Map([[entryTarget!.id, 1]]))
+    return finishIfTerminal(next)
+  }
+  if (healingTarget) {
+    next = heal(next, healingTarget.id, 1)
+    const healed = next.players[owner].creatures.find((unit) => unit.id === healingTarget.id)!
+    if (healed.health > healingTarget.health) {
+      const side = requireInvoker(next.players[owner])
+      if (side.deck.length) next = updateSide(next, owner, { ...side, hand: [...side.hand, side.deck[0]], deck: side.deck.slice(1) })
+    }
+  }
   return next
 }
 
@@ -282,6 +396,29 @@ export function activateR01(state: DuelState, creatureId: string): DuelState {
   const source = invoker.creatures.find((unit) => unit.id === creatureId)!
   return updateSide(state, owner, { ...invoker, mana: invoker.mana + 2, temporaryMana: (invoker.temporaryMana ?? 0) + 2,
     creatures: invoker.creatures.filter((unit) => unit.id !== source.id) })
+}
+
+export function n01ActivationAvailability(state: DuelState, creatureId: string): SummonAvailability {
+  const side = state.players[state.activePlayer]
+  const source = side.creatures.find((unit) => unit.id === creatureId)
+  const allowed = state.collectionProfile === 'v04b' && state.phase === 'main' && state.winner === null && !mainHealingSource(state)
+    && side.kind === 'invoker' && source?.owner === state.activePlayer && source.entityKind === 'real' && source.card.id === 'N01' && source.health > 0
+    && state.players[opponentOf(state.activePlayer)].creatures.some((unit) => unit.health > 0)
+  return { allowed: Boolean(allowed), reason: allowed ? '' : 'Urna maldita requiere fase principal propia, fuente viva y una criatura enemiga viva.' }
+}
+
+export function activateN01(state: DuelState, creatureId: string, targetId: string): DuelState {
+  requirePhase(state, 'main')
+  validateCombatIdentities(state)
+  const availability = n01ActivationAvailability(state, creatureId)
+  if (!availability.allowed) throw new RuleViolation(availability.reason)
+  const enemyOwner = opponentOf(state.activePlayer)
+  const enemy = state.players[enemyOwner]
+  if (!enemy.creatures.some((unit) => unit.id === targetId && unit.health > 0)) throw new RuleViolation('Elige una criatura enemiga viva; no se pagó el sacrificio.')
+  const side = state.players[state.activePlayer]
+  let next = updateSide(state, state.activePlayer, { ...side, creatures: side.creatures.filter((unit) => unit.id !== creatureId) })
+  next = updateSide(next, enemyOwner, { ...enemy, creatures: enemy.creatures.filter((unit) => unit.id !== targetId) })
+  return finishIfTerminal(next)
 }
 
 export function declareAttackers(state: DuelState, attackerIds: string[], targets: Record<string, string> = {}): DuelState {
@@ -378,25 +515,13 @@ export function resolveCombat(state: DuelState): DuelState {
     }
   }
 
-  const afterDamage = (unit: Creature): Creature => {
-    const next = { ...unit, health: unit.health - (damageToUnits.get(unit.id) ?? 0) }
-    delete next.attackBonus
-    return next
-  }
-  const nextAttackers = attackers.map(afterDamage)
-  const nextDefenders = defenders.map(afterDamage)
+  const damaged = applyGroupedDamage(state, damageToUnits, true)
   const defender = state.players[defenderPlayer]
-  const survivingDefenders = nextDefenders.filter((unit) => unit.health > 0)
+  const survivingDefenders = damaged.players[defenderPlayer].creatures
   const nextDefender: CombatSide = defender.kind === 'invoker'
     ? { ...defender, life: defender.life - damageToInvoker, creatures: survivingDefenders }
     : { ...defender, creatures: survivingDefenders }
-  const nextAttacker: CombatSide = { ...state.players[attackerPlayer], creatures: nextAttackers.filter((unit) => unit.health > 0) }
-  const updated = updateSide(updateSide(state, attackerPlayer, nextAttacker), defenderPlayer, nextDefender)
-  const winner = updated.players.player.life <= 0 ? 'opponent'
-    : state.mode === 'skirmish' ? updated.players.opponent.creatures.length === 0 ? 'player' : null
-      : nextDefender.kind === 'invoker' && nextDefender.life <= 0 ? attackerPlayer : null
-  const finished = winner ? removeFinishedTokens(updated) : updated
-  return { ...finished, phase: winner ? 'finished' : 'resolved', winner }
+  return finishIfTerminal({ ...updateSide(damaged, defenderPlayer, nextDefender), phase: 'resolved' })
 }
 
 function removeFinishedTokens(state: DuelState): DuelState {
@@ -421,7 +546,7 @@ export function endTurn(state: DuelState): DuelState {
     deck: current.deck.slice(current.deck.length > 0 ? 1 : 0),
   }
   const nextState = updateSide(state, activePlayer, nextInvoker)
-  return {
+  return enterMainHealing({
     ...nextState,
     activePlayer,
     turn: state.turn + 1,
@@ -429,11 +554,13 @@ export function endTurn(state: DuelState): DuelState {
     attackers: [],
     targets: {},
     blockers: {},
-  }
+    mainHealing: undefined,
+  })
 }
 
 export function startCombat(state: DuelState): DuelState {
   requirePhase(state, 'main')
+  requireMainChoicesComplete(state)
   const side = state.players[state.activePlayer]
   const next = state.collectionProfile === 'v04b' && side.kind === 'invoker'
     ? updateSide(state, state.activePlayer, { ...side, mana: side.mana - (side.temporaryMana ?? 0), temporaryMana: 0 }) : state
@@ -442,7 +569,7 @@ export function startCombat(state: DuelState): DuelState {
 
 /** Historical export name retained; P5 also preserves every legal V0.4B activation. */
 export function advanceMainPhaseIfNoLegalSummons(state: DuelState, interactionPending = false): DuelState {
-  if (state.phase !== 'main' || state.activePlayer !== 'player' || interactionPending || hasLegalMainPhaseAction(state)) {
+  if (state.phase !== 'main' || state.activePlayer !== 'player' || interactionPending || mainHealingSource(state) || hasLegalMainPhaseAction(state)) {
     return state
   }
   return startCombat(state)

@@ -9,6 +9,7 @@ export function playEnemyCards(state: DuelState): DuelState {
 
   let next = state
   while (true) {
+    if (next.phase === 'finished') return next
     const enemy = next.players.opponent
     if (enemy.kind === 'group') return next
     const playable = enemy.hand.find((card) =>
@@ -44,7 +45,9 @@ export function chooseEnemyBlockers(state: DuelState): Record<string, string[]> 
 
 /** Runs the enemy's main phase and attack, leaving the player in control of blocks. */
 export function runEnemyTurn(state: DuelState): DuelState {
-  let next = state.players.opponent.kind === 'group' ? state : startCombat(playEnemyCards(state))
+  let next = state.players.opponent.kind === 'group' ? state : playEnemyCards(state)
+  if (next.phase === 'finished') return next
+  if (next.players.opponent.kind !== 'group') next = startCombat(next)
   if (next.activePlayer !== 'opponent' || next.phase !== 'attackers') throw new RuleViolation('No es el turno de ataque enemigo.')
   next = declareAttackers(next, next.players.opponent.creatures.map((creature) => creature.id))
   return next

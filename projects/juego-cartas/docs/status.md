@@ -8,18 +8,18 @@ Lectura mínima para retomar trabajo (workflow v1.2): esta ficha → [decisions.
 
 | Campo | Valor |
 |---|---|
-| Último cierre | V0.4B M8a, 2026-11-08 («Mazo exhausto» con Eco de la cripta y «Rendirse» en `?expedicion=v04b`; playtesting aceptado). Anterior: M7 `dc03b34` |
-| Siguiente hito | M8b — integración completa y V0.4B por defecto (autorizado por fases); luego M8c — IA nivel 2 y balance |
+| Último cierre | V0.4B M8b, 2026-11-08 (integración: V0.4B por defecto, recorrido completo 01→19; playtesting aceptado). Anterior: M8a `31f3be6` |
+| Siguiente hito | M8c — IA nivel 2 con heurísticas sencillas e informe de balance (autorizado por fases; cifras requieren aprobación del diseñador) |
 | Decisiones abiertas | Zona de 03/10 provisional; «Mazo exhausto» y «Rendirse» implementados como experimentales (M8a). Ver [decisions.md](decisions.md#4-pendientes-abiertos-requieren-decisión-del-diseñador-antes-de-implementar) |
-| Juego activo | Legado por defecto (`ACTIVE_CONTENT = LEGACY_CONTENT`); expedición V0.4B jugable con `?expedicion=v04b` (con cofres desde M7) |
-| Comprobaciones | `npm test` (396/396 + spatial al cierre M8a) y `npm run build` desde `projects/juego-cartas/` |
+| Juego activo | Expedición V0.4B por defecto (desde M8b); legado con `?expedicion=legado` |
+| Comprobaciones | `npm test` (400/400 + spatial al cierre M8b) y `npm run build` desde `projects/juego-cartas/` |
 | Incidencias conocidas | Onda de scroll en Colección, diferida sin autorización |
 
 ## Propuesta y experiencia
 
 M3 (perfil V0.4B): escudos agrupados R03/R04, daño de entrada A03 y destrucción N01 con terminales inmediatos, cola obligatoria H02, cura/robo condicional H03 y ritual H04 con previsión/confirmación y retorno a 0/1. Detalle de reglas en [decisions.md](decisions.md); evidencia en el [registro M0–M3](history/migracion-v04b-m0-m3.md).
 
-El juego principal continúa con los datos P/E de `src/engine/content/legacy.ts` a través de `ACTIVE_CONTENT = LEGACY_CONTENT`. El catálogo nuevo está disponible para preparaciones aisladas, sin sustituir el inicio ni activar la aventura de 19 salas, efectos M3, orbe o diez encuentros nuevos. El dominio M2 se ejecuta únicamente en su perfil V0.4B; no altera las reglas ni el recorrido del prototipo legado descritos a continuación.
+Desde M8b el juego arranca en la expedición V0.4B (19 salas, cofres, orbe, Eco y Rendirse); el prototipo legado, accesible con `?expedicion=legado`, continúa con los datos P/E de `src/engine/content/legacy.ts` a través de `ACTIVE_CONTENT = LEGACY_CONTENT`. El catálogo nuevo está disponible para preparaciones aisladas, sin sustituir el inicio ni activar la aventura de 19 salas, efectos M3, orbe o diez encuentros nuevos. El dominio M2 se ejecuta únicamente en su perfil V0.4B; no altera las reglas ni el recorrido del prototipo legado descritos a continuación.
 
 Capacidades M1 aceptadas: catálogo oficial 21/39; cupos históricos por adquisición; copias, heridas y pérdidas independientes; recuperación 0/1/5 con suelo 1 en reserva; identidades de instancia en mano/campo y perfiles sin motor duplicado. `createV04BInitialSession()` prepara ocho copias/siete tipos y `createV04BCatalogSandbox()` prepara 39/21, con estados separados. M2 añade `temporaryMana` incluido en el total (se gasta primero y expira al salir de principal), renovación R02 futura, `activateR01`, tokens y `attackBonus` A04. P5 conserva principal por activaciones legales, ofrece activar R01 por copia o pasar sin usarla y bloquea activación/paso durante selección. Recalcula al actuar/cancelar; no activa automáticamente ni veta acciones legales por estrategia. M3 implementa en el perfil V0.4B los efectos agrupados R03/R04, A03, N01, H02, H03 y H04 descritos arriba; las etiquetas reflejan estos efectos activos. El ritual H04 incluye vista previa y confirmación con filtro de materiales reales. La aventura normal sigue usando el legado; esta aceptación no acredita IA estratégica, expedición V0.4B integrada ni balance.
 

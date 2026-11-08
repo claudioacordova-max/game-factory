@@ -23,6 +23,7 @@ export function DeckPanel({ session, cardTypes = PLAYER_CARD_TYPES, onChangeDeck
   </section>
 }
 export function CollectionView({ session, cardTypes = PLAYER_CARD_TYPES, onChangeDeck, onReinvoke }: Props & { onReinvoke: (cardId: string) => void }) {
+  const v04b = session.collectionProfile === 'v04b'
   return <section className="collection-view stone-panel" aria-labelledby="collection-title">
     <header className="panel-heading"><div><p className="section-kicker">Tus invocaciones</p><h2 id="collection-title">Colección <span>{session.copies.length}</span></h2></div><span className="subtle">{discoveredCardIds(session).length} tipos descubiertos</span></header>
     <p className="collection-help">{session.collectionProfile === 'v04b' ? 'Cada copia tiene identidad y salud propias. Solo puedes recuperar cupos ya obtenidos; perder una copia conserva su cupo. ' : 'Una copia por tipo, incluida la reserva. '}Reinvocar una perdida crea una copia básica en reserva y consume vida máxima del invocador (mínimo 1). Las semillas se recuperan gratis.</p>
@@ -47,16 +48,16 @@ export function CollectionView({ session, cardTypes = PLAYER_CARD_TYPES, onChang
             {session.collectionProfile === 'v04b' && <p className="copy-base-stats">{copy ? `Copia ${copy.id}` : `Cupo ${slot + 1} vacante`} · {copies.length}/{slots} poseídas / cupos obtenidos · límite {type.maxCopies}</p>}
             <PendingAbilities card={card} />
             <CardStats attack={card.attack} health={copy?.health ?? card.maxHealth} maxHealth={card.maxHealth} />
-            <p className="copy-base-stats">Base: {type.attack} ATQ · {type.maxHealth} VID{copy && (copy.bonusAttack > 0 || copy.bonusHealth > 0) ? ` · Mejoras: +${copy.bonusAttack} ATQ / +${copy.bonusHealth} VID` : ' · Sin mejoras'}</p>
-            {card.growth && <p className="growth-note">Mejora por victoria · {card.growth === 'attack' ? 'ATQ' : 'VID'} +{copy ? card.growth === 'attack' ? copy.bonusAttack : copy.bonusHealth : 0}/{card.growthCap}</p>}
+            <p className="copy-base-stats">Base: {type.attack} ATQ · {type.maxHealth} VID{v04b ? copy && copy.health >= card.maxHealth ? ' · Copia sana' : '' : copy && (copy.bonusAttack > 0 || copy.bonusHealth > 0) ? ` · Mejoras: +${copy.bonusAttack} ATQ / +${copy.bonusHealth} VID` : ' · Sin mejoras'}</p>
+            {!v04b && card.growth && <p className="growth-note">Mejora por victoria · {card.growth === 'attack' ? 'ATQ' : 'VID'} +{copy ? card.growth === 'attack' ? copy.bonusAttack : copy.bonusHealth : 0}/{card.growthCap}</p>}
             <p className="ownership-state">{!copy ? 'Sin copia · tipo descubierto' : copy.health < card.maxHealth ? `Herida · ${inDeck ? 'En baraja' : 'En reserva'}` : inDeck ? 'En tu baraja' : 'En reserva'}</p>
-            {copy && <p className="recovery-cost">Si se pierde: reinvocar {recovery.cost === 0 ? 'gratis' : `cuesta ${recovery.cost} de vida máxima`}. Copia básica, sin mejoras.</p>}
+            {copy && <p className="recovery-cost">Si se pierde: reinvocar {recovery.cost === 0 ? 'gratis' : `cuesta ${recovery.cost} de vida máxima`}.{v04b ? ' Vuelve sana a la reserva.' : ' Copia básica, sin mejoras.'}</p>}
             {copy ? <button type="button" className={`button ${inDeck ? 'button-secondary' : 'button-primary'}`} disabled={session.activeDuelId !== null} onClick={() => onChangeDeck(copy.id, !inDeck)} aria-label={`${inDeck ? 'Retirar' : 'Añadir'} ${card.name}${identityLabel} ${inDeck ? 'de' : 'a'} baraja`}>{inDeck ? 'Retirar de baraja' : 'Añadir a baraja'}</button> : <div className="reinvoke-action"><p>Recuperar: {recovery.cost} vida máxima<br/>Máximo: {session.invokerMaxLife} → {recovery.resultingMaxLife}</p><button type="button" className="button button-primary" disabled={!recovery.allowed} onClick={() => onReinvoke(card.id)} aria-label={`Reinvocar ${card.name}${identityLabel}`}>Reinvocar {card.seed ? 'gratis' : ''}</button>{recovery.reason && <p>{recovery.reason}</p>}</div>}
           </article>
         })
       })}
     </div>
     {session.copies.length === 0 && <p className="empty-state">No quedan copias. Recupera semillas gratis para preparar otra baraja.</p>}
-    <footer className="collection-footnote"><Icon name="skull" />Las bajas y sacrificios pierden su copia y sus mejoras. El tipo descubierto se conserva.</footer>
+    <footer className="collection-footnote"><Icon name="skull" />{v04b ? 'Morir o sacrificarse elimina la copia; su cupo se conserva y recuperarla cuesta vida máxima (las semillas, gratis).' : 'Las bajas y sacrificios pierden su copia y sus mejoras. El tipo descubierto se conserva.'}</footer>
   </section>
 }

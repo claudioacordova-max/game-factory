@@ -6,7 +6,7 @@ import type { ExpeditionState } from '../engine/world.js'
 import { encounterSummary, worldInteractionMessage } from '../ui/encounterSummary.js'
 import type { AdventureAdapter } from './types.js'
 
-/** The unchanged legacy expedition (default game), expressed as calls the shell already made. */
+/** The unchanged legacy expedition (?expedicion=legado since M8b), expressed as calls the shell already made. */
 export const LEGACY_ADVENTURE: AdventureAdapter<ExpeditionState> = {
   id: 'legacy',
   create: () => createExpeditionState(),

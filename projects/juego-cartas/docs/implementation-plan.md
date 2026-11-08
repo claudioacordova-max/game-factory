@@ -4,7 +4,7 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 
 ## Estado actual
 
-- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 cerrado: M6a y M6b (2026-11-08)**; **M7 cerrado (2026-11-08)**; **M8 autorizado por fases: M8a cerrado (2026-11-08), M8b siguiente**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
+- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 cerrado: M6a y M6b (2026-11-08)**; **M7 cerrado (2026-11-08)**; **M8 autorizado por fases: M8a y M8b cerrados (2026-11-08), M8c siguiente**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
 - Juego activo: legado. Incidencia diferida: scroll de Colección.
 - Última evidencia técnica (cierre M8a): 396/396 + spatial, build correcto (aviso de bundle >500 kB conocido).
 
@@ -28,7 +28,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M6a | Grafo de 19 salas y estado de exploración, puzle, muro | `7c0b1c1` |
 | V0.4B M6b | Expedición V0.4B jugable en 3D (`?expedicion=v04b`), combates reales, rendimiento | `0e0d2b5` |
 | V0.4B M7 | Once cofres, 31 premios únicos a reserva, panel de premios | `dc03b34` |
-| V0.4B M8a | Mazo exhausto (Eco de la cripta), Rendirse, terminación de encuentros | commit local de cierre M8a (hash en Git) |
+| V0.4B M8a | Mazo exhausto (Eco de la cripta), Rendirse, terminación de encuentros | `31f3be6` |
+| V0.4B M8b | Integración: V0.4B por defecto, legado con `?expedicion=legado`, recorrido completo | commit local de cierre M8b (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -201,3 +202,31 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Revisión: aprobada sin bloqueantes. Dudas del implementer resueltas por el diseñador (Eco no curable; rendirse en principal y ataque; Eco ficha normal salvo exclusiones). Ciclo correctivo 1/2 (filtro de curas) revisado y aprobado.
 - Playtesting: **aceptado por el diseñador 2026-11-08** («Todo bien, cerrar»).
 - Cierre: commit local `juego-cartas: cerrar V0.4B M8a de mazo exhausto y rendirse`, sin push.
+
+## V0.4B M8b — integración completa y V0.4B por defecto (en curso)
+
+### Brief
+
+- Autorización: plan M8 por fases y «V0.4B por defecto» decididos por el diseñador 2026-11-08 (decisions.md «Plan M8 por fases»); M8b autorizado tras cerrar M8a.
+- Alcance: (1) sin parámetro arranca la expedición V0.4B; el legado queda accesible con `?expedicion=legado`; `?expedicion=v04b` sigue funcionando; el legado conserva su comportamiento y su suite. Revisar si `ACTIVE_CONTENT` u otros puntos de entrada deben cambiar para que el modo por defecto sea coherente, sin alterar el legado. (2) Final de expedición al vencer B3 (sala 19) coherente con la presentación existente y exploración posterior permitida. (3) Prueba de recorrido completo 01→19 por el motor real (combates reales con jugador automático o estados de victoria, cofres, puzle, muro, orbe y ciclo de ratas) que demuestre integración de M4–M8a. (4) «Sin secretos obligatorios»: B3 alcanzable y vencible sin puzle 11/12, sin muro 14↔18 y sin cofres opcionales; verificar textos, HUD, ayuda y README (uso de los modos). (5) Corrección de incoherencias de integración que aparezcan (textos legados en V0.4B, ayudas, iconos) dentro de superficies existentes.
+- Fuera de alcance: IA nivel 2 y cambios de cifras (M8c), arte final, scroll de Colección, eliminar el legado.
+- Criterios de aceptación: arranque sin parámetro en V0.4B y legado idéntico con `?expedicion=legado` (suite legada intacta); recorrido completo automatizado hasta B3 con final de expedición; ningún requisito secreto para completar; rendimiento sin regresión frente a M7 (+25 % sobre máximo legado, sin fugas); tests previos + nuevos y build correctos; inspección visual del arranque, final de expedición y ayuda a 1440×900 y 1024×768.
+- **Mecánicas e invariantes:** decisions.md §2 y M1–M8a; ninguna regla nueva.
+- Decisiones creativas: ninguna abierta; cualquier texto o pantalla final nueva que requiera criterio creativo se consulta.
+- Revisión: completa. Playtesting humano: **requerido** (recorrido completo por el diseñador).
+- Modelos: implementer opus (integración y UI), reviewer sonnet.
+
+### Baseline
+
+- `HEAD 31f3be633d57b77d6af748e3dd098b4062f2ff9e`, árbol limpio salvo este plan.
+
+### Resultado (cerrado 2026-11-08)
+
+- Rutas: `src/adventure/{mode,select}.ts` (V0.4B por defecto; legado con `?expedicion=legado`), `src/adventure/{legacyAdventure,v04bAdventure}.ts` y `src/engine/content.ts` (solo comentarios; `ACTIVE_CONTENT` se mantiene en legado porque el adaptador V0.4B no lo consume), `src/App.tsx` (título del desplegable de resultado y clase `encounter-result-fit` solo en V0.4B), `src/styles.css`, `src/ui/CollectionViews.tsx` (textos sin mejoras legadas solo en V0.4B), `README.md` (modos y reglas V0.4B), `tests/m6b.tsx` (expectativa de acceso por modo), `tests/m8b.tsx` (nuevo), `tests/run.ts`; este plan.
+- Checks del coordinador: tests 400/400 + spatial, build correcto, `git diff --check` limpio, rutas dentro del alcance.
+- Recorrido automatizado 01→19 por vías reales (11 cofres, puzle con fallo, muro, rendición y orbe, segundo ciclo de ratas, final) y ruta mínima sin secretos 01-02-03-04-05-06-14-15-19. Los combates descartan intentos perdidos sin liquidar (no afirma balance): un jugador automático simple pierde 6 de 7 intentos en 17 y a veces en 06 (dato para M8c).
+- Final de expedición: reutiliza el patrón existente («Demo completada»), exploración posterior permitida.
+- Rendimiento (`--headed`, 1440×900): máximo V0.4B 269 / 18.915 / 39 / 3 (= M7) frente a legado 293 / 21.759 / 39 / 3; sin fugas tras dos vueltas; FPS mediana 142,0 vs 142,4.
+- Inspección visual: arranque sin parámetro, legado con parámetro, ayuda, final y Colección V0.4B a 1440×900 y 1024×768.
+- Revisión: aprobada sin bloqueantes. Ciclo correctivo 1/2 (textos de Colección y altura del panel de resultado en V0.4B) revisado y aprobado. Conocido sin cambio: el panel de resultado legado se estira a toda la altura (CSS compartido; legado intacto por criterio).
+- Playtesting: **aceptado** por el diseñador (2026-11-08, «Todo bien, cerrar»).

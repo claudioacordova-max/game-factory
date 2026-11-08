@@ -15,7 +15,7 @@ function chestReward(roomId: V04BRoomId, cardIds: readonly string[], copyIds: re
   }) }
 }
 
-/** V0.4B expedition (M6b, chests M7), only reachable with ?expedicion=v04b. */
+/** V0.4B expedition (M6b, chests M7): the default game since M8b (also ?expedicion=v04b). */
 export const V04B_ADVENTURE: AdventureAdapter<V04BPlayState> = {
   id: 'v04b',
   create: () => createV04BPlay(),

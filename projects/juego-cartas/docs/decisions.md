@@ -11,7 +11,7 @@ Propósito: lectura obligatoria y suficiente sobre **reglas aprobadas, invariant
 
 ## 2. Invariantes que todo cambio debe preservar
 
-- El juego principal sigue en legado: `ACTIVE_CONTENT = LEGACY_CONTENT`. V0.4B solo en preparaciones aisladas hasta una integración autorizada (M8). Mismo motor; sin segundo motor, plugins ni DSL de efectos.
+- Desde M8b (2026-11-08) el juego arranca en la expedición V0.4B; el legado sigue disponible con `?expedicion=legado`. `ACTIVE_CONTENT = LEGACY_CONTENT` se conserva para el adaptador legado (el V0.4B no lo consume). Mismo motor; sin segundo motor, plugins ni DSL de efectos.
 - Crecimiento legado por **victoria de copia invocada y superviviente**, no por eliminaciones. Legado: cero/una copia por tipo, reinvocación básica fuera de combate y coste de máximo con suelo 1. Mezclar solo baraja propia; enemigos deterministas. No restaurar ordenación manual de robo, confirmación separada de sacrificios (salvo H04, P8) ni fin de turno manual.
 - Sesión en memoria, sin guardado durable; nivel fijo 1. Estadísticas, recompensas y cifras son baseline experimental: no rebalancear automáticamente.
 - Motor TypeScript separado de UI/3D; sin dependencias ni arquitectura nuevas implícitas. Render estático agrupado con fallback de normales y DPR1.
@@ -73,7 +73,7 @@ Propósito: lectura obligatoria y suficiente sobre **reglas aprobadas, invariant
 | M5 | Restauración, orbe y ciclo | M3; restauración/orbe decididos 2026-11-08; MIG-D03, MIG-D06 |
 | M6 | Grafo, estado, 3D, puzle y secreto (M6a y M6b cerrados) | M5; MIG-D05, puzle y secreto decididos 2026-11-08 |
 | M7 | Ocho iniciales y 31 premios únicos (**cerrado 2026-11-08**) | M1, M5, M6; MIG-D01 |
-| M8 | Integración M4/M7, pruebas, playtesting y balance separado; sin secretos obligatorios (**autorizado 2026-11-08, fases M8a–M8c; M8a cerrado**) | M4, M7 |
+| M8 | Integración M4/M7, pruebas, playtesting y balance separado; sin secretos obligatorios (**autorizado 2026-11-08, fases M8a–M8c; M8a y M8b cerrados**) | M4, M7 |
 
 Contenido de ensayo inalterado: 19 salas, 21 tipos/39 copias, 23 principales/16 opcionales, diez combates. Señora de las Ratas: 10 PV, `A02, N03, N02 | A02, N03`, sin A04. Escaramuzas: 04 H01+N02+N05; 07 A02×2; 08 A02+N03; 16 N05+N06+N07; 17 H01+N04+R03. Cifras y mazos experimentales.
 

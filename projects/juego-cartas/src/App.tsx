@@ -38,7 +38,7 @@ import {
   togglePlayerAttacker,
 } from './ui/combatSelection.js'
 
-/** Without ?expedicion=v04b the legacy expedition is created exactly as before; ?perf adds the probe. */
+/** Without a parameter the V0.4B expedition starts; ?expedicion=legado creates the legacy game exactly as before; ?perf adds the probe. */
 export default function App() {
   const [{ adapter, perf }] = useState(() => {
     const search = typeof window === 'undefined' ? '' : window.location.search
@@ -374,10 +374,10 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
         <ExplorationHUD life={session.invokerLife} maxLife={session.invokerMaxLife} mana={usableMana} fatigue={session.fatigue} level={player.level} roomName={location.roomName} zoneName={location.zoneName} complete={location.complete} onCollection={() => setView('collection')} orb={orbControl} />
         {view !== 'collection' && !lastResult && !chestReward && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} />}
         {view === 'collection' && <CollectionOverlay session={session} cardTypes={adapter.collectionCardTypes} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
-        {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'}`} onClose={closeResult}>
+        {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'}${adapter.id === 'v04b' ? ' encounter-result-fit' : ''}`} onClose={closeResult}>
           <span className="result-seal"><Icon name={lastResult.won ? 'check' : 'skull'} /></span>
           <p className="section-kicker">{lastResult.won ? 'Encuentro superado' : 'La aventura continúa'}</p><h1>{lastResult.title}</h1><p className="result-outcome">{lastResult.outcome}</p><p className="result-resources">{lastResult.resources}</p>
-          <details open><summary>Heridas, bajas, mejoras y descubrimientos</summary><ul>{lastResult.details.map((detail) => <li key={detail}>{detail}</li>)}</ul></details>
+          <details open><summary>{adapter.id === 'v04b' ? 'Heridas, bajas y sacrificios' : 'Heridas, bajas, mejoras y descubrimientos'}</summary><ul>{lastResult.details.map((detail) => <li key={detail}>{detail}</li>)}</ul></details>
           <button type="button" className="button button-primary" onClick={closeResult}>Continuar explorando<Icon name="arrow" /></button>
         </GameOverlay>}
         {chestReward && <ChestRewardOverlay reward={chestReward} onClose={closeChestReward} />}

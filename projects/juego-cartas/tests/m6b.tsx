@@ -108,10 +108,12 @@ class Walker {
 }
 
 // ---------- Acceso por parámetro ----------
-test('acceso: solo ?expedicion=v04b crea la expedición V0.4B; sin parámetro el juego legado es idéntico', () => {
-  equal(expeditionModeFromSearch(''), 'legacy')
-  equal(expeditionModeFromSearch('?expedicion=otra'), 'legacy')
-  equal(expeditionModeFromSearch('?v04b'), 'legacy')
+// M8b replaces the access expectation: V0.4B is the default and the legacy game needs ?expedicion=legado.
+test('acceso: ?expedicion=v04b y el arranque por defecto crean V0.4B; ?expedicion=legado crea el juego legado idéntico', () => {
+  equal(expeditionModeFromSearch(''), 'v04b')
+  equal(expeditionModeFromSearch('?expedicion=otra'), 'v04b')
+  equal(expeditionModeFromSearch('?v04b'), 'v04b')
+  equal(expeditionModeFromSearch('?expedicion=legado'), 'legacy')
   equal(expeditionModeFromSearch('?expedicion=v04b'), 'v04b')
   equal(expeditionModeFromSearch('?perf&expedicion=v04b'), 'v04b')
   ok(adventureForMode('legacy') === LEGACY_ADVENTURE && adventureForMode('v04b') === V04B_ADVENTURE)

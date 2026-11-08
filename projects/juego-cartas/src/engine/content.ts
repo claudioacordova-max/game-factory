@@ -1,7 +1,7 @@
 import { LEGACY_CONTENT } from './content/legacy.js'
 
-// Static selection for the playable expedition. Future content stays isolated until
-// its collection, engine and world contracts are implemented and authorized.
+// Static content facade of the legacy expedition (?expedicion=legado since M8b). The default V0.4B
+// expedition never reads it: its adapter binds its own catalogue, encounters and map directly.
 export const ACTIVE_CONTENT = LEGACY_CONTENT
 
 // Compatibility facade: consumers receive one complete data set, never mixed tables.

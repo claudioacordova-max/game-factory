@@ -4,7 +4,7 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 
 ## Estado actual
 
-- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 cerrado: M6a y M6b (2026-11-08)**; **M7 cerrado (2026-11-08)**; **M8 autorizado por fases: M8a y M8b cerrados (2026-11-08), M8c siguiente**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
+- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 cerrado: M6a y M6b (2026-11-08)**; **M7 cerrado (2026-11-08)**; **M8 cerrado: M8a, M8b y M8c (2026-11-08)**; propuestas de cifras pendientes de decisión; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
 - Juego activo: legado. Incidencia diferida: scroll de Colección.
 - Última evidencia técnica (cierre M8a): 396/396 + spatial, build correcto (aviso de bundle >500 kB conocido).
 
@@ -29,7 +29,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M6b | Expedición V0.4B jugable en 3D (`?expedicion=v04b`), combates reales, rendimiento | `0e0d2b5` |
 | V0.4B M7 | Once cofres, 31 premios únicos a reserva, panel de premios | `dc03b34` |
 | V0.4B M8a | Mazo exhausto (Eco de la cripta), Rendirse, terminación de encuentros | `31f3be6` |
-| V0.4B M8b | Integración: V0.4B por defecto, legado con `?expedicion=legado`, recorrido completo | commit local de cierre M8b (hash en Git) |
+| V0.4B M8b | Integración: V0.4B por defecto, legado con `?expedicion=legado`, recorrido completo | `69bb33d` |
+| V0.4B M8c | IA nivel 2 e informe de balance ([balance-m8c.md](balance-m8c.md)) | commit local de cierre M8c (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -203,7 +204,7 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Playtesting: **aceptado por el diseñador 2026-11-08** («Todo bien, cerrar»).
 - Cierre: commit local `juego-cartas: cerrar V0.4B M8a de mazo exhausto y rendirse`, sin push.
 
-## V0.4B M8b — integración completa y V0.4B por defecto (en curso)
+## V0.4B M8b — integración completa y V0.4B por defecto (cerrado)
 
 ### Brief
 
@@ -230,3 +231,29 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Inspección visual: arranque sin parámetro, legado con parámetro, ayuda, final y Colección V0.4B a 1440×900 y 1024×768.
 - Revisión: aprobada sin bloqueantes. Ciclo correctivo 1/2 (textos de Colección y altura del panel de resultado en V0.4B) revisado y aprobado. Conocido sin cambio: el panel de resultado legado se estira a toda la altura (CSS compartido; legado intacto por criterio).
 - Playtesting: **aceptado** por el diseñador (2026-11-08, «Todo bien, cerrar»).
+- Cierre: commit local `69bb33d` `juego-cartas: cerrar V0.4B M8b de integración y V0.4B por defecto`, sin push.
+
+## V0.4B M8c — IA nivel 2 e informe de balance (cerrado)
+
+### Brief
+
+- Autorización: plan M8 por fases (diseñador 2026-11-08); M8c autorizado tras cerrar M8b. Heurísticas nivel 2 aprobadas por el diseñador 2026-11-08 (decisions.md «Heurísticas IA nivel 2»), sustituyen al nivel 1 en V0.4B.
+- Alcance: (1) IA nivel 2 en `src/engine/enemy.ts` solo para el perfil V0.4B (el legado no cambia): ataque, bloqueo, sacrificios y orden de cartas según la decisión; curas, escudos y R01 como nivel 1. Valor de una criatura = ATQ efectivo + vida actual; las fichas valen 0 como material. (2) El nivel 1 se conserva solo como estrategia de referencia en la simulación de balance. (3) Simulación de balance reproducible sin dependencias nuevas: diez encuentros × semillas × ambos iniciales, rival nivel 1 frente a nivel 2, al menos dos estilos de jugador automático; mide victorias, turnos, apariciones del Eco y rendiciones si aplica; incluye el recorrido completo 01→19. (4) Informe de balance en `docs/balance-m8c.md` con resultados y propuestas de cifras (salas 17 y 06 primero), **sin cambiar ningún número**.
+- Fuera de alcance: cambiar cifras, mazos, vidas o maná (requiere aprobación posterior del diseñador sobre el informe), optimizador o búsqueda, IA de grupos de escaramuza, legado, arte.
+- Criterios de aceptación: cada heurística cubierta por pruebas deterministas con fixtures; el rival nunca realiza acciones ilegales ni deja turnos bloqueados; la simulación de terminación M8a sigue terminando para todos los encuentros (cota documentada); suite previa (ajustando solo expectativas del nivel 1 sustituido) y build correctos; informe con método, tablas y propuestas.
+- Decisiones creativas: las propuestas de cifras del informe; se consultan, no se aplican.
+- Revisión: completa. Playtesting humano: **requerido** (combates contra nivel 2).
+- Modelos: implementer sonnet (lógica), reviewer sonnet.
+
+### Baseline
+
+- `HEAD 69bb33de181f568c84a88eb52bf8696903cbf198`, árbol limpio salvo este plan y decisions.md.
+
+### Resultado (cerrado 2026-11-08)
+
+- Rutas: `src/engine/enemy.ts` (nivel 2 por defecto en V0.4B; nivel 1 como parámetro de referencia), `tests/m4.ts` y `tests/m8b.tsx` (fijan nivel 1 donde prueban su comportamiento; helpers exportados con nivel), `tests/m8c.tsx` (nuevo, 22 pruebas), `tests/{balance,balanceRun,balanceWhatIf}.ts` (simulación; `node .test-dist/tests/balanceRun.js [--quick] [--what-if]`), `tests/run.ts`, `docs/balance-m8c.md`.
+- Checks del coordinador: tests 419/419 + spatial, build correcto, `git diff --check` limpio, contenido real sin cambios.
+- Interpretaciones del implementer, confirmadas por el diseñador al cerrar: H04 valorado con su bono ritual; «mayor coste» = maná + sacrificios; sin bloqueo «aguanta sin matar» fuera de emergencia; R01 solo si habilita una carta que la heurística 3 jugaría.
+- Simulación: sin acciones ilegales ni turnos bloqueados; terminación máxima 30 turnos (cota 60).
+- Revisión: aprobada sin bloqueantes. Observación: la ruta mínima sin secretos solo está demostrada contra nivel 1; contra nivel 2 el jugador automático no gana 06 ni 19 con las 8 iniciales (decisión de balance o limitación del jugador automático). Corrección menor del informe (Eco en 02) aplicada por el coordinador.
+- Playtesting: **aceptado** por el diseñador (2026-11-08, «Todo bien, cerrar»). Propuestas de cifras del informe pendientes de decisión (no aplicadas).

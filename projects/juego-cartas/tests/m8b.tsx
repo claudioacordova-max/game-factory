@@ -7,6 +7,7 @@ import {
 } from '../src/engine/index.js'
 import type { Creature, DuelState, GameSession, V04BInteraction, V04BPlayState, V04BRoomId } from '../src/engine/index.js'
 import { chooseEnemyBlockers, runEnemyTurn } from '../src/engine/enemy.js'
+import type { EnemyAiLevel } from '../src/engine/enemy.js'
 import { closestInteractable, isWalkable, roomWithObjects } from '../src/engine/spatial.js'
 import type { Point2, RoomDefinition, SpatialPose } from '../src/engine/spatial.js'
 import { createExpeditionState } from '../src/engine/world.js'
@@ -58,7 +59,7 @@ function mostWounded(candidates: readonly Creature[]): Creature | undefined {
 
 /** Heals as required, summons every payable card (tokens, then weakest real creatures as sacrifices), activates R01 only
  * when it enables a card, then attacks with every creature that has ATQ (skirmish: all on the first real foe). */
-function playerTurn(start: DuelState): DuelState {
+export function playerTurn(start: DuelState, level: EnemyAiLevel = 1): DuelState {
   let d = start
   while (mainHealingSource(d)) d = resolveMainHealing(d, mostWounded(healingCandidates(d, mainHealingSource(d)!.id))!.id)
   while (d.phase === 'main') {
@@ -84,12 +85,12 @@ function playerTurn(start: DuelState): DuelState {
   const attackers = d.players.player.creatures.filter((unit) => effectiveAttack(unit) > 0).map((unit) => unit.id)
   const foes = d.players.opponent.creatures.filter((unit) => !unit.echo)
   d = declareAttackers(startCombat(d), attackers, d.mode === 'skirmish' ? Object.fromEntries(attackers.map((id) => [id, foes[0].id])) : {})
-  return resolveCombat(d.mode === 'skirmish' ? d : declareBlockers(d, chooseEnemyBlockers(d)))
+  return resolveCombat(d.mode === 'skirmish' ? d : declareBlockers(d, chooseEnemyBlockers(d, level)))
 }
 
 /** Blocks each rival attacker with a free creature that survives it; never chump-blocks. */
-function rivalTurn(start: DuelState): DuelState {
-  const d = runEnemyTurn(start)
+export function rivalTurn(start: DuelState, level: EnemyAiLevel = 1): DuelState {
+  const d = runEnemyTurn(start, level)
   if (d.phase === 'finished') return d
   if (d.phase !== 'blockers') throw new Error(`Turno rival bloqueado en fase ${d.phase}`)
   const free = [...d.players.player.creatures]
@@ -102,11 +103,12 @@ function rivalTurn(start: DuelState): DuelState {
   return resolveCombat(declareBlockers(d, blocks))
 }
 
-function playOut(start: DuelState, label: string): DuelState {
+/** M8c: the walk uses the level-1 rival by default so the integration test does not depend on balance; level 2 is measured by the balance simulation. */
+export function playOut(start: DuelState, label: string, level: EnemyAiLevel = 1): DuelState {
   let d = start
   for (let step = 0; step < 200 && d.phase !== 'finished'; step += 1) {
     validateCombatIdentities(d)
-    d = d.activePlayer === 'player' ? playerTurn(d) : rivalTurn(d)
+    d = d.activePlayer === 'player' ? playerTurn(d, level) : rivalTurn(d, level)
     if (d.phase === 'finished') break
     d = endTurn(d)
   }
@@ -137,16 +139,21 @@ function poseNear(play: V04BPlayState, objectId: string, from: SpatialPose): Spa
   return { x: point.x, z: point.z, yaw: 0 }
 }
 
-interface FightLog { room: V04BRoomId; attempts: number; summary: EncounterSummary }
+export interface FightLog { room: V04BRoomId; attempts: number; summary: EncounterSummary; level: EnemyAiLevel }
 
 /** Drives App's real adapter: pose-validated interactions, real combats played to the end and the adapter's settlement. */
-class Expedition {
+export class Expedition {
   pose: SpatialPose
   fights: FightLog[] = []
   orbUses = 0
   recoveries = 0
   seed = 1
-  constructor(public play: V04BPlayState = createV04BPlay()) { this.pose = v04bSpatialRoom('01').spawn }
+  /** Set when `fight` runs out of attempts. */
+  blocked: { room: V04BRoomId; attempts: number }[] = []
+  /** Balance data: continue against the level-1 rival when a level-2 room cannot be won. */
+  fallback = false
+  onFight?: (room: V04BRoomId, session: GameSession) => void
+  constructor(public play: V04BPlayState = createV04BPlay(), public rivalLevel: EnemyAiLevel = 1) { this.pose = v04bSpatialRoom('01').spawn }
   get room() { return this.play.expedition.currentRoomId }
   get session() { return this.play.expedition.session }
   set session(session: GameSession) { this.play = V04B_ADVENTURE.withSession(this.play, session) }
@@ -204,7 +211,7 @@ class Expedition {
     this.prepare()
     const { started, pose } = this.launch(this.seed++)
     let d = started.duel
-    if (d.activePlayer === 'opponent') d = endTurn(rivalTurn(d))
+    if (d.activePlayer === 'opponent') d = endTurn(rivalTurn(d, this.rivalLevel))
     ok(surrenderAvailability(d).allowed, 'Rendirse disponible en el turno propio')
     const summary = this.commit(started, pose, surrender(d))
     ok(!summary.won && this.session.fatigue === 1, 'La rendición liquida una derrota normal con fatiga 1')
@@ -220,16 +227,21 @@ class Expedition {
     // A player restores before a boss duel when the orb has something to restore.
     if (V04B_ENCOUNTERS.find((entry) => entry.id === room)?.mode === 'duel') this.useOrbIfUseful()
     this.prepare()
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const { started, pose } = this.launch(this.seed++)
-      const finished = playOut(started.duel, `${room}#${attempt}`)
-      if (finished.winner !== 'player') continue
-      const summary = this.commit(started, pose, finished)
-      ok(summary.won, `${room}: victoria liquidada`)
-      this.fights.push({ room, attempts: attempt, summary })
-      return summary
+    this.onFight?.(room, this.session)
+    for (let level = this.rivalLevel; ; level = 1) {
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const { started, pose } = this.launch(this.seed++)
+        const finished = playOut(started.duel, `${room}#${attempt}`, level)
+        if (finished.winner !== 'player') continue
+        const summary = this.commit(started, pose, finished)
+        ok(summary.won, `${room}: victoria liquidada`)
+        this.fights.push({ room, attempts: attempt, summary, level })
+        return summary
+      }
+      // Balance data only (M8c): a level-2 room that cannot be won is replayed against the level-1 rival so the walk can go on.
+      this.blocked.push({ room, attempts: maxAttempts })
+      if (!this.fallback || level === 1) throw new Error(`${room}: sin victoria real en ${maxAttempts} intentos`)
     }
-    throw new Error(`${room}: sin victoria real en ${maxAttempts} intentos`)
   }
   open() {
     const roomId = this.room
@@ -265,8 +277,8 @@ function finalChecks(run: Expedition) {
   ok(V04B_ADVENTURE.location(run.play).complete)
 }
 
-test('recorrido completo 01→19 por el motor real: combates jugados, cofres, puzle, muro, orbe y ciclo de ratas', () => {
-  const run = new Expedition()
+/** The scripted full walk 01→19 (11 chests, puzzle with a failure, wall, surrender and orb, second rat cycle, final fight). */
+export function runFullWalk(run: Expedition) {
   equal(run.session.orb, { charges: 1, capacity: 1 }, 'Orbe inicial cargado')
   run.go('02'); run.fight()
   run.go('03').open().go('04').surrender()
@@ -299,18 +311,28 @@ test('recorrido completo 01→19 por el motor real: combates jugados, cofres, pu
   ok(wall.kind === 'wall' && wall.result.revealed, 'El muro abre 14↔18')
   run.go('18'); run.fight(); run.open().go('14', '16'); run.fight(); run.open().go('17'); run.fight(); run.open().go('15').open().go('19')
   run.fight()
+}
+
+test('recorrido completo 01→19 por el motor real: combates jugados, cofres, puzle, muro, orbe y ciclo de ratas', () => {
+  const run = new Expedition()
+  runFullWalk(run)
   equal(CHEST_ROOMS.filter((id) => isChestOpened(run.play.expedition, id)), CHEST_ROOMS, 'Los once cofres reclamados')
   equal(run.session.grantedCopyEventIds.length, 12, 'Preparación inicial + 11 cofres')
   finalChecks(run)
   report(`M8b recorrido completo: ${run.fights.map((f) => `${f.room}×${f.attempts}`).join(' ')} · orbe ${run.orbUses} · recuperaciones ${run.recoveries} · copias ${run.session.copies.length}`)
 })
 
-test('sin secretos obligatorios: B3 alcanzable y vencible sin puzle 11/12, sin muro 14↔18 y sin cofres', () => {
-  const run = new Expedition()
+/** Minimal route without secrets: 01-02-03-04-05-06-14-15-19. */
+export function runMinimalWalk(run: Expedition) {
   run.go('02'); run.fight()
   run.go('03', '04'); run.fight()
   run.go('05', '06'); run.fight()
   run.go('14', '15', '19'); run.fight()
+}
+
+test('sin secretos obligatorios: B3 alcanzable y vencible sin puzle 11/12, sin muro 14↔18 y sin cofres', () => {
+  const run = new Expedition()
+  runMinimalWalk(run)
   const expedition = run.play.expedition
   ok(!expedition.puzzle.solved && expedition.puzzle.progress === 0, 'Puzle sin tocar')
   ok(!expedition.wallExamined, 'Muro sin examinar')

@@ -8,11 +8,11 @@ Lectura mínima para retomar trabajo (workflow v1.2): esta ficha → [decisions.
 
 | Campo | Valor |
 |---|---|
-| Último cierre | V0.4B M8b, 2026-11-08 (integración: V0.4B por defecto, recorrido completo 01→19; playtesting aceptado). Anterior: M8a `31f3be6` |
-| Siguiente hito | M8c — IA nivel 2 con heurísticas sencillas e informe de balance (autorizado por fases; cifras requieren aprobación del diseñador) |
+| Último cierre | V0.4B M8c, 2026-11-08 (IA nivel 2 en V0.4B e [informe de balance](balance-m8c.md); playtesting aceptado). Anterior: M8b `69bb33d` |
+| Siguiente hito | Ninguno autorizado. Hoja de ruta M4–M8 completa; pendiente decidir las propuestas de cifras de [balance-m8c.md](balance-m8c.md) (17 primero, luego 06) |
 | Decisiones abiertas | Zona de 03/10 provisional; «Mazo exhausto» y «Rendirse» implementados como experimentales (M8a). Ver [decisions.md](decisions.md#4-pendientes-abiertos-requieren-decisión-del-diseñador-antes-de-implementar) |
 | Juego activo | Expedición V0.4B por defecto (desde M8b); legado con `?expedicion=legado` |
-| Comprobaciones | `npm test` (400/400 + spatial al cierre M8b) y `npm run build` desde `projects/juego-cartas/` |
+| Comprobaciones | `npm test` (419/419 + spatial al cierre M8c; balance: `node .test-dist/tests/balanceRun.js [--what-if]` tras compilar tests) y `npm run build` desde `projects/juego-cartas/` |
 | Incidencias conocidas | Onda de scroll en Colección, diferida sin autorización |
 
 ## Propuesta y experiencia

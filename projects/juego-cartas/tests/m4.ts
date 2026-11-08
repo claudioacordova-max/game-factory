@@ -92,11 +92,15 @@ test('A02 predesplegada (07/08) no crea ficha; A02 invocada por el rival en 09 s
   // Una A02 invocada crea ficha 1/1 (dominio).
   const manual = summonCreature(duel, enemyOf(duel).hand[0].instanceId!)
   equal(manual.players.opponent.creatures.map((c) => c.entityKind), ['real', 'token'])
-  // La IA: A02 (+ficha) -> N03 paga con la ficha -> N02 con el maná 1. ATQ 1 + 3 + 2 = 6, todo real y sin fichas.
-  const turn = runEnemyTurn(duel)
+  // Nivel 1 (referencia): A02 (+ficha) -> N03 paga con la ficha -> N02 con el maná 1. ATQ 1 + 3 + 2 = 6, todo real y sin fichas.
+  const turn = runEnemyTurn(duel, 1)
   equal(turn.players.opponent.creatures.map((c) => [c.card.id, c.entityKind]), [['A02', 'real'], ['N03', 'real'], ['N02', 'real']])
   equal([turn.phase, turn.attackers.length], ['blockers', 3])
   equal(turn.players.opponent.creatures.reduce((sum, c) => sum + c.card.attack, 0), 6)
+  // Nivel 2 (M8c): mayor coste primero. N02 (maná) entra; luego N03 (coste 1) antes que A02 y sacrifica a N02 (valor 4 <= 5); A02 crea su ficha después.
+  const smart = runEnemyTurn(duel)
+  equal(smart.players.opponent.creatures.map((c) => [c.card.id, c.entityKind]), [['N03', 'real'], ['A02', 'real'], ['token-rat', 'token']])
+  equal([smart.phase, smart.attackers.length], ['blockers', 3])
 })
 
 // ---------- MIG-D02 ----------
@@ -155,7 +159,8 @@ test('El Devoto invoca H04 sacrificando tres reales con X correcto y nunca usa f
   const idol = plain.players.opponent.creatures.find((c) => c.card.id === 'H04')!
   equal([ids(plain.players.opponent.creatures), idol.ritualBonus, idol.health], [['H04', 'N05', 'N05'], 7, 8])
   // Con ficha presente: A02 crea la ficha; H04 consume tres reales (N05, A02, primera H01) y la ficha queda.
-  const tokened = runEnemyTurn(rival(['A02', 'H04', 'N05'], ['H01', 'H01', 'N05'], 'opponent', 18))
+  // Nivel 1 (referencia): la mano se juega en orden, así que A02 entra antes y H04 consume a la A02 real.
+  const tokened = runEnemyTurn(rival(['A02', 'H04', 'N05'], ['H01', 'H01', 'N05'], 'opponent', 18), 1)
   const h04 = tokened.players.opponent.creatures.find((c) => c.card.id === 'H04')!
   equal([h04.ritualBonus, h04.health], [5, 6])
   equal(tokened.players.opponent.creatures.filter((c) => c.entityKind === 'token').length, 1)
@@ -213,7 +218,8 @@ test('El Rey Esqueleto, con su baraja real y un jugador pasivo, invoca legalment
     const seen = new Set<string>()
     for (let step = 0; step < 40 && d.phase !== 'finished'; step += 1) {
       if (d.activePlayer === 'player') { d = endTurn({ ...d, phase: 'resolved' }); continue }
-      d = runEnemyTurn(d)
+      // Nivel 1 (referencia): el nivel 2 no sacrifica 9 de valor por N09 (valor 8), por lo que puede no invocarla (ver m8c).
+      d = runEnemyTurn(d, 1)
       d.players.opponent.creatures.forEach((c) => seen.add(c.card.id))
       d = endTurn(resolveCombat(declareBlockers(d, {})))
     }

@@ -1,6 +1,6 @@
 # Duelo en la cripta — estado vigente
 
-Propósito: describir el prototipo implementado de `projects/juego-cartas/`. Revisión: 2026-11-07.
+Propósito: describir el prototipo implementado de `projects/juego-cartas/`. Revisión: 2026-11-08.
 
 ## Ficha de continuidad
 
@@ -8,11 +8,11 @@ Lectura mínima para retomar trabajo (workflow v1.2): esta ficha → [decisions.
 
 | Campo | Valor |
 |---|---|
-| Último cierre | V0.4B M6b, 2026-11-08 (expedición V0.4B jugable con `?expedicion=v04b`; playtesting aceptado). Anterior: M6a `7c0b1c1` |
-| Siguiente hito | M7 — ocho iniciales y 31 premios únicos (cofres). **No autorizado** |
-| Decisiones abiertas | Zona de 03/10 provisional; política de duplicados en cofres (P6/MIG-D01) a confirmar para M7; agotamiento mutuo sin ganador (M8). Ver [decisions.md](decisions.md#4-pendientes-abiertos-requieren-decisión-del-diseñador-antes-de-implementar) |
-| Juego activo | Legado por defecto (`ACTIVE_CONTENT = LEGACY_CONTENT`); expedición V0.4B jugable con `?expedicion=v04b` (sin cofres) |
-| Comprobaciones | `npm test` (356/356 + spatial al cierre M6b) y `npm run build` desde `projects/juego-cartas/` |
+| Último cierre | V0.4B M7, 2026-11-08 (once cofres con 31 premios únicos a reserva y panel de premios en `?expedicion=v04b`; playtesting aceptado). Anterior: M6b `0e0d2b5` |
+| Siguiente hito | M8 — integración M4/M7, pruebas, playtesting y balance separado. **No autorizado** |
+| Decisiones abiertas | Zona de 03/10 provisional; agotamiento mutuo sin ganador (M8). Ver [decisions.md](decisions.md#4-pendientes-abiertos-requieren-decisión-del-diseñador-antes-de-implementar) |
+| Juego activo | Legado por defecto (`ACTIVE_CONTENT = LEGACY_CONTENT`); expedición V0.4B jugable con `?expedicion=v04b` (con cofres desde M7) |
+| Comprobaciones | `npm test` (369/369 + spatial al cierre M7) y `npm run build` desde `projects/juego-cartas/` |
 | Incidencias conocidas | Onda de scroll en Colección, diferida sin autorización |
 
 ## Propuesta y experiencia

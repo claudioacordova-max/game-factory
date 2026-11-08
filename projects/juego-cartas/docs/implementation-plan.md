@@ -4,9 +4,9 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 
 ## Estado actual
 
-- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 cerrado: M6a y M6b (2026-11-08)**; **M7–M8 no autorizados**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
+- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 cerrado: M6a y M6b (2026-11-08)**; **M7 cerrado (2026-11-08)**; **M8 no autorizado**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
 - Juego activo: legado. Incidencia diferida: scroll de Colección.
-- Última evidencia técnica (cierre M6b): 356/356 + spatial, build correcto (aviso de bundle >500 kB conocido).
+- Última evidencia técnica (cierre M7): 369/369 + spatial, build correcto (aviso de bundle >500 kB conocido).
 
 ## Cierres
 
@@ -26,7 +26,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M4 | Diez encuentros aislados, MIG-D02, IA nivel 1 | `fbde853` |
 | V0.4B M5 | Restauración, orbe en HUD, ciclo de ratas MIG-D03 | `7aabf7a` |
 | V0.4B M6a | Grafo de 19 salas y estado de exploración, puzle, muro | `7c0b1c1` |
-| V0.4B M6b | Expedición V0.4B jugable en 3D (`?expedicion=v04b`), combates reales, rendimiento | commit local de cierre M6b (hash en Git) |
+| V0.4B M6b | Expedición V0.4B jugable en 3D (`?expedicion=v04b`), combates reales, rendimiento | `0e0d2b5` |
+| V0.4B M7 | Once cofres, 31 premios únicos a reserva, panel de premios | commit local de cierre M7 (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -144,3 +145,31 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Decisiones en decisions.md: «M6b aprobado por el diseñador» (acceso, combates, representación, rendimiento obligatorio).
 - Pendientes: zona de 03/10 provisional; agotamiento mutuo (M8); cofres (M7).
 - Cierre: commit local `juego-cartas: cerrar V0.4B M6b de expedición 3D jugable`, sin push.
+
+## V0.4B M7 — cofres y 31 premios únicos (cerrado 2026-11-08)
+
+### Brief
+
+- Autorización: el diseñador autorizó M7 y decidió destino, aviso y estado bloqueado, 2026-11-08 (decisions.md «M7 aprobado por el diseñador»).
+- Alcance: once cofres V0.4B visibles en 3D en sus salas (`v04bMap.ts`), interacción E validada por posición, concesión atómica con `grantCreatureCopies` (evento único por cofre, copias sanas en reserva), estado abierto persistente en la expedición y no reactivado por el ciclo de ratas, aviso de motivo si no está disponible, panel de premios con nombres oficiales (E/Esc, foco al avatar), Colección refleja las copias nuevas. Expedición inicia con las ocho iniciales de `createV04BInitialSession()`.
+- Fuera de alcance: V0.4B por defecto, integración y balance (M8), juego legado, scroll de Colección, agotamiento mutuo.
+- Criterios de aceptación: sin parámetro el legado es idéntico (suite legada intacta); los 11 cofres aparecen, alcanzables sin bloquear salidas ni colisiones; disponibilidad según M6a (13/15 al llegar, 12 con puzle, 03 tras B1, 14 tras B2, 04/07/09/16/17/18 tras victoria alguna vez); cada cofre concede exactamente sus cartas una vez; reclamar todos lleva a 39 copias/21 tipos con cupos = máximos; pérdida previa de copia no impide reclamar (MIG-D01); bloqueado en combate; ciclo de ratas no reactiva; rendimiento sin regresión frente a M6b (+25 % máximo legado, sin fugas); tests previos + nuevos y build correctos; inspección visual de cofres cerrado/bloqueado/abierto y panel a 1440×900 y 1024×768.
+- **Mecánicas e invariantes:** decisions.md §2; MIG-D01; M5/M6 y sus contratos; `ACTIVE_CONTENT = LEGACY_CONTENT` por defecto.
+- Decisiones creativas: ninguna abierta.
+- Revisión: completa. Playtesting humano: **requerido** antes del cierre.
+- Modelos: implementer opus (3D/UI), reviewer sonnet.
+
+### Baseline
+
+- `HEAD 0e0d2b5012319ed5191cf79359251a7508826f1a`, árbol limpio; cambios de esta sesión incluidos en M7: `docs/decisions.md`, `docs/implementation-plan.md`.
+
+### Resultado
+
+- Rutas: `src/engine/{v04bWorld,v04bSpatial,v04bPlay}.ts` (`openChest`, evento `v04b-chest:<sala>`, estado abierto derivado de `grantedCopyEventIds`, ancla común de cofre), `src/adventure/{types,v04bAdventure}.ts` (`reward` opcional; el legado no lo devuelve), `src/ui/ChestRewardOverlay.tsx` (nuevo), `src/ui/v04bMessages.ts`, `src/App.tsx`, `src/scene/V04BActors.tsx`, `src/styles.css`, `tests/m7.tsx` (nuevo), `tests/run.ts`, `tests/m6b.tsx` (aserción «cofres ocultos» sustituida por la expectativa M7); docs `decisions.md`, este plan.
+- Checks del coordinador: tests 369/369 + spatial, build correcto (aviso de bundle conocido), `git diff --check` limpio, rutas dentro del alcance.
+- Rendimiento (harness `--headed`, 1440×900; evidencia fuera del repo): máximo V0.4B 269 / 18.915 / 39 / 3 frente a legado 293 / 21.759 / 39 / 3; sin fugas tras dos circuitos; FPS mediana 143,1 vs 144,0 (tope de refresco).
+- Inspección visual: cofre bloqueado con motivo, disponible, abierto, panel y Colección a 1440×900 y 1024×768 con estados de fixture; corregida la altura del panel.
+- Revisión: aprobada sin bloqueantes. No bloqueantes: E sobre cofre abierto da motivo genérico (ruta no ofrecida en la UI); el aviso «Abres el cofre…» aparece tras cerrar el panel, duplicando información; el panel muestra el identificador interno de copia. Ciclos correctivos 0/2.
+- Limitaciones: ancla de cofre común a las 11 salas; retratos genéricos de cartas V0.4B (estilo existente).
+- Playtesting: **aceptado por el diseñador 2026-11-08** («Todo bien, cerrar»); no bloqueantes aceptados sin cambio.
+- Cierre: commit local `juego-cartas: cerrar V0.4B M7 de cofres y premios únicos`, sin push.

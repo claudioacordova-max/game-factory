@@ -14,8 +14,8 @@ export interface V04BRoomDefinition extends RoomDefinition {
   exits: Partial<Record<V04BRoomId, { side: WallSide; position: Point2 }>>
   /** Spawn per room the player can arrive from (every incoming edge, including 10 to 04). */
   arrivals: Partial<Record<V04BRoomId, SpatialPose>>
-  /** Interactive feature anchors (encounter, altar, inscription, pedestals, cracked wall). */
-  features: { encounter?: Point2; altar?: Point2; inscription?: Point2; pedestals?: Record<V04BRune, Point2>; crackedWall?: Point2 }
+  /** Interactive feature anchors (encounter, altar, inscription, pedestals, cracked wall, chest M7). */
+  features: { encounter?: Point2; altar?: Point2; inscription?: Point2; pedestals?: Record<V04BRune, Point2>; crackedWall?: Point2; chest?: Point2 }
 }
 
 const ROOM_WIDTH = 14, ROOM_DEPTH = 12
@@ -49,6 +49,8 @@ interface RoomPlan {
 }
 
 const ENEMY = { x: 0, z: -2.4 }
+/** Chest anchor (M7): front-east corner, clear of every exit, arrival, layout obstacle and feature. */
+export const V04B_CHEST_ANCHOR: Point2 = { x: 4.4, z: 4.2 }
 /** Wall assignment per edge: the side of an exit is also where the player appears when arriving from it. */
 const PLANS: Record<V04BRoomId, RoomPlan> = {
   '01': { sides: { '02': 'north' }, layout: 'legacyEast' },
@@ -87,6 +89,7 @@ function focusOf(plan: RoomPlan, exits: V04BRoomDefinition['exits']): Point2 {
 function defineV04BRoom(roomId: V04BRoomId): V04BRoomDefinition {
   const plan = PLANS[roomId]
   const data = v04bRoom(roomId)
+  const features: V04BRoomDefinition['features'] = { ...plan.features, ...(data.chest ? { chest: { ...V04B_CHEST_ANCHOR } } : {}) }
   const exits: V04BRoomDefinition['exits'] = {}
   for (const to of v04bNeighbours(roomId)) {
     const side = plan.sides[to]
@@ -109,7 +112,7 @@ function defineV04BRoom(roomId: V04BRoomId): V04BRoomDefinition {
     spawn: roomId === '01' ? { x: 0, z: 3.3, yaw: Math.PI } : { ...arrivals[sources[0]]! },
     // Legacy-compatible anchors: `enemy` is the room focus (floor art); the others mirror exits or the focus.
     anchors: { enemy: focus, chest: focus, shrine: focus, forward: exitAt('north'), back: exitAt('south'), wing: exitAt('west') },
-    exits, arrivals, features: plan.features ?? {},
+    exits, arrivals, features,
   }
 }
 

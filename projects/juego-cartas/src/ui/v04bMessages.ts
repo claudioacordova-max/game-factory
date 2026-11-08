@@ -14,7 +14,7 @@ const type = (id: string) => {
   return card
 }
 
-/** Same structure as the legacy result; consequences come from the committed transaction. No rewards in M6b. */
+/** Same structure as the legacy result; consequences come from the committed transaction. Encounters grant no cards (chests do, M7). */
 export function v04bEncounterSummary(before: GameSession, settlement: V04BSettlement, duel: DuelState, sacrificedCopyIds: readonly string[] = []): EncounterSummary {
   const encounter = V04B_ENCOUNTERS.find((entry) => entry.id === duel.encounterId)
   if (!encounter || duel.phase !== 'finished' || !duel.winner) throw new Error('Resultado incompleto.')
@@ -41,7 +41,7 @@ export function v04bEncounterSummary(before: GameSession, settlement: V04BSettle
       `Heridas conservadas: ${wounded.length ? wounded.map((copy) => `${type(copy.cardId).name} ${copy.id} ${copy.health}/${effectiveCopyCard(type(copy.cardId), copy).maxHealth}`).join(', ') : 'ninguna'}.`,
       `Bajas: ${deaths.length ? names(deaths) : 'ninguna'}. Sacrificios: ${sacrifices.length ? names(sacrifices) : 'ninguno'}.`,
       ...(settlement.restored ? [`Restauración gratuita: ${restoredHealed} copia(s) sanada(s).`] : []),
-      'Sin premios de cartas en este ensayo.',
+      'Los encuentros no conceden cartas; los premios se reclaman en los cofres.',
     ],
   }
 }
@@ -67,6 +67,11 @@ export function v04bInteractionMessage(result: V04BInteraction): string {
       if (result.result.outcome === 'reset') return `${result.result.reason}. Puedes volver a intentarlo sin penalización.`
       if (result.result.outcome === 'solved') return `La runa de ${name} se enciende: los tres pedestales arden. El sello de la Cámara del Titán se libera en el Cruce de los Sellos.`
       return `${result.result.reason}.`
+    }
+    case 'chest': {
+      if (!result.result.opened) return `${result.result.reason}.`
+      const names = result.result.cardIds.map((id) => type(id).name).join(', ')
+      return `Abres el cofre de ${v04bRoom(result.roomId).name}: ${names} ${result.result.cardIds.length === 1 ? 'pasa' : 'pasan'} a tu reserva.`
     }
     case 'wall':
       return result.result.revealed ? 'Al apartar la piedra agrietada se abre un paso oculto hacia la Cámara del Sacrificio.' : `${result.result.reason}.`

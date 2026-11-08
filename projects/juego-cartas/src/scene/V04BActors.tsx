@@ -7,7 +7,7 @@ import type { V04BFigure } from './cryptVisuals.js'
 
 /**
  * V0.4B object renderer (M6b). Bosses and rats reuse the approved models; El Devoto and skirmish creatures are
- * provisional low-poly figures from shared primitives (no final art). Doors in normal state reuse WorldObject.
+ * provisional low-poly figures from shared primitives (no final art). Doors in normal state and chests reuse WorldObject.
  */
 const BONE = '#cdc5ad', IRON = '#525c68', BRONZE = '#b69a67'
 /** Robed body: its cone geometry belongs to the figure (released on unmount, like the approved Custodian). */
@@ -217,6 +217,8 @@ function SideAware({ object, children }: { object: ExplorationObject; children: 
 
 export function V04BWorldObject({ object, roomId, onInteract }: { object: ExplorationObject; roomId: string; onInteract: (id: string) => void }) {
   if (object.kind === 'enemy' && object.status === 'completed') return null
+  // M7 chests reuse the approved legacy chest (shared geometry/materials): locked with padlock, available, or lid open.
+  if (object.kind === 'chest') return <WorldObject object={object} roomId={roomId} onInteract={onInteract} />
   const theme = cryptTheme(roomId)
   const [kind, a, b] = (object.visual ?? '').split(':')
   if (object.kind === 'exit') {

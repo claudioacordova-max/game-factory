@@ -218,13 +218,14 @@ const at03 = () => go(win(go(createV04BExpedition(), '02'), '02'), '03')
 const objectsAt = (expedition: V04BExpedition) => v04bObjectsForRoom({ expedition, returnPoint: null })
 const exitObject = (expedition: V04BExpedition, to: string) => objectsAt(expedition).find((object) => object.id === `v04b-${expedition.currentRoomId}:exit:${to}`)
 
-test('salidas: estado visible y motivo coherentes con roomExits en todas las salas; sin cofres', () => {
+test('salidas: estado visible y motivo coherentes con roomExits en todas las salas; cofres solo donde hay cofre (M7)', () => {
   const states = [createV04BExpedition(), go(createV04BExpedition(), '02'), at03(), go(at03(), '04')]
   for (const state of states) for (const id of ROOM_IDS) {
     const here = { ...state, currentRoomId: id }
     const exits = roomExits(here)
     const objects = objectsAt(here)
-    ok(!objects.some((object) => object.kind === 'chest'), 'Los cofres no se muestran (M7)')
+    // M7 replaces the M6b expectation "chests hidden": one chest object exactly in rooms with chest data.
+    equal(objects.filter((object) => object.kind === 'chest').length, v04bRoom(id).chest ? 1 : 0, `Cofres de ${id}`)
     for (const exit of exits) {
       const object = objects.find((candidate) => candidate.id === `v04b-${id}:exit:${exit.to}`)
       if (exit.status === 'hidden') { ok(!object, `${id}→${exit.to} oculta no se muestra`); continue }

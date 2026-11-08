@@ -1,7 +1,8 @@
 import { ExplorationViolation } from './exploration.js'
 import { createV04BInitialSession } from './v04bPreparations.js'
 import { enterRatCircuitFrom03, leaveAltarTo04, ratCycleStatus, recordRatEncounterVictory, RAT_ROOM_IDS, useRatAltar } from './restoration.js'
-import { requireOutsideCombat } from './session.js'
+import { grantCreatureCopies, requireOutsideCombat } from './session.js'
+import { V04B_CARD_TYPES } from './content/v04b.js'
 import type { GameSession, RatRoomId } from './session.js'
 import {
   V04B_INSCRIPTION_TEXT, V04B_PUZZLE_LENGTH, V04B_ROOMS, V04B_RUNES, v04bEdgeIsTwoWay, v04bNeighbours, v04bRoom, v04bRuneIsNext,
@@ -9,7 +10,7 @@ import {
 import type { V04BRoomId, V04BRune } from './content/v04bMap.js'
 
 /**
- * V0.4B exploration state (M6a): pure, immutable engine layer over the M5 session. No UI, 3D, duels or rewards.
+ * V0.4B exploration state (M6a, chests M7): pure, immutable engine layer over the M5 session. No UI, 3D or duels.
  * Contract (as M5): incoherent events throw ExplorationViolation (or RuleViolation from the session);
  * legitimate interactions that do nothing return a result with a `reason` and the unchanged state.
  */
@@ -164,10 +165,20 @@ export function examineWall(state: V04BExpedition): WallExamination {
   return { state: { ...state, wallExamined: true }, revealed: true, reason: '' }
 }
 
-// ---------- Cofres (solo informativo para M7) ----------
-export interface ChestAvailability { roomId: V04BRoomId; cardIds: readonly string[]; available: boolean; reason: string }
+// ---------- Cofres (M7) ----------
+export interface ChestAvailability { roomId: V04BRoomId; cardIds: readonly string[]; available: boolean; reason: string; opened: boolean }
 
-/** Every planned chest with whether it would be claimable now. Informational: nothing is granted or claimed. */
+/** Stable one-time grant event of a chest; its presence in the session is the persistent "opened" state. */
+export function chestEventId(roomId: V04BRoomId): string {
+  return `v04b-chest:${roomId}`
+}
+
+/** Opened chests are the granted chest events of the session: the rat cycle never touches them (MIG-D03). */
+export function isChestOpened(state: V04BExpedition, roomId: V04BRoomId): boolean {
+  return state.session.grantedCopyEventIds.includes(chestEventId(roomId))
+}
+
+/** Every chest with whether its M6a requirement is met now (`available`) and whether it was already claimed. */
 export function chestAvailability(state: V04BExpedition): ChestAvailability[] {
   return V04B_ROOMS.filter((room) => room.chest).map((room) => {
     const chest = room.chest!
@@ -178,10 +189,30 @@ export function chestAvailability(state: V04BExpedition): ChestAvailability[] {
           : chest.requirement === 'puzzle' ? [state.puzzle.solved, 'Resuelve el puzle de las runas']
             : chest.requirement === 'arrival' ? [state.visitedRoomIds.includes(room.id), 'Llega a la sala']
               : [ever, 'Vence el encuentro de la sala']
-    return { roomId: room.id, cardIds: chest.cardIds, available, reason: available ? '' : reason }
+    return { roomId: room.id, cardIds: chest.cardIds, available, reason: available ? '' : reason, opened: isChestOpened(state, room.id) }
   })
 }
 
 export function availableChests(state: V04BExpedition): ChestAvailability[] {
   return chestAvailability(state).filter((chest) => chest.available)
+}
+
+export interface ChestOpening { state: V04BExpedition; opened: boolean; cardIds: readonly string[]; copyIds: readonly string[]; reason: string }
+
+/**
+ * Claims the chest of the current room once per expedition: one atomic grantCreatureCopies event with healthy
+ * copies in reserve. A lost earlier copy never prevents the claim (MIG-D01: slots are historical). Not in combat.
+ * Incoherent calls (other room, room without chest) throw; a closed or already opened chest returns a reason.
+ */
+export function openChest(state: V04BExpedition, roomId: string): ChestOpening {
+  requireRoom(state, roomId as V04BRoomId, 'El cofre')
+  const chest = chestAvailability(state).find((entry) => entry.roomId === roomId)
+  if (!chest) throw new ExplorationViolation(`La sala ${roomId} no tiene cofre.`)
+  const none = (reason: string): ChestOpening => ({ state, opened: false, cardIds: chest.cardIds, copyIds: [], reason })
+  if (chest.opened) return none('El cofre ya está abierto')
+  if (!chest.available) return none(chest.reason)
+  const session = grantCreatureCopies(state.session, chestEventId(chest.roomId), chest.cardIds, V04B_CARD_TYPES)
+  const before = new Set(state.session.copies.map((copy) => copy.id))
+  const copyIds = session.copies.filter((copy) => !before.has(copy.id)).map((copy) => copy.id)
+  return { state: { ...state, session }, opened: true, cardIds: chest.cardIds, copyIds, reason: '' }
 }

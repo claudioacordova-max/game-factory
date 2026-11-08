@@ -2,11 +2,20 @@ import {
   createV04BEncounterDuel, createV04BPlay, interactV04BObject, isV04BExpeditionComplete, settleV04BEncounter, v04bObjectsForRoom, v04bRoom,
   v04bSpatialRoom, V04B_CARD_TYPES, V04B_ENCOUNTERS,
 } from '../engine/index.js'
-import type { V04BPlayState } from '../engine/index.js'
+import type { V04BPlayState, V04BRoomId } from '../engine/index.js'
 import { v04bEncounterSummary, v04bInteractionMessage } from '../ui/v04bMessages.js'
-import type { AdventureAdapter } from './types.js'
+import type { AdventureAdapter, ChestReward } from './types.js'
 
-/** V0.4B expedition (M6b), only reachable with ?expedicion=v04b. */
+function chestReward(roomId: V04BRoomId, cardIds: readonly string[], copyIds: readonly string[]): ChestReward {
+  if (cardIds.length !== copyIds.length) throw new Error('Concesión de cofre incoherente.')
+  return { source: v04bRoom(roomId).name, cards: cardIds.map((id, index) => {
+    const card = V04B_CARD_TYPES.find((entry) => entry.id === id)
+    if (!card) throw new Error(`Tipo desconocido: ${id}`)
+    return { copyId: copyIds[index], card }
+  }) }
+}
+
+/** V0.4B expedition (M6b, chests M7), only reachable with ?expedicion=v04b. */
 export const V04B_ADVENTURE: AdventureAdapter<V04BPlayState> = {
   id: 'v04b',
   create: () => createV04BPlay(),
@@ -26,6 +35,7 @@ export const V04B_ADVENTURE: AdventureAdapter<V04BPlayState> = {
       state: result.state, message,
       ...(result.kind === 'encounter' ? { duel: result.duel } : {}),
       ...(result.kind === 'travel' ? { pose: { key: v04bSpatialRoom(result.to).id, pose: result.arrival } } : {}),
+      ...(result.kind === 'chest' && result.result.opened ? { reward: chestReward(result.roomId, result.result.cardIds, result.result.copyIds) } : {}),
     }
   },
   settle(state, duel, sacrificedCopyIds) {

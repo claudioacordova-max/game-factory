@@ -9,9 +9,10 @@ import { V04B_ENCOUNTERS } from './content/v04bEncounters.js'
 import { v04bRoom, v04bRuneIsNext, V04B_PUZZLE_LENGTH, V04B_RUNES } from './content/v04bMap.js'
 import type { V04BRoomId, V04BRune } from './content/v04bMap.js'
 import {
-  activatePedestal, createV04BExpedition, examineWall, isEncounterDefeated, readInscription, recordRoomVictory, roomExits, travel, useAltar,
+  activatePedestal, chestAvailability, createV04BExpedition, examineWall, isEncounterDefeated, openChest, readInscription, recordRoomVictory, roomExits,
+  travel, useAltar,
 } from './v04bWorld.js'
-import type { AltarUse, PedestalActivation, V04BExpedition, WallExamination } from './v04bWorld.js'
+import type { AltarUse, ChestOpening, PedestalActivation, V04BExpedition, WallExamination } from './v04bWorld.js'
 import { v04bArrivalPose, v04bSpatialRoom } from './v04bSpatial.js'
 
 /**
@@ -43,7 +44,7 @@ export function litRunes(state: V04BExpedition): V04BRune[] {
 
 const objectId = (roomId: V04BRoomId, suffix: string) => `v04b-${roomId}:${suffix}`
 
-/** Objects of the current room: availability comes only from v04bWorld; positions from v04bSpatial. Chests are hidden (M7). */
+/** Objects of the current room: availability comes only from v04bWorld; positions from v04bSpatial. */
 export function v04bObjectsForRoom(state: V04BPlayState): ExplorationObject[] {
   const exp = state.expedition
   const roomId = exp.currentRoomId
@@ -75,6 +76,13 @@ export function v04bObjectsForRoom(state: V04BPlayState): ExplorationObject[] {
     objects.push({ id: objectId(roomId, 'wall'), kind: 'feature', label: 'Una marca ritual tenue en la piedra', action: 'Examinar el muro agrietado',
       position: { ...room.features.crackedWall }, status: 'available', visual: 'cracked-wall' })
   }
+  const chest = data.chest && room.features.chest ? chestAvailability(exp).find((entry) => entry.roomId === roomId) : undefined
+  if (chest && room.features.chest) {
+    // Closed and unavailable chests stay visible and explain why, like blocked exits.
+    const status = chest.opened ? 'completed' : chest.available ? 'available' : 'locked'
+    objects.push({ id: objectId(roomId, 'chest'), kind: 'chest', label: chest.opened ? 'Cofre abierto' : 'Cofre', position: { ...room.features.chest }, status,
+      ...(status === 'locked' ? { reason: chest.reason } : {}), visual: `chest:${status}` })
+  }
   for (const exit of roomExits(exp)) {
     if (exit.status === 'hidden') continue
     const anchor = room.exits[exit.to]
@@ -95,6 +103,7 @@ export type V04BInteraction =
   | { kind: 'inscription'; state: V04BPlayState; text: string }
   | { kind: 'pedestal'; state: V04BPlayState; rune: V04BRune; result: PedestalActivation }
   | { kind: 'wall'; state: V04BPlayState; result: WallExamination }
+  | { kind: 'chest'; state: V04BPlayState; roomId: V04BRoomId; result: ChestOpening }
 
 /** Rejections throw before any mutation, as in the legacy world. */
 export function interactV04BObject(state: V04BPlayState, id: string, pose: SpatialPose, random?: RandomSource): V04BInteraction {
@@ -130,6 +139,7 @@ export function interactV04BObject(state: V04BPlayState, id: string, pose: Spati
     return { kind: 'pedestal', rune, result, state: withExpedition(result.state) }
   }
   if (suffix === 'wall') { const result = examineWall(exp); return { kind: 'wall', result, state: withExpedition(result.state) } }
+  if (suffix === 'chest') { const result = openChest(exp, exp.currentRoomId); return { kind: 'chest', roomId: exp.currentRoomId, result, state: withExpedition(result.state) } }
   throw new ExplorationViolation('Ese objeto no tiene interacción.')
 }
 

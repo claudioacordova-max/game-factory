@@ -16,7 +16,8 @@ import { ExplorationScene } from './scene/ExplorationScene.js'
 import { V04BWorldObject } from './scene/V04BActors.js'
 import type { SpatialPose } from './engine/spatial.js'
 import type { EncounterSummary } from './ui/encounterSummary.js'
-import type { AdventureAdapter } from './adventure/types.js'
+import type { AdventureAdapter, ChestReward } from './adventure/types.js'
+import { ChestRewardOverlay } from './ui/ChestRewardOverlay.js'
 import { expeditionModeFromSearch, perfEnabledFromSearch } from './adventure/mode.js'
 import { adventureForMode } from './adventure/select.js'
 
@@ -57,6 +58,8 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
   const poses = useRef<Partial<Record<string, SpatialPose>>>({})
   const sacrificedCopies = useRef<string[]>([])
   const [lastResult, setLastResult] = useState<EncounterSummary | null>(null)
+  /** V0.4B chest reward panel; the legacy adapter never returns a reward. */
+  const [chestReward, setChestReward] = useState<ChestReward | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [sacrificeIds, setSacrificeIds] = useState<string[]>([])
   const [attackerIds, setAttackerIds] = useState<string[]>([])
@@ -75,6 +78,7 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
   function resumeExploration() { setResumeRevision((value) => value + 1) }
   function closeCollection() { setView('exploration'); resumeExploration() }
   function closeResult() { setLastResult(null); resumeExploration() }
+  function closeChestReward() { setChestReward(null); resumeExploration() }
   useEffect(() => () => { if (presentationTimer.current !== null) clearTimeout(presentationTimer.current) }, [])
   const [view, setView] = useState<'exploration' | 'collection'>('exploration')
   const [notice, setNoticeText] = useState('')
@@ -161,7 +165,7 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
     const shortcut = (event: KeyboardEvent) => {
       const target = event.target
       const editing = target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select') !== null)
-      const action = collectionShortcut(event, { inCombat: isDuelActive, resultOpen: lastResult !== null, collectionOpen: view === 'collection' }, editing)
+      const action = collectionShortcut(event, { inCombat: isDuelActive, resultOpen: lastResult !== null || chestReward !== null, collectionOpen: view === 'collection' }, editing)
       if (action) {
         event.preventDefault()
         if (action === 'open') setView('collection')
@@ -170,7 +174,7 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
     }
     window.addEventListener('keydown', shortcut)
     return () => window.removeEventListener('keydown', shortcut)
-  }, [isDuelActive, lastResult, view])
+  }, [isDuelActive, lastResult, chestReward, view])
 
   function closeDuel(result: DuelState) {
     if (settledDuels.current.has(result.id)) return
@@ -313,6 +317,7 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
       if (result.pose) poses.current[result.pose.key] = result.pose.pose
       setAdventure(result.state)
       setLastResult(null)
+      if (result.reward) setChestReward(result.reward)
       if (result.duel) {
         setDuel(result.duel)
         sacrificedCopies.current = []
@@ -363,11 +368,11 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
   return (
     <main className={`game-shell ${isDuelActive ? 'mode-duel' : 'mode-exploration'}`}>
       {!isDuelActive ? <div className="exploration-world">
-        <ExplorationScene room={room} initialPose={poses.current[roomKey] ?? room.spawn} objects={objects} resumeRevision={resumeRevision} disabled={view === 'collection' || lastResult !== null} onInteract={interactNearby} onPoseChange={(pose) => { poses.current[roomKey] = pose }}
+        <ExplorationScene room={room} initialPose={poses.current[roomKey] ?? room.spawn} objects={objects} resumeRevision={resumeRevision} disabled={view === 'collection' || lastResult !== null || chestReward !== null} onInteract={interactNearby} onPoseChange={(pose) => { poses.current[roomKey] = pose }}
           ObjectView={adapter.id === 'v04b' ? V04BWorldObject : undefined} perf={perf} />
         <div className="exploration-atmosphere" aria-hidden="true" />
         <ExplorationHUD life={session.invokerLife} maxLife={session.invokerMaxLife} mana={usableMana} fatigue={session.fatigue} level={player.level} roomName={location.roomName} zoneName={location.zoneName} complete={location.complete} onCollection={() => setView('collection')} orb={orbControl} />
-        {view !== 'collection' && !lastResult && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} />}
+        {view !== 'collection' && !lastResult && !chestReward && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} />}
         {view === 'collection' && <CollectionOverlay session={session} cardTypes={adapter.collectionCardTypes} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
         {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'}`} onClose={closeResult}>
           <span className="result-seal"><Icon name={lastResult.won ? 'check' : 'skull'} /></span>
@@ -375,6 +380,7 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
           <details open><summary>Heridas, bajas, mejoras y descubrimientos</summary><ul>{lastResult.details.map((detail) => <li key={detail}>{detail}</li>)}</ul></details>
           <button type="button" className="button button-primary" onClick={closeResult}>Continuar explorando<Icon name="arrow" /></button>
         </GameOverlay>}
+        {chestReward && <ChestRewardOverlay reward={chestReward} onClose={closeChestReward} />}
       </div> : <CombatView duel={duel} session={session} enemyName={activeEncounter.name} enemyMaxLife={activeEncounter.maxLife}
         notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} selectedCardId={selectedCardId} sacrificeIds={sacrificeIds} attackerIds={attackerIds} targetChoices={targetChoices} blockerChoices={blockerChoices} presenting={presenting}
         pending={controls.current.pending} onActivateN01={(creatureId) => dispatchCombat({ type: 'activate-n01', creatureId })}

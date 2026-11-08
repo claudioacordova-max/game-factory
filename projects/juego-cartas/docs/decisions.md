@@ -53,6 +53,7 @@ Propósito: lectura obligatoria y suficiente sobre **reglas aprobadas, invariant
 - **Runas del puzle (M6, diseñador 2026-11-08):** orden fijo **Hueso → Sombra → Maná**; inscripción de 11 de tipo «Primero lo que queda, luego lo que oculta, al final lo que fluye» (texto narrativo ajustable).
 - **Criterios M6a aceptados por el diseñador (2026-11-08):** zona por sala **provisional** (El Umbral 01–02, Las Catacumbas 03–06, Las Madrigueras 07–10, Las Cámaras Rúnicas 11–13, La Cripta Profunda 14–19; 03 y 10 a revisar al ambientar en M6b); la conexión de entrada bidireccional cuenta como regreso, de modo que 17 entrando desde 15 deja abiertas 15 y 16. Condiciones informativas de cofre para M7: 13 y 15 al llegar, 12 con puzle, 03 tras B1, 14 tras B2, 04/07/09/16/17/18 por victoria alguna vez.
 - **M6b aprobado por el diseñador (2026-11-08):** acceso a la expedición V0.4B solo con `?expedicion=v04b` (sin parámetro el juego no cambia); M6b incluye combates reales M4 con la liquidación existente, restauración gratuita B1/B2 y ciclo de ratas real; cofres no visibles hasta M7. Enemigos: jefes con modelos existentes (Centinela acorazado, Prior encapuchado, Rey Esqueleto coronado, Señora de las Ratas), El Devoto como figura encapuchada provisional con brasero ritual, escaramuzas 04/16/17 con figuras low-poly sencillas sin arte final. Sala 03 con aspecto de Catacumbas y puerta rúnica del Titán; Altar 10 neutro y solemne, sin estética de ratas. **Rendimiento obligatorio:** presupuesto por sala frente al legado, sin fugas de recursos al recorrer las salas y FPS medidos en automático y en el playtesting.
+- **M7 aprobado por el diseñador (2026-11-08):** solo en `?expedicion=v04b`; once cofres con los 31 premios de `v04bMap.ts` (8 iniciales + 31 = 39, exactamente los cupos; no hay excedentes). Cada cofre se reclama con E una vez por expedición (evento único de `grantCreatureCopies`); el ciclo de ratas no los reactiva. Condiciones de M6a. Las copias concedidas van a la **reserva** (el jugador decide en Colección). Al abrir, **panel superpuesto** con las cartas obtenidas y su nombre oficial, se cierra con E/Esc y el foco vuelve al avatar. Cofre no disponible: **visible y cerrado con motivo** al acercarse, como las salidas bloqueadas. P6/MIG-D01 confirmado sin política de duplicados adicional.
 
 ## 4. Pendientes abiertos (requieren decisión del diseñador antes de implementar)
 
@@ -67,8 +68,8 @@ Propósito: lectura obligatoria y suficiente sobre **reglas aprobadas, invariant
 |---|---|---|
 | M4 | Diez encuentros aislados e IA | M3; MIG-D02, MIG-D07, convención A02 (ratificada) |
 | M5 | Restauración, orbe y ciclo | M3; restauración/orbe decididos 2026-11-08; MIG-D03, MIG-D06 |
-| M6 | Grafo, estado, 3D, puzle y secreto (M6a cerrado; M6b 3D pendiente) | M5; MIG-D05, puzle y secreto decididos 2026-11-08 |
-| M7 | Ocho iniciales y 31 premios únicos | M1, M5, M6; MIG-D01 |
+| M6 | Grafo, estado, 3D, puzle y secreto (M6a y M6b cerrados) | M5; MIG-D05, puzle y secreto decididos 2026-11-08 |
+| M7 | Ocho iniciales y 31 premios únicos (**cerrado 2026-11-08**) | M1, M5, M6; MIG-D01 |
 | M8 | Integración M4/M7, pruebas, playtesting y balance separado; sin secretos obligatorios | M4, M7 |
 
 Contenido de ensayo inalterado: 19 salas, 21 tipos/39 copias, 23 principales/16 opcionales, diez combates. Señora de las Ratas: 10 PV, `A02, N03, N02 | A02, N03`, sin A04. Escaramuzas: 04 H01+N02+N05; 07 A02×2; 08 A02+N03; 16 N05+N06+N07; 17 H01+N04+R03. Cifras y mazos experimentales.

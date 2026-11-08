@@ -8,8 +8,8 @@ Lectura obligatoria al iniciar cualquier sesión (Codex o Claude Code), junto co
 
 | Campo | Valor |
 |---|---|
-| Último cambio | Harness reutilizable de inspección visual (`scripts/visual-inspect.mjs`), 2026-11-07; commit local en el historial Git (`factory: add shared headless visual-inspect harness`). Anterior: adaptación a Claude Code y eficiencia de tokens v1.2 |
-| Juegos | `juego-cartas`: M3 cerrado, M4 no autorizado ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: sin intervención activa |
+| Último cambio | Adopción v1.2 en `comerciante-medieval` (solo documentación), 2026-11-07; commit local `comerciante-medieval: adopt token efficiency v1.2 docs`. Anterior: harness reutilizable de inspección visual (`5873925`) |
+| Juegos | `juego-cartas`: M3 cerrado, M4 no autorizado ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: ITER-10 cerrado, sin hito autorizado ([ficha](../../projects/comerciante-medieval/docs/status.md)) |
 | Limitaciones vigentes | Agentes de Claude Code requieren sesión nueva; `deny` de `.claude/settings.json` cubre Bash, no PowerShell; ejecutor instalado en `%USERPROFILE%\.codex\bin\`; CLI Playwright 0.1.22 instalada fuera del repo en `%USERPROFILE%\.game-factory\tools\` (no en `%LOCALAPPDATA%`, que Claude Desktop virtualiza) |
 
 Pendientes de Factory (ninguno autorizado para ejecución):
@@ -17,7 +17,6 @@ Pendientes de Factory (ninguno autorizado para ejecución):
 | Pendiente | Estado | Qué falta |
 |---|---|---|
 | Ajustes menores del harness visual | Hallazgos no bloqueantes de la revisión, 2026-11-07 | `patches.mjs` exige `export default` (un export con nombre se ignora sin aviso): validar o documentar; la skill dice que el escenario debe estar fuera del repo pero solo se comprueban fixture y salida. Los errores de consola se cuentan pero no cambian el código de salida |
-| Adopción v1.2 en `comerciante-medieval` | Diferido por el diseñador | Crear ficha de continuidad y `decisions.md`, compactar el plan y archivar evidencia, en su próxima intervención o cuando se autorice |
 
 ## Capacidades existentes
 
@@ -77,7 +76,7 @@ Los [contextos originales](history/00-contexto-comun.md) y las [instrucciones de
 
 - **Fase A (autorizada):** `CLAUDE.md` importa `AGENTS.md`; agentes `.claude/agents/` `implementer` (sonnet), `reviewer` (sonnet, sin herramientas de edición: lectura técnica forzada) y `runner` (haiku, comandos mecánicos); wrappers de skills en `.claude/skills/`; permisos equivalentes a `.codex/rules` en `.claude/settings.json`. `.codex/` intacto; ambas herramientas conviven.
 - **Fase B (autorizada):** sección *Token efficiency (v1.2)* en el [workflow](workflow-v1.md#token-efficiency-v12): lectura por capas (ficha de continuidad → `decisions.md` → spec → código), invariantes obligatorias en cada brief, registros compactos, archivo al cerrar tras consolidar decisiones, revisión proporcional y ruteo de modelos. [Plantillas](templates/) reutilizables para nuevos juegos.
-- Aplicado en `juego-cartas`: [decisions.md](../../projects/juego-cartas/docs/decisions.md), ficha en `status.md`, plan vivo compacto; registros M0–M3 y plan anterior archivados íntegros en `history/`. `comerciante-medieval` adopta el formato en su próxima intervención.
+- Aplicado en `juego-cartas`: [decisions.md](../../projects/juego-cartas/docs/decisions.md), ficha en `status.md`, plan vivo compacto; registros M0–M3 y plan anterior archivados íntegros en `history/`. Aplicado en `comerciante-medieval` el 2026-11-07 (autorizado por el diseñador): [decisions.md](../../projects/comerciante-medieval/docs/decisions.md), ficha en `status.md`, plan vivo compacto; plan anterior archivado en `history/implementation-plan-2026-10-28.md` con enlaces reajustados. Sin cambios de código, pruebas ni spec. Revisión independiente: un hallazgo bloqueante (invariante «cambiar presentación no autoriza cambiar la economía» omitida) corregido en un ciclo; revisión acotada aprobada.
 - Limitaciones: los agentes de Claude Code requieren sesión nueva para cargarse; las reglas `deny` de `.claude/settings.json` cubren Bash, no PowerShell; el ejecutor instalado sigue en `%USERPROFILE%\.codex\bin\`.
 
 ## Harness reutilizable de inspección visual — 2026-11-07

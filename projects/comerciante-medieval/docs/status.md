@@ -1,8 +1,21 @@
 # Comerciante Medieval — estado actual
 
-Revisión: 2026-10-28. Ámbito: demo `projects/comerciante-medieval/`. Corte inspeccionado: `54955677ec9430695b233c99a8fb4067b103a86d`; último cambio del juego: `737fea910ae0461eabf2520d365cbb49035b1cd5` (ITER-10, 2026-10-24).
+Revisión: 2026-11-07 (ficha de continuidad; el resto del documento, 2026-10-28). Ámbito: demo `projects/comerciante-medieval/`. Corte inspeccionado: `54955677ec9430695b233c99a8fb4067b103a86d`; último cambio del juego: `737fea910ae0461eabf2520d365cbb49035b1cd5` (ITER-10, 2026-10-24).
 
 Este documento describe la implementación existente, corroborada mediante lectura del motor, la UI y los registros. Distingue los cierres históricos de las pruebas reejecutadas durante la migración documental; no constituye una nueva aprobación de diseño ni acredita playtesting nuevo.
+
+## Ficha de continuidad
+
+Lectura mínima para retomar trabajo (workflow v1.2): esta ficha → [decisions.md](decisions.md) → [spec-v1.md](spec-v1.md) → código afectado. El [plan vivo](implementation-plan.md) registra autorizaciones y cierres; `history/` solo se consulta para procedencia.
+
+| Campo | Valor |
+|---|---|
+| Último cierre | ITER-10, `737fea9` (aceptado con playtesting 2026-10-24) |
+| Siguiente hito | Ninguno autorizado |
+| Decisiones abiertas | Discrepancia `needs.progression` del panel experimental, sin corrección autorizada. Ver [decisions.md](decisions.md#4-pendientes-abiertos) |
+| Configuración activa | Dos pueblos, sesión en memoria, panel de inspección cerrado por defecto |
+| Comprobaciones | `npm test` (51 casos, última ejecución 2026-10-28) y `npm run build` desde `projects/comerciante-medieval/` |
+| Incidencias conocidas | Discrepancia `needs.progression`; bundle >500 kB; cobertura parcial del DOM. Ninguna con tarea autorizada |
 
 ## Propuesta y bucle jugable
 

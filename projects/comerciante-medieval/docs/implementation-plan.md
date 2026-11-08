@@ -1,14 +1,16 @@
-# Comerciante Medieval — continuidad de implementación
+# Comerciante Medieval — plan vivo
 
-Revisión: 2026-10-28. Ámbito: `projects/comerciante-medieval/`. Corte de migración: `54955677ec9430695b233c99a8fb4067b103a86d`. Propósito: punto principal para planificar y registrar las siguientes intervenciones, conservando accesible el historial anterior.
+Propósito: autorizaciones, estado y cierres de `projects/comerciante-medieval/`. Revisión: 2026-11-07. Formato compacto según el [workflow v1.2](../../../docs/factory/workflow-v1.md#token-efficiency-v12). Reglas e invariantes: [decisions.md](decisions.md). Evidencia detallada anterior: [plan archivado 2026-10-28](history/implementation-plan-2026-10-28.md) y [plan histórico íntegro](history/implementation-plan-v0.1.md).
 
-## Estado y autoridad
+Leer [status.md](status.md), [spec-v1.md](spec-v1.md), [AGENTS.md](../../../AGENTS.md) y el [workflow](../../../docs/factory/workflow-v1.md) antes de continuar. La consolidación no otorga aprobación nueva; no trasladar casillas históricas a pendientes.
 
-No hay una implementación activa ni un nuevo roadmap autorizado en este corte. El usuario aceptó la migración documental y su limpieza final y autorizó un único commit documental de cierre el 2026-10-28, sin cambios de gameplay ni push. El ejecutor seguro ya admite las bajas verificadas necesarias para ese cierre. El último cierre del videojuego es ITER-10, `737fea910ae0461eabf2520d365cbb49035b1cd5`.
+## Estado actual
 
-Leer [status.md](status.md), [spec-v1.md](spec-v1.md), [AGENTS.md](../../../AGENTS.md) y el [workflow vigente](../../../docs/factory/workflow-v1.md) antes de continuar. La especificación consolidada reúne decisiones ya aprobadas; no otorga una nueva aprobación ni amplía permisos. Toda intervención futura requiere el alcance/autorización correspondiente. No trasladar las casillas o estados intermedios históricos a pendientes actuales.
+- Sin implementación activa ni roadmap autorizado. Último cierre del juego: ITER-10, `737fea910ae0461eabf2520d365cbb49035b1cd5`.
+- Última evidencia técnica (cierre ITER-10): 51 pruebas y build correctos; `npm test` reejecutado el 2026-10-28 (51 satisfactorias).
+- Migración documental 2026-10-28: consolidación en spec-v1 y limpieza, sin cambios de gameplay; detalle en el [plan archivado](history/implementation-plan-2026-10-28.md).
 
-## Desarrollo completado
+## Cierres
 
 | Trabajo | Resultado registrado | Commit estable |
 |---|---|---|
@@ -29,25 +31,6 @@ Leer [status.md](status.md), [spec-v1.md](spec-v1.md), [AGENTS.md](../../../AGEN
 | ITER-09 | UX Atlas del camino, clic directo y revisión final aceptada | `bbd8b30f901c4ba97e7934677861f03f196ea81e` |
 | ITER-10 | Inventario/carga, saldo familiar, iconografía y atajo I aceptados | `737fea910ae0461eabf2520d365cbb49035b1cd5` |
 
-El [plan histórico](history/implementation-plan-v0.1.md) conserva íntegramente briefs, aprobaciones, rutas modificadas, checks, revisiones y ciclos correctivos; incluye la reconciliación expresa de ITER-07/08. La aprobación de ITER-09/10 no se retrotrae a esas dos fichas. Los materiales visuales `docs/comerciante-medieval-uiux-propuesta.md` y `docs/comerciante-medieval-uiux/` mencionados allí no están disponibles; no se consideran evidencias accesibles.
+## Registro de la siguiente intervención
 
-## Decisiones aplicables para continuar
-
-- Motor económico determinista TypeScript independiente de la UI; React/R3F presenta el estado y solicita acciones. Moneda en décimas y carga en medias unidades para evitar ambigüedades de precisión.
-- Conservar inventarios separados, fondo familiar compartido, operaciones atómicas, reglas anti-recompra y límites diarios. Cambiar presentación no autoriza cambiar economía.
-- D9: 1.000 monedas para ascenso 2→3 y mantenimiento de 3; 2.000 solo meta de prosperidad. No crear tramo 4 ni histéresis no aprobada.
-- Mantener baseline experimental de recetas, tarifas, durabilidades y escenarios. Riesgos de balance requieren evidencia y autorización posterior; no ajustar cifras para forzar prosperidad.
-- Comercio actual por unidad, inventario con I/Esc, carga dentro del inventario y fondo familiar junto al NPC sustituyen los flujos viejos de cantidad/confirmación y distribución del HUD.
-- Puerto exclusivo de caravana; viaje solo entre los dos pueblos, un día global. Persistencia únicamente durante la sesión.
-
-## Evidencia y asuntos abiertos
-
-El cierre ITER-10 registra 51 pruebas y build correctos, revisión independiente sin bloqueantes y aceptación visual/playtesting manual del diseñador (2026-10-24). No se presenta ese registro como ejecución nueva ni como validación de cambios futuros. El aviso de bundle >500 kB y la cobertura incompleta de DOM son límites conocidos, no tareas nuevas autorizadas.
-
-Única discrepancia concreta identificada en esta consolidación: los colores `needs.progression` mostrados por el panel experimental usan metas de tramo 2 incluso en tramo 3, mientras compras y `prosperityGoalsMet` usan las metas superiores. Véase [spec-v1.md, límites de corroboración](spec-v1.md#límites-de-corroboración). Se conserva el requisito aprobado y no se altera código; no hay una corrección de gameplay autorizada por esta migración.
-
-## Registro desde este corte
-
-La próxima intervención autorizada se registrará aquí con brief, alcance, criterios, autorización, baseline Git, cambios, checks, revisión independiente, correcciones, aceptación humana cuando proceda y cierre/commit real si está permitido. Una iteración grande puede enlazar un documento propio sin duplicar el historial.
-
-Durante la migración documental principal del 2026-10-28, el coordinador reejecutó `npm.cmd test`: las 51 pruebas resultaron satisfactorias, y verificó enlaces, integridad y preflight documental. Revisión independiente de la migración: aprobada sin hallazgos. No hubo builds, revisiones visuales ni playtesting nuevos y no se cambió el código. Los cinco archivos preexistentes excluidos se preservaron en aquella fase; su eliminación posterior fue autorizada expresamente como limpieza final. Esta limpieza no repite la suite de gameplay. La aceptación final y autorización del commit documental único se recibieron el 2026-10-28. El [estado de Factory](../../../docs/factory/status.md) registra la corrección técnica separada que resolvió el impedimento del ejecutor. Este registro acompaña el cierre documental autorizado; su hash real se obtiene de Git después de la operación, sin insertarlo circularmente aquí. No hay aceptación humana ni trabajo jugable pendientes por esta migración.
+Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md). Al cerrar, dejar aquí una fila de cierre y un resumen de 5–10 líneas; mover la evidencia detallada a `history/` y llevar a [decisions.md](decisions.md) toda decisión o pendiente nuevo.

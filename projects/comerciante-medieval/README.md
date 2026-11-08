@@ -58,5 +58,6 @@ npm run simulate -- --scenario trade-opportunity --days 9 --seed 42
 
 - [Estado actual: propuesta, sistemas, contenido y limitaciones](docs/status.md).
 - [Especificación consolidada de requisitos aprobados](docs/spec-v1.md).
-- [Plan y punto de continuidad](docs/implementation-plan.md).
+- [Decisiones vigentes: reglas aprobadas, invariantes y pendientes](docs/decisions.md).
+- [Plan y punto de continuidad](docs/implementation-plan.md) (enlaza el plan archivado de 2026-10-28).
 - [Historial íntegro de implementación e iteraciones](docs/history/implementation-plan-v0.1.md).

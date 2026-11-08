@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-type IconName = 'mana' | 'heart' | 'sword' | 'shield' | 'skull' | 'cards' | 'gate' | 'lock' | 'check' | 'arrow'
+type IconName = 'mana' | 'heart' | 'sword' | 'shield' | 'skull' | 'cards' | 'gate' | 'lock' | 'check' | 'arrow' | 'orb'
 const paths: Record<IconName, ReactNode> = {
   mana: <><path d="m12 2 7 10-7 10-7-10Z"/><path d="m5 12 7 4 7-4M12 2v20"/></>,
   heart: <path d="M20 5c-3-3-7-1-8 1-2-3-6-4-9-1-4 5 3 11 9 16 6-5 12-11 8-16Z"/>,
@@ -12,6 +12,7 @@ const paths: Record<IconName, ReactNode> = {
   lock: <><rect x="5" y="10" width="14" height="12" rx="1"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 15v3"/></>,
   check: <path d="m4 12 5 5L20 6"/>,
   arrow: <path d="M3 12h18m-6-6 6 6-6 6"/>,
+  orb: <><circle cx="12" cy="11" r="7"/><path d="M8 9a5 5 0 0 1 4-3M7 20h10M9 18l-1 2m8-2 1 2"/></>,
 }
 export function Icon({ name, className = '' }: { name: IconName; className?: string }) {
   return <svg className={`icon ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>

@@ -4,9 +4,9 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 
 ## Estado actual
 
-- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5–M8 no autorizados**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
+- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6–M8 no autorizados**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
 - Juego activo: legado. Incidencia diferida: scroll de Colección.
-- Última evidencia técnica (cierre M4): 292/292 + spatial, build correcto (aviso de bundle >500 kB conocido).
+- Última evidencia técnica (cierre M5): 309/309 + spatial, build correcto (aviso de bundle >500 kB conocido).
 
 ## Cierres
 
@@ -23,7 +23,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M1 | Catálogo 21/39, cupos, copias e identidades | `3ec644a` |
 | V0.4B M2 | Recursos, fichas, R01 y P5 | `a449504` |
 | V0.4B M3 | Escudos, A03/N01, H02/H03, ritual H04 (P3/P4/P8) | `52b9e77` |
-| V0.4B M4 | Diez encuentros aislados, MIG-D02, IA nivel 1 | commit local de cierre M4 (hash en Git) |
+| V0.4B M4 | Diez encuentros aislados, MIG-D02, IA nivel 1 | `fbde853` |
+| V0.4B M5 | Restauración, orbe en HUD, ciclo de ratas MIG-D03 | commit local de cierre M5 (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -56,4 +57,32 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Revisión: completa, aprobada sin bloqueantes; N1 (aserción tautológica) y N2 (agotamiento no acotado) corregidos en un ciclo; N3 (jugador automático no bloquea) aceptado sin cambio. Revisión acotada del ciclo aprobada. Ciclos correctivos 1/2.
 - Inspección visual: no aplica (sin cambios de UI). Playtesting: no requerido (ver brief).
 - Decisiones nuevas en decisions.md: convención A02 predesplegada, maná rival 1, heurísticas IA nivel 1; pendiente de agotamiento mutuo (M8).
-- Cierre: commit local `juego-cartas: cerrar V0.4B M4 de encuentros aislados e IA`, sin push.
+- Cierre: `fbde853` (`juego-cartas: cerrar V0.4B M4 de encuentros aislados e IA`), sin push.
+
+## V0.4B M5 — restauración, orbe y ciclo de ratas (cerrado 2026-11-08)
+
+### Brief
+
+- Autorización: el diseñador definió restauración/orbe, aprobó los detalles (activación fuera de combate desde el HUD de exploración, sin gasto si no hay nada que restaurar, restauración gratuita B1/B2) y autorizó «M5» con el plan propuesto, 2026-11-08.
+- Alcance (solo perfil V0.4B, aislado): efecto de restauración en sesión; orbe inicial cargado, capacidad 1, `activateOrb`; `applyBossRestoration` sin consumo (no conectado a B1/B2); estado del ciclo de ratas MIG-D03 dirigido por eventos abstractos (victoria 07/08/09, altar, salida 10→04, reentrada desde 03); botón del orbe en `ExplorationHUD` solo para sesiones V0.4B; pruebas `tests/m5`.
+- Fuera de alcance: mapa/salas reales y conexión de eventos (M6), premios (M7), conexión B1/B2 e integración (M8), legado, scroll de Colección.
+- Criterios de aceptación: restauración sana copias vivas heridas (baraja y reserva) a máximo, vida máxima y actual a 20, fatiga 0, no revive, bloqueada en combate; recuperar tras restaurar vuelve a costar vida máxima; orbe inicial cargado, capacidad 1, activación rechazada en combate/vacío/sin nada que restaurar; restauración de jefe no consume carga; MIG-D03: altar recarga solo con orbe vacío y 07/08/09 vencidos en el ciclo, recarga reactiva 07–09, cierra 10→09, exige salida 10→04 y reentrada desde 03, orbe lleno no recarga ni reinicia, sin recarga no hay reinicio, cofres nunca se reactivan; botón HUD con carga, desactivado con motivo y aviso de resultado; legado sin botón ni cambios; suite previa + nuevas y build correctos; inspección visual headless a 1440×900 y 1024×768.
+- **Mecánicas e invariantes:** decisions.md §2 completo; MIG-D01 (recuperación y cupos), MIG-D03, MIG-D06, restauración/orbe 2026-11-08; foco al cerrar superposiciones y controles de exploración aceptados; `ACTIVE_CONTENT = LEGACY_CONTENT`.
+- Decisiones creativas: ninguna abierta.
+- Revisión: completa. Playtesting humano: no requerido (botón no alcanzable desde el juego normal; se prueba al integrar en M6/M8). Capturas disponibles para el diseñador.
+- Modelos: implementer sonnet, reviewer sonnet.
+
+### Baseline
+
+- `HEAD fbde85321bef95c23b2863410bffb09d8b078472`; cambios previos de esta sesión, autorizados e incluidos en M5: `docs/decisions.md`, `docs/status.md` (decisiones de restauración/orbe).
+
+### Resultado
+
+- Rutas: `src/engine/restoration.ts` (nuevo: restauración, orbe, `applyBossRestoration`, ciclo de ratas), `src/engine/session.ts` (`orb?`, `ratCycle?` opcionales), `src/engine/v04bPreparations.ts` (orbe cargado y ciclo vacío), `src/engine/index.ts`, `src/ui/ExplorationHUD.tsx` (botón del orbe, solo V0.4B), `src/ui/GameIcons.tsx` (icono `orb`), `src/styles.css`, `src/App.tsx` (handler y prop), `tests/m5.tsx` (nuevo), `tests/run.ts`; docs `decisions.md`, `status.md`, este plan.
+- Contrato técnico para M6: eventos incoherentes del ciclo (victoria repetida, victoria con circuito cerrado, reentrada sin salir por 04) lanzan `RuleViolation`; interacción legítima sin efecto con el altar devuelve `recharged: false` con motivo. MIG-D03 no fija orden entre 07/08/09; lo resuelve la topología de M6.
+- Checks del coordinador: tests 309/309 + spatial, build correcto, `git diff --check` limpio.
+- Inspección visual headless (harness compartido, App real parcheado en memoria con sesión V0.4B; evidencia fuera del repo): estados cargado, vacío, sin nada que restaurar y tras activar, a 1440×900 y 1024×768. Botón a la derecha de Colección sin solape; aviso con lo restaurado (vida 17→20, fatiga 1→0); foco al viewport; juego normal sin botón. Móvil (<640 px) no capturado.
+- Revisión: completa, aprobada sin bloqueantes; N1 (texto «Vacío · Orbe vacío») corregido en un ciclo y revisión acotada aprobada; N2 (orden de imports) y N3 (posición fija del botón) aceptados sin cambio. Ciclos correctivos 1/2.
+- Playtesting: no requerido (botón no alcanzable desde el juego normal; se prueba al integrar en M6/M8).
+- Decisiones nuevas en decisions.md: restauración y orbe con sus detalles (2026-11-08).
+- Cierre: commit local `juego-cartas: cerrar V0.4B M5 de restauración y orbe`, sin push.

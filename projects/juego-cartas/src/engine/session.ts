@@ -10,6 +10,21 @@ export interface CreatureCopy {
   bonusHealth: number
 }
 
+/** V0.4B restoration orb: single-use activatable, capacity 1. Absent in legacy sessions. */
+export interface OrbState { charges: number; capacity: number }
+
+export type RatRoomId = '07' | '08' | '09'
+
+/** MIG-D03 rat-circuit cycle, driven by abstract events (M6 connects them to rooms). V0.4B only. */
+export interface RatCycleState {
+  /** Rat encounters defeated in the current cycle. */
+  defeated: RatRoomId[]
+  /** True after an effective recharge until the player re-enters the circuit from room 03: 10 to 09 is closed. */
+  returnClosed: boolean
+  /** True once the player left the altar through 10 to 04 after a recharge. */
+  leftAltarVia04: boolean
+}
+
 /** Persistent state for this loaded page; combat representations reference these IDs. */
 export interface GameSession {
   collectionProfile: CollectionProfile
@@ -26,6 +41,10 @@ export interface GameSession {
   activeEncounterId: string | null
   settledDuelIds: string[]
   nextCopyNumber: number
+  /** V0.4B only (createV04BInitialSession and the sandbox). */
+  orb?: OrbState
+  /** V0.4B only. */
+  ratCycle?: RatCycleState
 }
 
 export const NORMAL_INVOKER_MAX_LIFE = 20

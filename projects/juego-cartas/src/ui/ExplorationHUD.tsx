@@ -1,8 +1,19 @@
+import { orbStatus } from '../engine/index.js'
+import type { GameSession } from '../engine/index.js'
 import { Icon } from './GameIcons.js'
 
-export function ExplorationHUD({ life, maxLife, mana, fatigue, level, roomName, complete, onCollection }: {
+/** V0.4B restoration orb control; omitted for legacy sessions. */
+export interface OrbControl { charged: boolean; canActivate: boolean; reason: string; onActivate: () => void }
+
+/** Undefined for legacy sessions, so the normal game never shows the orb. */
+export function orbControlFor(session: GameSession, onActivate: () => void): OrbControl | undefined {
+  const status = orbStatus(session)
+  return session.collectionProfile === 'v04b' && status.present ? { charged: status.charged, canActivate: status.canActivate, reason: status.reason, onActivate } : undefined
+}
+
+export function ExplorationHUD({ life, maxLife, mana, fatigue, level, roomName, complete, onCollection, orb }: {
   life: number; maxLife: number; mana: number; fatigue: number; level: number
-  roomName: string; complete: boolean; onCollection: () => void
+  roomName: string; complete: boolean; onCollection: () => void; orb?: OrbControl
 }) {
   return <div className="exploration-hud">
     <section className="explorer-vitals" aria-label="Recursos del invocador">
@@ -14,6 +25,9 @@ export function ExplorationHUD({ life, maxLife, mana, fatigue, level, roomName, 
       </div>
     </section>
     <div className="exploration-location"><Icon name={complete ? 'check' : 'gate'} /><div><span>{complete ? 'Demo completada' : 'La cripta'}</span><strong>{roomName}</strong></div></div>
+    {orb && <button className={`orb-launcher ${orb.charged ? 'charged' : 'empty'}`} type="button" disabled={!orb.canActivate} onClick={orb.onActivate}
+      aria-label={orb.canActivate ? 'Activar orbe de restauración (cargado)' : `Orbe de restauración: ${orb.reason}`}>
+      <span><Icon name="orb" /></span><div><strong>Orbe</strong><small>{orb.charged ? 'Cargado' : 'Vacío'}{orb.charged && orb.reason && !orb.canActivate ?` · ${orb.reason}` : ''}</small></div></button>}
     <button className="collection-launcher" type="button" onClick={onCollection} aria-haspopup="dialog" aria-keyshortcuts="i"><span><Icon name="cards" /></span><strong>Colección</strong><kbd>I</kbd></button>
   </div>
 }

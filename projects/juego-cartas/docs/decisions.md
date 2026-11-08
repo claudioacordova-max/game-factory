@@ -44,11 +44,11 @@ Propósito: lectura obligatoria y suficiente sobre **reglas aprobadas, invariant
 - **Convención A02 predesplegada (M4, ratificada por el diseñador 2026-11-07):** las A02 que empiezan desplegadas en 07/08 no crean ficha; una A02 invocada durante el combate sí la crea.
 - **Maná base rival 1 (M4, ratificado por el diseñador 2026-11-07):** valor experimental del ensayo M4, sujeto a balance posterior; no es decisión derivada de MIG-D02.
 - **Heurísticas IA nivel 1 (M4, aprobadas con el plan 2026-11-07):** orden de mano jugando toda carta pagable, sin límite artificial por turno; sacrificios fichas primero y luego reales de menor ATQ+VID (H04 solo reales); R01 solo si habilita una carta de mano impagable; curas H02/H03 a la aliada con más vida perdida, desempate por orden de campo; ataque y bloqueo previos. Experimentales; nivel 2 en M8.
+- **Restauración y orbe (M5, decidido por el diseñador 2026-11-08):** la restauración es un **efecto**; el orbe es un **activable** de un solo uso (capacidad 1) que lo dispara. Efecto: (1) sana a salud máxima todas las copias vivas heridas de la colección en ese momento (baraja y reserva); (2) restablece la vida máxima del invocador a la inicial, 20, recuperando lo gastado en recuperaciones de copias; (3) elimina la fatiga. No revive copias muertas o sacrificadas; recuperarlas después vuelve a costar vida máxima. Recarga mediante el ciclo de ratas (MIG-D03); orbe inicial cargado (MIG-D06). Detalles aprobados 2026-11-08: el orbe se activa en cualquier momento **fuera de combate**, nunca en combate, desde un botón en el **HUD de exploración** (no dentro de Colección, para no abrir otro menú); si no hay nada que restaurar (sin heridas, fatiga 0, vida máxima 20) el botón queda desactivado con aviso y no gasta la carga; vencer a B1/B2 aplica una restauración gratuita automática sin consumir la carga (se conecta al integrar encuentros, M6–M8).
 - **MIG-D05 — escaramuza obligatoria 04 (M6):** antes de vencer 04, bloquear salidas que permitan eludirla y permitir volver por la puerta de entrada si la conexión admite retorno; demás salidas bloqueadas. Tras victoria, tránsito del grafo aprobado.
 
 ## 4. Pendientes abiertos (requieren decisión del diseñador antes de implementar)
 
-- **Restauración y orbe (antes de M5):** baseline de referencia máxima 20; cerrar referencia/ajuste y condiciones de activación del orbe fuera de combate, mensajes e interacciones sin efecto.
 - **Excepción MIG-D05 (M6):** entrada 10→04 no admite volver por esa conexión. Proponer alternativas y decidir; no invertir la arista, crear acceso ni elegir otra salida. Intención: exigir combate sin encierro innecesario.
 - **M6:** interacción/solución del puzle y acceso oculto 18. Sin habilidades de exploración ni accesos inventados.
 - **Agotamiento mutuo sin ganador (M8, aplazado por el diseñador 2026-11-07):** si ambos bandos quedan sin criaturas, mano ni mazo, el combate no termina (no hay empate ni derrota por mazo agotado; no inventar regla). Reproducción: `createV04BEncounterDuel(createV04BInitialSession(), '18', { random: seededRandom(5), firstPlayer: 'opponent' })` con jugador automático que invoca todo, ataca con todo y nunca bloquea; también semilla 8 con `firstPlayer: 'player'` (la simulación alterna quién empieza por paridad de semilla). La simulación M4 lo acepta solo en esos casos conocidos. Decidir regla o ajuste de contenido en M8.
@@ -61,7 +61,7 @@ Propósito: lectura obligatoria y suficiente sobre **reglas aprobadas, invariant
 | Hito | Alcance | Depende de |
 |---|---|---|
 | M4 | Diez encuentros aislados e IA | M3; MIG-D02, MIG-D07, convención A02 (ratificada) |
-| M5 | Restauración, orbe y ciclo | M3; contrato restante del orbe; MIG-D03, MIG-D06 |
+| M5 | Restauración, orbe y ciclo | M3; restauración/orbe decididos 2026-11-08; MIG-D03, MIG-D06 |
 | M6 | Grafo, estado, 3D, puzle y secreto | M5; resolver excepción MIG-D05 |
 | M7 | Ocho iniciales y 31 premios únicos | M1, M5, M6; MIG-D01 |
 | M8 | Integración M4/M7, pruebas, playtesting y balance separado; sin secretos obligatorios | M4, M7 |

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import {
+  activateOrb,
+  restorationPreview,
   reinvokeCreatureType,
   addCopyToActiveDeck,
   baseMana,
@@ -23,7 +25,7 @@ import type { EncounterSummary } from './ui/encounterSummary.js'
 import { CombatView } from './ui/CombatView.js'
 import './ui/combat.css'
 import { CollectionOverlay, GameOverlay } from './ui/CollectionOverlay.js'
-import { ExplorationHUD } from './ui/ExplorationHUD.js'
+import { ExplorationHUD, orbControlFor } from './ui/ExplorationHUD.js'
 import { GameNotice } from './ui/GameNotice.js'
 import { collectionShortcut } from './ui/explorationControls.js'
 import { applyCombatAction, cancelSummonShortcut, createCombatControls } from './ui/combatActions.js'
@@ -335,6 +337,18 @@ export default function App() {
     } catch (error) { reject(error) }
   }
 
+  /** V0.4B only; the normal game uses the legacy profile, so no orb control is shown there. */
+  function activateSessionOrb() {
+    try {
+      const preview = restorationPreview(session)
+      setAdventure({ ...adventure, session: activateOrb(session) })
+      setNotice(`Orbe activado: ${preview.healedCopies} copias sanadas, vida máxima +${preview.maxLifeRecovered}, fatiga ${preview.fatigueRemoved ? 'eliminada' : 'sin cambios'}.`)
+    } catch (error) {
+      setNotice(error instanceof RuleViolation ? error.message : 'No se pudo activar el orbe.')
+    }
+    resumeExploration()
+  }
+  const orbControl = orbControlFor(session, activateSessionOrb)
   const dungeonComplete = isExpeditionComplete(adventure)
   const objects = objectsForRoom(adventure)
   const activeEncounter = DUNGEON_ENCOUNTERS.find((entry) => entry.id === duel.encounterId)
@@ -343,7 +357,7 @@ export default function App() {
       {!isDuelActive ? <div className="exploration-world">
         <ExplorationScene room={ROOMS[adventure.roomId]} initialPose={poses.current[adventure.roomId] ?? ROOMS[adventure.roomId].spawn} objects={objects} resumeRevision={resumeRevision} disabled={view === 'collection' || lastResult !== null} onInteract={interactNearby} onPoseChange={(pose) => { poses.current[adventure.roomId] = pose }} />
         <div className="exploration-atmosphere" aria-hidden="true" />
-        <ExplorationHUD life={session.invokerLife} maxLife={session.invokerMaxLife} mana={usableMana} fatigue={session.fatigue} level={player.level} roomName={ROOMS[adventure.roomId].name} complete={dungeonComplete} onCollection={() => setView('collection')} />
+        <ExplorationHUD life={session.invokerLife} maxLife={session.invokerMaxLife} mana={usableMana} fatigue={session.fatigue} level={player.level} roomName={ROOMS[adventure.roomId].name} complete={dungeonComplete} onCollection={() => setView('collection')} orb={orbControl} />
         {view !== 'collection' && !lastResult && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} />}
         {view === 'collection' && <CollectionOverlay session={session} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
         {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'}`} onClose={closeResult}>

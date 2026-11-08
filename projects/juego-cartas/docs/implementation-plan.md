@@ -30,7 +30,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M7 | Once cofres, 31 premios únicos a reserva, panel de premios | `dc03b34` |
 | V0.4B M8a | Mazo exhausto (Eco de la cripta), Rendirse, terminación de encuentros | `31f3be6` |
 | V0.4B M8b | Integración: V0.4B por defecto, legado con `?expedicion=legado`, recorrido completo | `69bb33d` |
-| V0.4B M8c | IA nivel 2 e informe de balance ([balance-m8c.md](balance-m8c.md)) | commit local de cierre M8c (hash en Git) |
+| V0.4B M8c | IA nivel 2 e informe de balance ([balance-m8c.md](balance-m8c.md)) | `ed83a85` |
+| Iteración UI-1 | Grimorio V0.4B agrupado (Colección/Reinvocar/Filtros, reinvocar todas ≥ 7), 21 retratos V0.4B, foco del orbe | commit local de cierre UI-1 (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -257,3 +258,39 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Simulación: sin acciones ilegales ni turnos bloqueados; terminación máxima 30 turnos (cota 60).
 - Revisión: aprobada sin bloqueantes. Observación: la ruta mínima sin secretos solo está demostrada contra nivel 1; contra nivel 2 el jugador automático no gana 06 ni 19 con las 8 iniciales (decisión de balance o limitación del jugador automático). Corrección menor del informe (Eco en 02) aplicada por el coordinador.
 - Playtesting: **aceptado** por el diseñador (2026-11-08, «Todo bien, cerrar»). Propuestas de cifras del informe pendientes de decisión (no aplicadas).
+
+## Iteración UI-1 — grimorio, retratos V0.4B y foco del orbe (cerrada)
+
+### Brief
+
+- Autorización: pedida por el diseñador 2026-11-08 tras cerrar M8 (iteración posterior al cierre; UX/presentación + corrección pequeña). Precisiones del diseñador en el mismo intercambio (decisions.md «Iteración UI-1»).
+- Comportamiento actual: el grimorio lista cada copia por separado (dos Diablillos salen uno encima del otro, en baraja y colección), mezcla en una sola lista cartas para añadir, retirar y reinvocar; las cartas V0.4B comparten retrato genérico; tras usar el orbe con clic el teclado no mueve al avatar hasta hacer clic en la escena.
+- Comportamiento deseado (solo V0.4B; legado sin cambios):
+  1. **Agrupación:** una ficha por tipo con contador (×2) en la baraja activa y en Colección; la ficha indica cuántas copias están heridas.
+  2. **Añadir:** en Colección solo aparecen copias poseídas que no están en la baraja. Clic en la ficha: si ninguna copia de ese tipo está herida, añade una directamente; si hay heridas, abre una mini ventana para elegir la copia (con su vida).
+  3. **Retirar:** solo con la X de la baraja (Colección nunca muestra «Retirar de baraja»). Sin heridas, retira una copia; con heridas, deja elegir cuál.
+  4. **Navegación:** mini barra con «Colección», «Reinvocar» y «Filtros» (desplegable). Reinvocar lista las copias perdidas recuperables con su coste; una vez reinvocadas pasan a Colección.
+  5. **Reinvocar todas:** botón en Reinvocar con ventana de confirmación que muestra el coste total y la vida máxima resultante; solo habilitado si la vida máxima resultante es ≥ 7; si no, desactivado con motivo.
+  6. **Filtros:** coste de maná (0, 1, 2, 3+) y sacrificios (0, 1, 2+); se aplican a Colección y Reinvocar.
+  7. **Retratos V0.4B:** cada tipo de carta V0.4B con ilustración propia y reconocible, en el estilo de los retratos existentes (p. ej. ratas), programática/SVG, coherente con la cripta.
+  8. **Orbe:** tras activarlo con el ratón, el foco vuelve al avatar y WASD/E funcionan sin clic adicional.
+- Fuera de alcance (diferido por el diseñador): bug de arrastre bloqueado tras intentar arrastrar en principal (difícil de diagnosticar; registrado en decisions.md §4), balance (propuestas de balance-m8c.md), scroll de Colección, legado.
+- Mecánicas e invariantes: MIG-D01 (cupos y recuperación con suelo 1 individual), identidades de copia y heridas, baraja editable fuera de combate y bloqueada en combate, orbe fuera de combate.
+- Criterios de aceptación: los ocho puntos observables a 1440×900 y 1024×768; teclado y foco correctos en ventanas nuevas (Esc cierra, foco vuelve); tests nuevos de agrupación, elección de copia, reinvocar todas (umbral 7) y foco del orbe; suite y build correctos; legado idéntico.
+- Decisiones creativas: resueltas por el diseñador; aspecto de retratos y de la barra delegado (convención visual, skill game-ui-ux).
+- Revisión: completa. Playtesting humano: **requerido** (grimorio, retratos y orbe).
+- Modelos: implementer opus (UI y arte), reviewer sonnet.
+
+### Baseline
+
+- `HEAD ed83a856abeb39068ece3145fed59f73f20aaa6e`, árbol limpio salvo este plan y decisions.md.
+
+### Resultado (cerrado 2026-11-08)
+
+- Rutas: `src/engine/session.ts` (`reinvokeAllLostCopies` atómica, `reinvokeAllStatus`, umbral 7), `src/ui/Grimoire.tsx` y `src/ui/grimoireModel.ts` (nuevos: grimorio V0.4B agrupado, elección de copia, pestañas, filtros, confirmación), `src/ui/{CollectionViews,CollectionOverlay,ExplorationHUD,GameIcons,GameNotice}.tsx`, `src/App.tsx`, `src/styles.css`, `tests/ui1.tsx` (nuevo), `tests/{m1,m7,m8b}.tsx` (expectativas de lista agrupada), `tests/run.ts`.
+- Checks del coordinador: tests 428/428 + spatial, build correcto, `git diff --check` limpio. Legado comprobado por huellas de marcado tomadas en `ed83a85`.
+- Orbe: reproducido con segundo clic sobre el orbe gastado y con clic en el texto del aviso; corregido (`aria-disabled`, mousedown sin foco, `keepFocus` en el aviso V0.4B).
+- Inspección visual a 1440×900 y 1024×768: tres pestañas, elección de copia, confirmación, filtros, retratos en baraja y combate, foco tras el orbe; un título de diálogo oculto corregido durante la inspección.
+- Criterios por defecto, aceptados por el diseñador al cerrar: «Reinvocar todas» ignora los filtros (lo avisa); con vida máxima < 7 queda desactivado aunque solo haya semillas; sin heridas se mueve una copia cualquiera.
+- Revisión: aprobada sin bloqueantes. Observaciones: comportamientos de foco solo cubiertos por inspección y playtesting (tests de marcado estático); `aria-label` sin rol en contadores; A02/N05 reutilizan emblemas legados de rata y esqueleto.
+- Playtesting: **aceptado** por el diseñador (2026-11-08, «Todo bien, cerrar»).

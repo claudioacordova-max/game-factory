@@ -17,7 +17,7 @@ import { LEGACY_ADVENTURE } from '../src/adventure/legacyAdventure.js'
 import { V04B_ADVENTURE } from '../src/adventure/v04bAdventure.js'
 import type { EncounterSummary } from '../src/ui/encounterSummary.js'
 import { ExplorationHUD } from '../src/ui/ExplorationHUD.js'
-import { CollectionView } from '../src/ui/CollectionViews.js'
+import { CollectionView, DeckPanel } from '../src/ui/CollectionViews.js'
 import { PLAYER_CARD_TYPES } from '../src/engine/content.js'
 import { unlockCreatureType } from '../src/engine/session.js'
 import { seededRandom } from './duelFixtures.js'
@@ -349,8 +349,13 @@ test('Colección: V0.4B sin textos de mejoras legadas; el legado conserva los su
   const wounded = { ...base, copies: base.copies.map((copy, index) => (index === 0 ? { ...copy, health: copy.health - 1 } : copy)) }
   const v04b = renderToStaticMarkup(<CollectionView session={wounded} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} />)
   for (const legacyText of ['Sin mejoras', 'sin mejoras', 'Mejoras:', 'Mejora por victoria', 'sus mejoras']) ok(!v04b.includes(legacyText), `V0.4B muestra «${legacyText}»`)
-  ok(v04b.includes('Copia sana') && v04b.includes('Herida'), 'Estado de salud de cada copia')
-  ok(v04b.includes('Vuelve sana a la reserva.'), 'Recuperación V0.4B')
+  // UI-1: the reserve is empty here (all initial copies are in the deck), so health states are checked on the
+  // grouped deck panel and the recovery text on the Reinvocar tab.
+  const deck = renderToStaticMarkup(<DeckPanel session={wounded} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} />)
+  ok(deck.includes('1 herida'), 'Estado de salud de las copias')
+  const reinvoke = renderToStaticMarkup(<CollectionView session={wounded} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} initialTab="reinvoke" />)
+  for (const legacyText of ['Sin mejoras', 'sin mejoras', 'Mejoras:', 'Mejora por victoria', 'sus mejoras']) ok(!reinvoke.includes(legacyText) && !deck.includes(legacyText), `V0.4B muestra «${legacyText}»`)
+  ok(reinvoke.includes('Vuelven sanas a la reserva.'), 'Recuperación V0.4B')
   ok(v04b.includes('Morir o sacrificarse elimina la copia; su cupo se conserva y recuperarla cuesta vida máxima (las semillas, gratis).'), 'Pie V0.4B')
   const legacySession = unlockCreatureType(createExpeditionState().session, PLAYER_CARD_TYPES.find((card) => card.growth)!)
   const legacy = renderToStaticMarkup(<CollectionView session={legacySession} onChangeDeck={noop} onReinvoke={noop} />)

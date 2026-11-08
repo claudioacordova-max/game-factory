@@ -257,8 +257,13 @@ test('panel y Colección: nombres oficiales, copias en reserva y cierre con E/Es
   for (const id of v04bRoom('03').chest!.cardIds) ok(markup.includes(V04B_CARD_TYPES.find((card) => card.id === id)!.name), `Nombre de ${id}`)
   ok(markup.includes('Cruce de los Sellos') && markup.includes('En reserva') && markup.includes('<kbd>E</kbd>'))
   const collection = renderToStaticMarkup(<CollectionView session={result.state.expedition.session} cardTypes={V04B_CARD_TYPES} onChangeDeck={() => {}} onReinvoke={() => {}} />)
-  for (const entry of result.reward.cards) ok(collection.includes(`data-copy-id="${entry.copyId}"`), `Colección muestra ${entry.copyId}`)
-  equal((collection.match(/En reserva/g) ?? []).length, 4, 'Las cuatro copias nuevas aparecen en reserva')
+  // UI-1: Colección groups the reserve by type (×N) instead of one tile per copy identity.
+  const rewardSession = result.state.expedition.session
+  for (const entry of result.reward.cards) {
+    ok(!rewardSession.activeDeckCopyIds.includes(entry.copyId), `${entry.copyId} queda en reserva`)
+    ok(collection.includes(`data-card-id="${rewardSession.copies.find((copy) => copy.id === entry.copyId)!.cardId}"`), `Colección muestra ${entry.copyId}`)
+  }
+  ok(collection.includes('aria-label="4 copias en reserva"'), 'Las cuatro copias nuevas aparecen en reserva')
   const legacy = LEGACY_ADVENTURE.create()
   equal(LEGACY_ADVENTURE.objects(legacy), objectsForRoom(createExpeditionState()))
   ok(ACTIVE_CONTENT.id === 'legacy-v1')

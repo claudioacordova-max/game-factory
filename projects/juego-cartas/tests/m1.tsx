@@ -315,15 +315,16 @@ test('colección y reserva renderizan ambas identidades, salud/cupos y recuperac
   const initial = prepare('N02','N02')
   const session = { ...initial,copies:initial.copies.map((c,i) => ({...c,health:i === 0 ? 1 : 2})),activeDeckCopyIds:[initial.copies[1].id] }
   const noop = () => {}
+  // UI-1: Colección groups the reserve by type (copy-1, wounded); the deck copy (copy-2) is only in the deck panel;
+  // add/remove are split (tile vs. deck ×) and vacancies live in the Reinvocar tab.
   const markup = renderToStaticMarkup(<CollectionView session={session} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} />)
-  ok(markup.includes('data-copy-id="copy-1"') && markup.includes('data-copy-id="copy-2"') && markup.includes('2/2 poseídas / cupos obtenidos'))
-  ok(markup.includes('Herida · En reserva') && markup.includes('En tu baraja') && markup.includes('VID'))
-  ok(markup.includes('Añadir Limo de huesos copy-1 a baraja') && markup.includes('Retirar Limo de huesos copy-2 de baraja'))
+  ok(markup.includes('data-card-id="N02"') && markup.includes('×1') && markup.includes('1 herida') && markup.includes('VID'))
+  ok(markup.includes('Añadir Limo de huesos a la baraja: 1 en reserva, 1 herida; elegir copia') && !markup.includes('Retirar'))
   const deck = renderToStaticMarkup(<DeckPanel session={session} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} />)
-  ok(deck.includes('copy-2') && !deck.includes('copy-1'))
+  ok(deck.includes('Retirar una copia de Limo de huesos de la baraja') && !deck.includes('1 herida'))
   const missing = lose(session,[initial.copies[1].id])
-  const vacancy = renderToStaticMarkup(<CollectionView session={missing} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} />)
-  ok(vacancy.includes('Cupo 2 vacante') && vacancy.includes('Reinvocar Limo de huesos cupo 2') && vacancy.includes('Máximo: 20 → 19'))
+  const vacancy = renderToStaticMarkup(<CollectionView session={missing} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} initialTab="reinvoke" />)
+  ok(vacancy.includes('×1<small> perdidas</small>') && vacancy.includes('Reinvocar una copia de Limo de huesos (1 de vida máxima)') && vacancy.includes('Máximo: 20 → 19'))
   const legacy = createGameSession([{...card('N02')},{...card('N02')}])
   equal([legacy.copies.length,legacy.collectionProfile],[1,'legacy'])
   validateSessionCopies(legacy)

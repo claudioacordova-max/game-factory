@@ -8,11 +8,11 @@ Lectura mínima para retomar trabajo (workflow v1.2): esta ficha → [decisions.
 
 | Campo | Valor |
 |---|---|
-| Último cierre | V0.4B M8c, 2026-11-08 (IA nivel 2 en V0.4B e [informe de balance](balance-m8c.md); playtesting aceptado). Anterior: M8b `69bb33d` |
-| Siguiente hito | Ninguno autorizado. Hoja de ruta M4–M8 completa; pendiente decidir las propuestas de cifras de [balance-m8c.md](balance-m8c.md) (17 primero, luego 06) |
+| Último cierre | Iteración UI-1, 2026-11-08 (grimorio V0.4B agrupado con pestañas y filtros, «Reinvocar todas» con umbral 7, retratos propios V0.4B, foco tras el orbe; playtesting aceptado). Anterior: M8c `ed83a85` |
+| Siguiente hito | Ninguno autorizado. Pendientes del diseñador: más ajustes de interfaz, bug de arrastre bloqueado (diferido, ver decisions.md §4) y después balance ([balance-m8c.md](balance-m8c.md)) |
 | Decisiones abiertas | Zona de 03/10 provisional; «Mazo exhausto» y «Rendirse» implementados como experimentales (M8a). Ver [decisions.md](decisions.md#4-pendientes-abiertos-requieren-decisión-del-diseñador-antes-de-implementar) |
 | Juego activo | Expedición V0.4B por defecto (desde M8b); legado con `?expedicion=legado` |
-| Comprobaciones | `npm test` (419/419 + spatial al cierre M8c; balance: `node .test-dist/tests/balanceRun.js [--what-if]` tras compilar tests) y `npm run build` desde `projects/juego-cartas/` |
+| Comprobaciones | `npm test` (428/428 + spatial al cierre UI-1; balance: `node .test-dist/tests/balanceRun.js [--what-if]` tras compilar tests) y `npm run build` desde `projects/juego-cartas/` |
 | Incidencias conocidas | Onda de scroll en Colección, diferida sin autorización |
 
 ## Propuesta y experiencia

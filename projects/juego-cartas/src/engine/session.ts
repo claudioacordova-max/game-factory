@@ -199,6 +199,41 @@ export function reinvokeCreatureType(session: GameSession, cardId: string, cardT
   }
 }
 
+/** UI-1 (experimental): «Reinvocar todas» requires the resulting invoker max life to stay at or above this value. */
+export const REINVOKE_ALL_MIN_MAX_LIFE = 7
+
+/** Vacant obtained slots (lost copies) per discovered type, in discovery order; one entry per lost copy. */
+export function lostCopyCardIds(session: GameSession, cardTypes: readonly CreatureCard[]): string[] {
+  return discoveredCardIds(session).flatMap((cardId) => {
+    if (!cardTypes.some((card) => card.id === cardId)) return []
+    const vacant = unlockedSlotsForType(session, cardId) - session.copies.filter((copy) => copy.cardId === cardId).length
+    return Array.from({ length: Math.max(0, vacant) }, () => cardId)
+  })
+}
+
+export interface ReinvokeAllStatus { allowed: boolean; cardIds: string[]; cost: number; resultingMaxLife: number; reason: string }
+
+/** Total cost of recovering every lost copy at once (seeds free). Individual recovery keeps its own floor of 1. */
+export function reinvokeAllStatus(session: GameSession, cardTypes: readonly CreatureCard[]): ReinvokeAllStatus {
+  const cardIds = lostCopyCardIds(session, cardTypes)
+  const cost = cardIds.reduce((total, cardId) => total + reinvokeStatus(session, cardId, cardTypes).cost, 0)
+  const resultingMaxLife = session.invokerMaxLife - cost
+  const reason = session.collectionProfile !== 'v04b' ? 'Solo en la expedición V0.4B'
+    : session.activeDuelId !== null ? 'Solo fuera de combate'
+      : cardIds.length === 0 ? 'No hay copias perdidas'
+        : resultingMaxLife < REINVOKE_ALL_MIN_MAX_LIFE ? `La vida máxima quedaría en ${resultingMaxLife}; debe quedar al menos en ${REINVOKE_ALL_MIN_MAX_LIFE}`
+          : ''
+  return { allowed: !reason, cardIds, cost, resultingMaxLife, reason }
+}
+
+/** Atomic: validates the whole batch, then applies the existing individual recovery once per lost copy. */
+export function reinvokeAllLostCopies(session: GameSession, cardTypes: readonly CreatureCard[]): GameSession {
+  validateSessionCopies(session, cardTypes)
+  const status = reinvokeAllStatus(session, cardTypes)
+  if (!status.allowed) throw new RuleViolation(status.reason)
+  return status.cardIds.reduce((current, cardId) => reinvokeCreatureType(current, cardId, cardTypes), session)
+}
+
 export function addCopyToActiveDeck(session: GameSession, copyId: string): GameSession {
   requireOutsideCombat(session)
   validateSessionCopies(session)

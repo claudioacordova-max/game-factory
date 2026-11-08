@@ -3,10 +3,18 @@ import { discoveredCardIds, effectiveCopyCard, reinvokeStatus, unlockedSlotsForT
 import { PLAYER_CARD_TYPES } from '../engine/content.js'
 import { CardStats, PendingAbilities, RarityLabel } from './CardViews.js'
 import { CreaturePortrait, Icon } from './GameIcons.js'
+import { V04BDeckPanel, V04BGrimoire } from './Grimoire.js'
+import type { GrimoireTab } from './Grimoire.js'
+import type { GrimoireFilters } from './grimoireModel.js'
+
+/** Plain boolean (not a type guard) so the untouched legacy bodies keep compiling as before. */
+function isV04B(session: GameSession): boolean { return session.collectionProfile === 'v04b' }
 
 type Props = { session: GameSession; cardTypes?: readonly CreatureCard[]; onChangeDeck: (copyId: string, included: boolean) => void }
 
 export function DeckPanel({ session, cardTypes = PLAYER_CARD_TYPES, onChangeDeck }: Props) {
+  // UI-1: V0.4B groups copies by type; the legacy panel below is unchanged.
+  if (isV04B(session)) return <V04BDeckPanel session={session} cardTypes={cardTypes} onChangeDeck={onChangeDeck} />
   return <section className="deck-panel stone-panel" aria-labelledby="deck-title">
     <header className="panel-heading"><div><p className="section-kicker">Elegidas para el duelo</p><h2 id="deck-title">Baraja activa <span>{session.activeDeckCopyIds.length}</span></h2></div><Icon name="cards" /></header>
     <p className="subtle">El robo es aleatorio. Elige tus criaturas.</p>
@@ -22,7 +30,12 @@ export function DeckPanel({ session, cardTypes = PLAYER_CARD_TYPES, onChangeDeck
     <p className="deck-note"><Icon name="heart" />Las heridas se conservan entre duelos.</p>
   </section>
 }
-export function CollectionView({ session, cardTypes = PLAYER_CARD_TYPES, onChangeDeck, onReinvoke }: Props & { onReinvoke: (cardId: string) => void }) {
+export function CollectionView({ session, cardTypes = PLAYER_CARD_TYPES, onChangeDeck, onReinvoke, onReinvokeAll, initialTab, initialFilters, initialFiltersOpen }: Props & {
+  onReinvoke: (cardId: string) => void
+  /** UI-1, V0.4B only. initial* exist for tests and inspection fixtures. */
+  onReinvokeAll?: () => void; initialTab?: GrimoireTab; initialFilters?: GrimoireFilters; initialFiltersOpen?: boolean
+}) {
+  if (isV04B(session)) return <V04BGrimoire session={session} cardTypes={cardTypes} onChangeDeck={onChangeDeck} onReinvoke={onReinvoke} onReinvokeAll={onReinvokeAll} initialTab={initialTab} initialFilters={initialFilters} initialFiltersOpen={initialFiltersOpen} />
   const v04b = session.collectionProfile === 'v04b'
   return <section className="collection-view stone-panel" aria-labelledby="collection-title">
     <header className="panel-heading"><div><p className="section-kicker">Tus invocaciones</p><h2 id="collection-title">Colección <span>{session.copies.length}</span></h2></div><span className="subtle">{discoveredCardIds(session).length} tipos descubiertos</span></header>

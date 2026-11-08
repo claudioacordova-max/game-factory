@@ -11,6 +11,19 @@ export function orbControlFor(session: GameSession, onActivate: () => void): Orb
   return session.collectionProfile === 'v04b' && status.present ? { charged: status.charged, canActivate: status.canActivate, reason: status.reason, onActivate } : undefined
 }
 
+/**
+ * UI-1 orb focus fix. A pointer press on the orb must not take focus from the avatar viewport: with the
+ * native `disabled` attribute, a second click on the spent orb moved focus to <body> and WASD/E stopped
+ * until the scene was clicked. The orb is therefore aria-disabled (still announced as unavailable, with its
+ * reason) and its mousedown default is prevented; keyboard activation still resumes exploration afterwards.
+ */
+export function keepAvatarFocus(event: { preventDefault: () => void }): void { event.preventDefault() }
+export function activateOrbControl(orb: OrbControl): boolean {
+  if (!orb.canActivate) return false
+  orb.onActivate()
+  return true
+}
+
 /** zoneName is V0.4B only; the legacy HUD keeps its fixed «La cripta» heading. */
 export function ExplorationHUD({ life, maxLife, mana, fatigue, level, roomName, zoneName, complete, onCollection, orb }: {
   life: number; maxLife: number; mana: number; fatigue: number; level: number
@@ -26,7 +39,8 @@ export function ExplorationHUD({ life, maxLife, mana, fatigue, level, roomName, 
       </div>
     </section>
     <div className="exploration-location"><Icon name={complete ? 'check' : 'gate'} /><div><span>{complete ? 'Demo completada' : zoneName ?? 'La cripta'}</span><strong>{roomName}</strong></div></div>
-    {orb && <button className={`orb-launcher ${orb.charged ? 'charged' : 'empty'}`} type="button" disabled={!orb.canActivate} onClick={orb.onActivate}
+    {orb && <button className={`orb-launcher ${orb.charged ? 'charged' : 'empty'}`} type="button" aria-disabled={orb.canActivate ? undefined : true}
+      onMouseDown={keepAvatarFocus} onClick={() => activateOrbControl(orb)}
       aria-label={orb.canActivate ? 'Activar orbe de restauración (cargado)' : `Orbe de restauración: ${orb.reason}`}>
       <span><Icon name="orb" /></span><div><strong>Orbe</strong><small>{orb.charged ? 'Cargado' : 'Vacío'}{orb.charged && orb.reason && !orb.canActivate ?` · ${orb.reason}` : ''}</small></div></button>}
     <button className="collection-launcher" type="button" onClick={onCollection} aria-haspopup="dialog" aria-keyshortcuts="i"><span><Icon name="cards" /></span><strong>Colección</strong><kbd>I</kbd></button>

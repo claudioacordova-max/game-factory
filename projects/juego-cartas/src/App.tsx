@@ -4,6 +4,8 @@ import {
   activateOrb,
   restorationPreview,
   reinvokeCreatureType,
+  reinvokeAllLostCopies,
+  reinvokeAllStatus,
   addCopyToActiveDeck,
   baseMana,
   cardInstanceId,
@@ -348,6 +350,15 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
     } catch (error) { reject(error) }
   }
 
+  /** UI-1, V0.4B only: one atomic recovery of every lost copy (threshold checked by the domain). */
+  function recoverAll() {
+    try {
+      const status = reinvokeAllStatus(session, adapter.reinvokeCardTypes)
+      setAdventure(adapter.withSession(adventure, reinvokeAllLostCopies(session, adapter.reinvokeCardTypes)))
+      setNotice(`${status.cardIds.length} copias reinvocadas en reserva ${status.cost === 0 ? 'gratis' : `por ${status.cost} de vida máxima`} (máximo ${status.resultingMaxLife}).`)
+    } catch (error) { reject(error) }
+  }
+
   /** V0.4B only; the normal game uses the legacy profile, so no orb control is shown there. */
   function activateSessionOrb() {
     try {
@@ -372,8 +383,8 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
           ObjectView={adapter.id === 'v04b' ? V04BWorldObject : undefined} perf={perf} />
         <div className="exploration-atmosphere" aria-hidden="true" />
         <ExplorationHUD life={session.invokerLife} maxLife={session.invokerMaxLife} mana={usableMana} fatigue={session.fatigue} level={player.level} roomName={location.roomName} zoneName={location.zoneName} complete={location.complete} onCollection={() => setView('collection')} orb={orbControl} />
-        {view !== 'collection' && !lastResult && !chestReward && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} />}
-        {view === 'collection' && <CollectionOverlay session={session} cardTypes={adapter.collectionCardTypes} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
+        {view !== 'collection' && !lastResult && !chestReward && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} keepFocus={adapter.id === 'v04b'} />}
+        {view === 'collection' && <CollectionOverlay session={session} cardTypes={adapter.collectionCardTypes} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} onReinvokeAll={adapter.id === 'v04b' ? recoverAll : undefined} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
         {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'}${adapter.id === 'v04b' ? ' encounter-result-fit' : ''}`} onClose={closeResult}>
           <span className="result-seal"><Icon name={lastResult.won ? 'check' : 'skull'} /></span>
           <p className="section-kicker">{lastResult.won ? 'Encuentro superado' : 'La aventura continúa'}</p><h1>{lastResult.title}</h1><p className="result-outcome">{lastResult.outcome}</p><p className="result-resources">{lastResult.resources}</p>

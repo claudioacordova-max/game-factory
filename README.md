@@ -1,6 +1,6 @@
 # AI Game Factory
 
-Entorno de desarrollo de prototipos y demos de videojuegos web 3D mediante Codex, agentes especializados, skills y herramientas de apoyo. El diseñador aprueba reglas y alcance; la Factory implementa, comprueba y registra el trabajo autorizado.
+Entorno de desarrollo de prototipos y demos de videojuegos web 3D mediante Codex o Claude Code, agentes especializados, skills y herramientas de apoyo. El diseñador aprueba reglas y alcance; la Factory implementa, comprueba y registra el trabajo autorizado.
 
 Revisión documental: 2026-10-28. Ámbito: Factory y proyectos existentes.
 

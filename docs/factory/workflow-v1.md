@@ -4,7 +4,7 @@ Purpose: operative procedure for the Factory and its games. Documentation revise
 
 ## Roles
 
-- **Coordinator:** the main Codex session. It reads the approved design and technical plan, assigns bounded work, runs checks, evaluates review findings, tracks milestone state, and makes eligible local commits.
+- **Coordinator:** the main Codex or Claude Code session. It reads the approved design and technical plan, assigns bounded work, runs checks, evaluates review findings, tracks milestone state, and makes eligible local commits.
 - **Implementer:** the native `implementer` subagent. It implements only the authorized scope, updates necessary tests, runs applicable checks, and reports results. It does not change approved design or commit.
 - **Reviewer:** the native `reviewer` subagent. It independently inspects the specification, acceptance criteria, code, and tests after implementation. It reports evidence and a verdict without editing or committing.
 
@@ -41,9 +41,58 @@ The executor receives only the approved file paths, keeping unrelated and untrac
 
 Keep durable progress in `projects/<game>/docs/implementation-plan.md` and, where useful, the project's existing validation or progress report. Record each milestone's status, scope, changed paths, checks and outcomes, reviewer verdict and findings, correction cycles, blockers or playtesting status, and commit hash. The live plan links to earlier plans and evidence in `history/`; consult them when needed without reopening superseded work or copying the full history. Do not create a parallel tracking system for routine work. On a new session, read those records and Git history/status, confirm the approved scope and current milestone, then resume only work already authorized. If repository state conflicts with the record, inspect and resolve the discrepancy before continuing.
 
+## Token efficiency (v1.2)
+
+Adopted 2026-11-07. These rules reduce repeated reading and writing without removing any role, check, review, playtesting or commit gate. They apply to every game and to both Codex and Claude Code. **Reduce evidence, never rules:** approved rules, invariants and open decisions stay in documents that are always read; only process evidence is archived.
+
+### Game documents and layered reading
+
+Each game keeps, in `projects/<game>/docs/`:
+
+- `status.md` starting with a **continuity card** ([template](templates/status-card.md)): last closure, next milestone and its authorization, open decisions, active configuration, check commands and known incidents.
+- `decisions.md` ([template](templates/decisions.md)): sources and precedence, invariants every change must preserve, approved decisions (implemented and future), open decisions and roadmap. It consolidates without reinterpreting; the source prevails on discrepancy.
+- `spec-vN.md` and `implementation-plan.md` as before; the live plan stays compact (current state, closures table, links).
+
+The Factory itself keeps a **Factory continuity card** at the top of `docs/factory/status.md`: last Factory change, game states, current limitations and a table of Factory pending items (proposed, deferred or authorized but unfinished). Every session reads it at start, together with the active game's card. **Before ending a session, record there every Factory proposal or follow-up that was not executed**, and remove items once closed. Chat history and tool-specific memory are not continuity sources.
+
+Reading order for a new session or a delegated task: continuity card → `decisions.md` → applicable `spec-vN.md` → the code and tests affected. `history/` is consulted only for provenance or when a source is disputed. The coordinator gives subagents exact paths and sections instead of whole records. The spec and `decisions.md` are always read in full by the implementer and reviewer; they are the guard against breaking existing mechanics.
+
+### Briefs and records
+
+- Every milestone or iteration brief includes **"Mechanics and invariants to preserve"**: the existing rules the change touches or borders, referenced to `decisions.md`/spec. The coordinator writes it; implementer and reviewer check against it.
+- Records use the compact [milestone template](templates/milestone-record.md): bullets, no narration of each step. Screenshots, logs, probe output and harnesses stay outside the repository; the record keeps only their path and result.
+- Subagent reports are compact: changed paths, checks, findings, blockers. No restating of the brief.
+
+### Archive on closure
+
+When a milestone or iteration closes: (1) move every new or changed approved decision and open item into `decisions.md`, and verify none is lost; (2) leave a closure row and a 5–10 line summary in the live plan; (3) move detailed evidence to `history/` with a note of its original location. Step 1 must happen before step 3. Consolidation is not a new design approval.
+
+### Proportional review
+
+- **Full independent review** (as in the milestone procedure): every milestone, and any iteration that changes rules, engine logic, data, or player-facing behavior beyond a local presentation tweak.
+- **Scoped review**: a correction cycle or small presentation fix limited to a few lines (for example a single CSS value). The reviewer still runs independently but only over the diff, the affected criterion and the checks; it does not re-audit the milestone. This counts toward the correction-cycle limit as before.
+- Do not re-run unchanged suites or captures to re-document an unchanged result; cite the existing evidence. After any correction, still repeat every check the diff can affect, as the milestone procedure requires.
+
+### Model routing
+
+Use the strongest model only where judgment is the product.
+
+| Work | Tier | Claude Code | Codex |
+|---|---|---|---|
+| Planning, milestone definition, creative/design analysis, UI/UX, visual and 3D design, architecture | Strong | `opus` | strong model, high reasoning |
+| Implementation of a well-specified logic/engine milestone; independent review | Medium | `sonnet` (agent default) | medium model or reasoning |
+| Implementation whose core is UI/UX, visual or 3D | Strong | implementer with `model: "opus"` | strong model |
+| Tests, builds, preflight, Git inspection, commit executor, files from exact instructions | Small | `haiku` via `runner` | small model, low reasoning |
+
+Each subagent starts cold: batch mechanical work into one call (for example tests + build + preflight, reporting failures only) and do not spawn an agent for a single short command. Agent profiles: `.claude/agents/` (Claude Code) and `.codex/agents/` (Codex).
+
+### Tool parity
+
+Command permissions exist in `.codex/rules/*.rules` and `.claude/settings.json`; skills are canonical in `.agents/skills/` with thin wrappers in `.claude/skills/`. A change to one permission set or profile must be mirrored in the other.
+
 ## Start a new project
 
-Start from the new project's approved game specification and approved technical milestone plan. Check that both define the gameplay scope and acceptance criteria before delegating implementation. Use the repository's existing project/template process when authorized; do not migrate or modify another project as part of setup. Establish documentation in `projects/<game>/docs/` under the conventions below; the generator provides the technical template and does not automatically create these documents. Track milestone status in `implementation-plan.md`, and execute only approved milestones through this workflow.
+Start from the new project's approved game specification and approved technical milestone plan. Check that both define the gameplay scope and acceptance criteria before delegating implementation. Use the repository's existing project/template process when authorized; do not migrate or modify another project as part of setup. Establish documentation in `projects/<game>/docs/` under the conventions below, including the continuity card and `decisions.md` from `docs/factory/templates/` (see Token efficiency); the generator provides the technical template and does not automatically create these documents. Track milestone status in `implementation-plan.md`, and execute only approved milestones through this workflow.
 
 ## Post-closure iterations (v1.1)
 
@@ -78,5 +127,5 @@ Adapt the structure and visual direction to each game; do not make one project's
 ## Known limitations
 
 - The reviewer is asked not to edit, but v1 does not technically enforce read-only access. Subagents share the workspace and sandbox.
-- Custom agent profiles may require a fresh Codex session to load. If the `implementer` or `reviewer` role is not available, do not pretend it ran; report the limitation and resume with the configured agent in a new session.
+- Custom agent profiles (`.codex/agents/`, `.claude/agents/`) may require a fresh session to load. If the `implementer` or `reviewer` role is not available, do not pretend it ran; report the limitation and resume with the configured agent in a new session.
 - Human playtesting remains a human decision and cannot be replaced by tests or code review.

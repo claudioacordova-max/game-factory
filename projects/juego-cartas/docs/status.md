@@ -1,14 +1,23 @@
 # Duelo en la cripta — estado vigente
 
-Propósito: describir el prototipo implementado de `projects/juego-cartas/`. Revisión operativa: 2026-11-04. El corte de la consolidación documental anterior fue `54955677ec9430695b233c99a8fb4067b103a86d`; el baseline de M0 es `8fb9c4f023d08f2b60013502e13e591c9c8d8eb1`. Las verificaciones nuevas se distinguen de los cierres históricos.
+Propósito: describir el prototipo implementado de `projects/juego-cartas/`. Revisión: 2026-11-07.
 
-Iteración UX y fatiga cerrada con alcance parcialmente aceptado por decisión expresa del diseñador: foco/cierres, arrastre/reasignación, bloqueos múltiples, prioridades de bloqueadores y atacantes, distribución contextual, conexiones/transiciones, presentación enemiga, turnos/fases y fatiga aceptados. Se conserva la eliminación técnicamente verificada de transiciones hover en botones de colección; el diseñador confirmó que no resolvió la onda durante scroll. Esa incidencia queda no resuelta y diferida, sin mantener activa la iteración. El [plan vivo](implementation-plan.md) registra evidencia y cierre con commit exclusivamente local, sin push.
+## Ficha de continuidad
+
+Lectura mínima para retomar trabajo (workflow v1.2): esta ficha → [decisions.md](decisions.md) → [spec-v1.md](spec-v1.md) → código afectado. El [plan vivo](implementation-plan.md) registra autorizaciones y cierres; `history/` solo se consulta para procedencia.
+
+| Campo | Valor |
+|---|---|
+| Último cierre | V0.4B M3, `52b9e77` (aceptado con playtesting 2026-11-04) |
+| Siguiente hito | M4 — diez encuentros aislados e IA. **No autorizado** |
+| Decisiones abiertas | Convención A02 predesplegada y maná base rival (M4); restauración/orbe (M5); excepción MIG-D05, puzle y acceso 18 (M6). Ver [decisions.md](decisions.md#4-pendientes-abiertos-requieren-decisión-del-diseñador-antes-de-implementar) |
+| Juego activo | Legado (`ACTIVE_CONTENT = LEGACY_CONTENT`); V0.4B solo en preparaciones aisladas |
+| Comprobaciones | `npm test` (279/279 + spatial al cierre M3) y `npm run build` desde `projects/juego-cartas/` |
+| Incidencias conocidas | Onda de scroll en Colección, diferida sin autorización |
 
 ## Propuesta y experiencia
 
-**Continuación 2026-11-04:** M3 implementado con P3/P4/P8 ratificadas: escudos agrupados R03/R04, daño de entrada A03 y destrucción voluntaria N01 con objetivos/terminales inmediatos, cola obligatoria H02, cura/robo condicional H03 y ritual H04 con previsión/edición/cancelación/confirmación y retorno de superviviente a 0/1 sana. Los efectos se ejecutan en el perfil V0.4B aislado; la aventura normal continúa usando el legado. Coordinador: 279/279 + spatial, build y 18 recorridos interactivos en dos tamaños satisfactorios; revisión independiente aprobada sin hallazgos pendientes. El diseñador confirma playtesting completado y funcionamiento correcto. M3 aceptado; no iniciar M4–M8. El [registro de continuación](iterations/2026-10-31-migracion-v04b.md#continuación-m3-autorizada--2026-11-04) conserva el detalle y la evidencia.
-
-Históricamente, M0 cerró en `be974b9b424a52db9653ab73c485fb71a6327991`, M1 en `3ec644a5bd2705e2c6ed6353f6e568b9e6b4bcf4` y M2 en `a449504be7c857c2d34f38e1a981c1f5695bcedc`. Este último hash fue el baseline M3; las propuestas P3/P4/P8 se ratificaron después y M3 ya está implementado y aceptado como se describe arriba. El [registro operativo](iterations/2026-10-31-migracion-v04b.md) conserva el historial y la evidencia. La aventura normal sigue usando el legado.
+M3 (perfil V0.4B): escudos agrupados R03/R04, daño de entrada A03 y destrucción N01 con terminales inmediatos, cola obligatoria H02, cura/robo condicional H03 y ritual H04 con previsión/confirmación y retorno a 0/1. Detalle de reglas en [decisions.md](decisions.md); evidencia en el [registro M0–M3](history/migracion-v04b-m0-m3.md).
 
 El juego principal continúa con los datos P/E de `src/engine/content/legacy.ts` a través de `ACTIVE_CONTENT = LEGACY_CONTENT`. El catálogo nuevo está disponible para preparaciones aisladas, sin sustituir el inicio ni activar la aventura de 19 salas, efectos M3, orbe o diez encuentros nuevos. El dominio M2 se ejecuta únicamente en su perfil V0.4B; no altera las reglas ni el recorrido del prototipo legado descritos a continuación.
 

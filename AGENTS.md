@@ -44,7 +44,7 @@ During implementation:
 
 ## Approved technical milestones
 
-When the user authorizes execution of a technical milestone from an approved plan, the coordinator (the main Codex session) must run the milestone workflow in `docs/factory/workflow-v1.md` automatically:
+When the user authorizes execution of a technical milestone from an approved plan, the coordinator (the main Codex or Claude Code session; see `CLAUDE.md` for the Claude Code mapping) must run the milestone workflow in `docs/factory/workflow-v1.md` automatically:
 
 1. Read the applicable game specification, approved technical plan, and repository instructions.
 2. Confirm the milestone scope and acceptance criteria. Record the starting Git `HEAD` and full status, including staged, unstaged, and untracked paths; identify pre-existing user changes before editing.
@@ -77,3 +77,5 @@ Before work, record `HEAD` and the complete Git status. Never include pre-existi
 Identify the active game from the task and its authorized scope; do not assume one project is permanently active. Factory documentation lives in `docs/factory/`. Each game's current documentation lives in `projects/<game>/docs/`: `status.md` describes the implemented state, `spec-vN.md` consolidates approved requirements for a defined scope, and `implementation-plan.md` is the planning and continuity record. Read the applicable specification and later authorized decisions together; a consolidation does not grant new design approval.
 
 The existing games are `projects/juego-cartas/` and `projects/comerciante-medieval/`. Their root READMEs link to their current documents and archived sources in `docs/history/` within each project. Historical records preserve evidence, not permission to restart superseded work. Follow the documentation maintenance conventions in `docs/factory/workflow-v1.md` without changing the existing milestone, review, playtesting, or commit gates.
+
+Token efficiency rules (layered reading, `decisions.md`, compact records, archive on closure, proportional review and model routing) are in the **Token efficiency (v1.2)** section of `docs/factory/workflow-v1.md`; they add no gates and remove none. Start every session from the Factory continuity card at the top of `docs/factory/status.md` (plus the active game's card) and record unexecuted Factory follow-ups there before ending.

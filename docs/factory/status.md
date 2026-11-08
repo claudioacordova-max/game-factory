@@ -1,6 +1,23 @@
 # Game Factory — estado vigente
 
-Propósito: capacidades implementadas, evidencia y limitaciones. Ámbito: Factory. Revisión: 2026-10-28. Corte base de la reorganización: `54955677ec9430695b233c99a8fb4067b103a86d`. Reorganización documental aceptada y cierre autorizado por el usuario el 2026-10-28; el impedimento técnico quedó resuelto en `a773dff6f5314bb1c28eda7fef401e4a256fbbd2`. Este registro integra la entrega de cierre documental, cuyo identificador real se informa después de comprobar Git.
+Propósito: capacidades implementadas, evidencia y limitaciones. Ámbito: Factory. Revisión: 2026-11-07 (ficha de continuidad); resto del documento 2026-10-28. Corte base de la reorganización: `54955677ec9430695b233c99a8fb4067b103a86d`. Reorganización documental aceptada y cierre autorizado por el usuario el 2026-10-28; el impedimento técnico quedó resuelto en `a773dff6f5314bb1c28eda7fef401e4a256fbbd2`. Este registro integra la entrega de cierre documental, cuyo identificador real se informa después de comprobar Git.
+
+## Ficha de continuidad de Factory
+
+Lectura obligatoria al iniciar cualquier sesión (Codex o Claude Code), junto con la ficha del juego activo. Revisión: 2026-11-07. Toda propuesta o pendiente de Factory que no se ejecute en su sesión se registra aquí antes de cerrarla ([workflow v1.2](workflow-v1.md#token-efficiency-v12)).
+
+| Campo | Valor |
+|---|---|
+| Último cambio | Adaptación a Claude Code (fase A) y eficiencia de tokens v1.2 (fase B), 2026-11-07; commit local en el historial Git (`factory: adapt to Claude Code and token efficiency v1.2`) |
+| Juegos | `juego-cartas`: M3 cerrado, M4 no autorizado ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: sin intervención activa |
+| Limitaciones vigentes | Agentes de Claude Code requieren sesión nueva; `deny` de `.claude/settings.json` cubre Bash, no PowerShell; ejecutor instalado en `%USERPROFILE%\.codex\bin\` |
+
+Pendientes de Factory (ninguno autorizado para ejecución):
+
+| Pendiente | Estado | Qué falta |
+|---|---|---|
+| Harness reutilizable de inspección visual | Propuesto 2026-11-07; el diseñador quiere abordarlo próximamente | Diseñar e implementar, en el template o en `scripts/`, un servidor/arranque reutilizable con inicializadores controlados y capturas a 1440×900/1024×768, en lugar de montar uno temporal por hito. Requiere plan y aprobación (código de herramientas) |
+| Adopción v1.2 en `comerciante-medieval` | Diferido por el diseñador | Crear ficha de continuidad y `decisions.md`, compactar el plan y archivar evidencia, en su próxima intervención o cuando se autorice |
 
 ## Capacidades existentes
 
@@ -55,3 +72,10 @@ Fuente probada y pin de pruebas: SHA-256 `758fa50726a64fd33b07a9485e04d5d358376a
 Commit técnico local comprobado: `a773dff6f5314bb1c28eda7fef401e4a256fbbd2`, mensaje `factory: support verified tracked deletions in safe commits`. Incluye exactamente las cuatro herramientas/pruebas autorizadas; el índice quedó vacío y las 59 rutas documentales permanecieron separadas. La aceptación de la reorganización y su limpieza está satisfecha; su cierre documental único utiliza el ejecutor ya corregido, sin push. El hash de ese cierre se obtiene después de ejecutarlo y no se inserta circularmente en este documento.
 
 Los [contextos originales](history/00-contexto-comun.md) y las [instrucciones de asesoría anteriores](history/01-chat-configuracion-factory.md) quedan archivados. Para comprender el sistema, comenzar por [overview.md](overview.md); para ejecutar trabajo, seguir el workflow.
+
+## Adaptación a Claude Code y eficiencia de tokens — 2026-11-07
+
+- **Fase A (autorizada):** `CLAUDE.md` importa `AGENTS.md`; agentes `.claude/agents/` `implementer` (sonnet), `reviewer` (sonnet, sin herramientas de edición: lectura técnica forzada) y `runner` (haiku, comandos mecánicos); wrappers de skills en `.claude/skills/`; permisos equivalentes a `.codex/rules` en `.claude/settings.json`. `.codex/` intacto; ambas herramientas conviven.
+- **Fase B (autorizada):** sección *Token efficiency (v1.2)* en el [workflow](workflow-v1.md#token-efficiency-v12): lectura por capas (ficha de continuidad → `decisions.md` → spec → código), invariantes obligatorias en cada brief, registros compactos, archivo al cerrar tras consolidar decisiones, revisión proporcional y ruteo de modelos. [Plantillas](templates/) reutilizables para nuevos juegos.
+- Aplicado en `juego-cartas`: [decisions.md](../../projects/juego-cartas/docs/decisions.md), ficha en `status.md`, plan vivo compacto; registros M0–M3 y plan anterior archivados íntegros en `history/`. `comerciante-medieval` adopta el formato en su próxima intervención.
+- Limitaciones: los agentes de Claude Code requieren sesión nueva para cargarse; las reglas `deny` de `.claude/settings.json` cubren Bash, no PowerShell; el ejecutor instalado sigue en `%USERPROFILE%\.codex\bin\`.

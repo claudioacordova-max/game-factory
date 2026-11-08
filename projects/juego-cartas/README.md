@@ -2,7 +2,7 @@
 
 Demo de RPG de cartas: explora siete salas 3D, descubre criaturas y prepara una baraja para duelos y escaramuzas. Las heridas, bajas y mejoras se conservan durante la sesión. Revisión de esta guía: 2026-10-28; referencia implementada `54955677ec9430695b233c99a8fb4067b103a86d`.
 
-La iteración UX y fatiga queda cerrada con alcance parcialmente aceptado: el diseñador aceptó combate, distribución contextual, prioridades, conexiones, turnos/fases, foco y fatiga. Se conserva la eliminación verificada de transiciones hover en botones de colección, pero no resolvió la onda observada durante scroll lento con rueda en el menú abierto con I. El scroll queda como incidencia conocida, no resuelta y diferida, sin investigación adicional autorizada ni fecha comprometida. La evidencia y el cierre constan en el [plan vivo](docs/implementation-plan.md); el detalle de la limitación está en el [estado vigente](docs/status.md). Cierre con commit exclusivamente local, sin push.
+La iteración UX y fatiga queda cerrada con alcance parcialmente aceptado: el diseñador aceptó combate, distribución contextual, prioridades, conexiones, turnos/fases, foco y fatiga. Se conserva la eliminación verificada de transiciones hover en botones de colección, pero no resolvió la onda observada durante scroll lento con rueda en el menú abierto con I. El scroll queda como incidencia conocida, no resuelta y diferida, sin investigación adicional autorizada ni fecha comprometida. La evidencia y el cierre constan en el [plan archivado](docs/history/implementation-plan-2026-11-07.md), enlazado desde el [plan vivo](docs/implementation-plan.md); el detalle de la limitación está en el [estado vigente](docs/status.md). Cierre con commit exclusivamente local, sin push.
 
 ## Ejecutar
 

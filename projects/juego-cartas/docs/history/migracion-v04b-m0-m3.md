@@ -1,5 +1,7 @@
 # Duelo en la cripta — migración V0.4B: M0–M3
 
+> **Archivado el 2026-11-07** desde `docs/iterations/2026-10-31-migracion-v04b.md` (workflow v1.2). Evidencia completa M0–M3. Las decisiones y pendientes vigentes están consolidados en [decisions.md](../decisions.md); este registro sigue siendo la fuente de procedencia.
+
 Propósito: conservar la autorización, decisiones y continuidad de la migración desde el prototipo legado. Fecha del registro: 2026-10-31. Punto de entrada: [plan vivo](../implementation-plan.md). Este registro no sustituye la [especificación implementada del legado](../spec-v1.md) ni presenta reglas futuras como instaladas.
 
 ## Brief y autorización

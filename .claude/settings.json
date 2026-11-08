@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:/Program Files/nodejs/node.exe\" C:/Users/klaud/.codex/bin/game-factory-commit.cjs:*)",
+      "Bash(node C:/Users/klaud/.codex/bin/game-factory-commit.cjs:*)",
+      "Bash(node .codex/tools/commit-format-preflight.cjs:*)",
+      "Bash(node --test .codex/tools/:*)",
+      "Bash(npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)"
+    ],
+    "deny": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(git rebase:*)",
+      "Bash(git commit --amend:*)"
+    ]
+  }
+}

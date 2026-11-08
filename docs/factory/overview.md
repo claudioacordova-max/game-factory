@@ -10,7 +10,7 @@ La base técnica existente es TypeScript, React, Vite, Three.js y React Three Fi
 
 ## Organización y responsabilidades
 
-El diseñador aprueba reglas, alcance y decisiones creativas materiales. Codex coordina: interpreta el encargo autorizado, delimita tareas, comprueba resultados y mantiene la continuidad. El agente `implementer` implementa lo autorizado y las pruebas necesarias; el `reviewer` inspecciona después el resultado en un contexto independiente y reporta hallazgos sin editar.
+El diseñador aprueba reglas, alcance y decisiones creativas materiales. La sesión principal (Codex o Claude Code) coordina: interpreta el encargo autorizado, delimita tareas, comprueba resultados y mantiene la continuidad. El agente `implementer` implementa lo autorizado y las pruebas necesarias; el `reviewer` inspecciona después el resultado en un contexto independiente y reporta hallazgos sin editar.
 
 Las skills existentes ayudan a preparar briefs (`game-iteration`) y a diseñar, implementar y evaluar interfaces (`game-ui-ux`). No son agentes adicionales ni sustituyen autorizaciones. El [workflow](workflow-v1.md) reúne el procedimiento obligatorio; [AGENTS.md](../../AGENTS.md) fija las instrucciones del repositorio.
 

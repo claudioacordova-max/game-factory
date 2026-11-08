@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
-import { BoxGeometry, CylinderGeometry, IcosahedronGeometry, InstancedMesh, Matrix4, MeshStandardMaterial, SphereGeometry } from 'three'
+import { BoxGeometry, CylinderGeometry, IcosahedronGeometry, InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry } from 'three'
 import type { ReactNode } from 'react'
 import type { MasonryBlock } from './cryptVisuals.js'
 
@@ -18,6 +18,16 @@ export function cryptMaterial(color: string, metal = false): MeshStandardMateria
   }
   return material
 }
+/** Unlit shared materials for runes and mana light (V0.4B); batched like the other static pieces. */
+const glowMaterials = new Map<string, MeshBasicMaterial>()
+export function cryptGlowMaterial(color: string): MeshBasicMaterial {
+  let material = glowMaterials.get(color)
+  if (!material) {
+    material = new MeshBasicMaterial({ color })
+    glowMaterials.set(color, material)
+  }
+  return material
+}
 type V3 = [number, number, number]
 interface PieceProps { at?: V3; size: V3; color: string; rotation?: V3; metal?: boolean; children?: ReactNode }
 export function Block({ at, size, color, rotation, metal }: PieceProps) {
@@ -31,6 +41,10 @@ export function Pebble({ at, size, color, rotation }: PieceProps) {
 }
 export function Orb({ at, size, color, rotation }: PieceProps) {
   return <mesh position={at} scale={size} rotation={rotation} geometry={sphere} material={cryptMaterial(color)} castShadow dispose={null} />
+}
+/** Glowing rune stroke or mana inlay: shared box geometry, unlit shared material, no shadows. */
+export function Glow({ at, size, color, rotation }: PieceProps) {
+  return <mesh position={at} scale={size} rotation={rotation} geometry={box} material={cryptGlowMaterial(color)} dispose={null} />
 }
 export function Masonry({ blocks, color }: { blocks: readonly MasonryBlock[]; color: string }) {
   const ref = useRef<InstancedMesh>(null)

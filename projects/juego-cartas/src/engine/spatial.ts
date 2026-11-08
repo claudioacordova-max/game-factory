@@ -15,9 +15,17 @@ export interface RoomDefinition {
 export interface ExplorationObject {
   id: string
   label: string
-  kind: 'enemy' | 'chest' | 'shrine' | 'exit'
+  kind: 'enemy' | 'chest' | 'shrine' | 'exit' | 'feature'
   position: Point2
   status: 'available' | 'locked' | 'completed'
+  /** Optional contextual verb; defaults by kind. */
+  action?: string
+  /** Optional reason shown near a locked object (V0.4B exits). */
+  reason?: string
+  /** Optional presentation hint for alternative renderers; never used for rules. */
+  visual?: string
+  /** Exit set in a side wall (V0.4B): its door body runs along z instead of x. */
+  sideWall?: boolean
 }
 
 export const AVATAR_RADIUS = 0.3
@@ -131,5 +139,5 @@ export function closestInteractable(pose: Point2, objects: readonly ExplorationO
 export function roomWithObjects(room: RoomDefinition, objects: readonly ExplorationObject[]): RoomDefinition {
   return { ...room, obstacles: [...room.obstacles, ...objects.flatMap((object): SpatialObstacle[] =>
     object.kind === 'enemy' && object.status === 'completed' ? [] :
-      [{ ...object.position, width: object.kind === 'exit' ? 1.3 : 0.75, depth: object.kind === 'exit' ? 0.3 : 0.65 }])] }
+      [{ ...object.position, width: object.kind === 'exit' ? object.sideWall ? 0.3 : 1.3 : 0.75, depth: object.kind === 'exit' ? object.sideWall ? 1.3 : 0.3 : 0.65 }])] }
 }

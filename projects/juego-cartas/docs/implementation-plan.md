@@ -4,9 +4,9 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 
 ## Estado actual
 
-- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 dividido: M6a cerrado (2026-11-08), M6b (3D) no autorizado**; **M7–M8 no autorizados**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
+- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 cerrado: M6a y M6b (2026-11-08)**; **M7–M8 no autorizados**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
 - Juego activo: legado. Incidencia diferida: scroll de Colección.
-- Última evidencia técnica (cierre M6a): 336/336 + spatial, build correcto (aviso de bundle >500 kB conocido).
+- Última evidencia técnica (cierre M6b): 356/356 + spatial, build correcto (aviso de bundle >500 kB conocido).
 
 ## Cierres
 
@@ -25,7 +25,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M3 | Escudos, A03/N01, H02/H03, ritual H04 (P3/P4/P8) | `52b9e77` |
 | V0.4B M4 | Diez encuentros aislados, MIG-D02, IA nivel 1 | `fbde853` |
 | V0.4B M5 | Restauración, orbe en HUD, ciclo de ratas MIG-D03 | `7aabf7a` |
-| V0.4B M6a | Grafo de 19 salas y estado de exploración, puzle, muro | commit local de cierre M6a (hash en Git) |
+| V0.4B M6a | Grafo de 19 salas y estado de exploración, puzle, muro | `7c0b1c1` |
+| V0.4B M6b | Expedición V0.4B jugable en 3D (`?expedicion=v04b`), combates reales, rendimiento | commit local de cierre M6b (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -112,4 +113,34 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Revisión: completa, aprobada sin hallazgos. Ciclos correctivos 0/2.
 - Inspección visual y playtesting: no aplican (sin UI).
 - Decisiones en decisions.md: bloqueo por encuentro, runas, criterios M6a aceptados (zonas provisionales, regreso por conexión de entrada, condiciones de cofre).
-- Cierre: commit local `juego-cartas: cerrar V0.4B M6a de grafo y exploración`, sin push.
+- Cierre: `7c0b1c1` (`juego-cartas: cerrar V0.4B M6a de grafo y exploración`), sin push.
+
+## V0.4B M6b — expedición V0.4B jugable en 3D (cerrado 2026-11-08)
+
+### Brief
+
+- Autorización: el diseñador aprobó el plan, sus cuatro decisiones y exigió pruebas de rendimiento, 2026-11-08.
+- Alcance: 19 salas 3D compactas reutilizando geometría, paleta y estabilización aprobadas, con salidas en muros (hasta 4) y ambiente por zona; salidas con estado visible y motivo; altar 10, inscripción 11, pedestales 12 y muro 14 interactivos; combates M4 conectados por sala con liquidación existente, restauración gratuita B1/B2 y ciclo de ratas; HUD V0.4B (orbe M5, nombre oficial de sala); acceso solo con `?expedicion=v04b`; representación de enemigos según decisions.md; medición de rendimiento.
+- Fuera de alcance: cofres y premios (M7), V0.4B por defecto y balance (M8), scroll de Colección.
+- Criterios de aceptación: sin parámetro el juego legado es idéntico (suite legada intacta); con parámetro se juega 01→19 con combates reales; todas las salidas alcanzables y ninguna bloqueada por obstáculos en las 19 salas; estados de salida visibles con motivo; puzle, muro, altar y orbe operables con E; victorias desbloquean, derrotas aplican fatiga 0–1 y permiten reintentar; nombres oficiales; suite previa + nuevas y build correctos; inspección visual de las 19 salas a 1440×900 y 1024×768.
+- **Rendimiento (obligatorio):** (1) presupuesto por sala medido con `renderer.info` (draw calls, triángulos, geometrías, texturas): ninguna sala V0.4B supera en más de un 25 % el máximo de las siete salas legadas medido en la misma ejecución; (2) sin fugas: tras recorrer las 19 salas y volver a 01, geometrías y texturas vuelven al valor inicial (±5 %); (3) FPS: muestra automática por sala en navegador con aceleración (harness `--headed`), mediana ≥ 90 % de la mediana legada en la misma máquina y ejecución; (4) contador de FPS y `renderer.info` visible solo con `?perf` para el playtesting; el diseñador confirma fluidez aceptable en su equipo. Si no se cumple, optimizar dentro del alcance (instancias, agrupado estático existente, menos geometría) sin degradar el arte aprobado.
+- **Mecánicas e invariantes:** decisions.md §2 completo (render estático agrupado con fallback de normales y DPR1; controles, foco y colisiones aceptados); M4–M6a y sus contratos; `ACTIVE_CONTENT = LEGACY_CONTENT` por defecto.
+- Decisiones creativas: ninguna abierta (representación provisional del Devoto y escaramuzas aceptada).
+- Revisión: completa. Playtesting humano: **requerido** antes del cierre.
+- Modelos: implementer opus (3D/UI), reviewer sonnet.
+
+### Baseline
+
+- `HEAD 7c0b1c13d23569619f8023ac77507a2363c8927c`; cambios previos de esta sesión, autorizados e incluidos en M6b: `docs/decisions.md`, `docs/implementation-plan.md`, `docs/status.md`.
+
+### Resultado
+
+- Rutas nuevas: `src/adventure/{types,legacyAdventure,v04bAdventure,mode,select}.ts` (adaptador por expedición sobre un único shell), `src/engine/v04bSpatial.ts` (19 salas 14×12, salidas por muro, apariciones por arista), `src/engine/v04bPlay.ts` (objetos, interacción validada por posición, liquidación idempotente con `recordRoomVictory` y restauración B1/B2), `src/scene/V04BActors.tsx`, `src/scene/PerfProbe.tsx` (solo con `?perf`), `src/ui/v04bMessages.ts`, `tests/m6b.tsx`. Modificadas: `src/App.tsx`, `src/engine/{index,spatial}.ts`, `src/scene/{CryptEnvironment,CryptGeometry,ExplorationActors,ExplorationScene}.tsx`, `src/scene/{cryptVisuals.ts,exploration.css}`, `src/ui/ExplorationHUD.tsx`, `tests/run.ts`, `README.md` (uso de `?expedicion=v04b` y `?perf`); docs `decisions.md`, `status.md`, este plan.
+- Checks del coordinador: tests 356/356 + spatial, build correcto, `git diff --check` limpio.
+- Rendimiento (harness `--headed`, 1440×900, misma ejecución; evidencia fuera del repo): máximo V0.4B 253 llamadas / 18.867 triángulos / 37 geometrías / 3 texturas frente a máximo legado 293 / 21.759 / 39 / 3 (límite +25 % cumplido); sin fugas tras dos circuitos (geometrías/texturas iguales al volver a 01); FPS mediana 144 V0.4B vs 143,2 legado (ratio 1,006; ambas al tope del refresco). El diseñador confirmó fluidez en su equipo.
+- Inspección visual: 65 capturas de las 19 salas y estados (bloqueo con motivo, Titán sellado/abierto, altar, inscripción, pedestales, puzle resuelto, muro, combate 04) a 1440×900 y 1024×768; correcciones dentro del alcance durante la implementación. Móvil (<640 px) no inspeccionado.
+- Revisión: completa, aprobada sin bloqueantes; legado verificado línea a línea. No bloqueantes aceptados sin cambio: motivo de sello con «sala 12» en lugar del nombre oficial; desplazamiento fijo del muro agrietado. Ciclos correctivos 0/2.
+- Playtesting: **aceptado por el diseñador 2026-11-08** («Todo bien, cerrar»).
+- Decisiones en decisions.md: «M6b aprobado por el diseñador» (acceso, combates, representación, rendimiento obligatorio).
+- Pendientes: zona de 03/10 provisional; agotamiento mutuo (M8); cofres (M7).
+- Cierre: commit local `juego-cartas: cerrar V0.4B M6b de expedición 3D jugable`, sin push.

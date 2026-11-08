@@ -8,19 +8,17 @@ import {
   baseMana,
   cardInstanceId,
   RuleViolation,
-  startSessionDuel,
   removeCopyFromActiveDeck,
   ExplorationViolation,
 } from './engine/index.js'
 import type { CreatureCard, DuelState } from './engine/index.js'
-import { DUNGEON_ENCOUNTERS, MAIN_ENCOUNTERS, PLAYER_CARD_TYPES } from './engine/content.js'
 import { ExplorationScene } from './scene/ExplorationScene.js'
-import { ROOMS } from './engine/spatial.js'
-import type { RoomId, SpatialPose } from './engine/spatial.js'
-import { createExpeditionState, interactWorldObject, isExpeditionComplete, objectsForRoom, settleExpeditionEncounter } from './engine/world.js'
-import type { ExpeditionState } from './engine/world.js'
-import { encounterSummary, worldInteractionMessage } from './ui/encounterSummary.js'
+import { V04BWorldObject } from './scene/V04BActors.js'
+import type { SpatialPose } from './engine/spatial.js'
 import type { EncounterSummary } from './ui/encounterSummary.js'
+import type { AdventureAdapter } from './adventure/types.js'
+import { expeditionModeFromSearch, perfEnabledFromSearch } from './adventure/mode.js'
+import { adventureForMode } from './adventure/select.js'
 
 import { CombatView } from './ui/CombatView.js'
 import './ui/combat.css'
@@ -39,15 +37,24 @@ import {
   togglePlayerAttacker,
 } from './ui/combatSelection.js'
 
+/** Without ?expedicion=v04b the legacy expedition is created exactly as before; ?perf adds the probe. */
 export default function App() {
-  const [adventure, setAdventure] = useState<ExpeditionState>(createExpeditionState)
-  const { session } = adventure
-  const [duel, setDuelState] = useState<DuelState>(() => startSessionDuel(session, PLAYER_CARD_TYPES, MAIN_ENCOUNTERS[0].opponentDeck))
+  const [{ adapter, perf }] = useState(() => {
+    const search = typeof window === 'undefined' ? '' : window.location.search
+    return { adapter: adventureForMode(expeditionModeFromSearch(search)) as AdventureAdapter<unknown>, perf: perfEnabledFromSearch(search) }
+  })
+  return <GameApp adapter={adapter} perf={perf} />
+}
+
+function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boolean }) {
+  const [adventure, setAdventure] = useState<S>(() => adapter.create())
+  const session = adapter.session(adventure)
+  const [duel, setDuelState] = useState<DuelState>(() => adapter.initialDuel(adventure))
   const controls = useRef(createCombatControls(duel))
   const renderedRevision = controls.current.revision
   const settledDuels = useRef(new Set<string>())
   const isDuelActive = session.activeDuelId !== null
-  const poses = useRef<Partial<Record<RoomId, SpatialPose>>>({})
+  const poses = useRef<Partial<Record<string, SpatialPose>>>({})
   const sacrificedCopies = useRef<string[]>([])
   const [lastResult, setLastResult] = useState<EncounterSummary | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
@@ -167,10 +174,9 @@ export default function App() {
 
   function closeDuel(result: DuelState) {
     if (settledDuels.current.has(result.id)) return
-    const next = settleExpeditionEncounter(adventure, result)
-    const summary = encounterSummary(adventure, next, result, sacrificedCopies.current)
+    const { state: next, summary, returnPose } = adapter.settle(adventure, result, sacrificedCopies.current)
     settledDuels.current.add(result.id)
-    if (next.encounterReturnPoint) poses.current[next.encounterReturnPoint.roomId] = next.encounterReturnPoint.pose
+    if (returnPose) poses.current[returnPose.key] = returnPose.pose
     setAdventure(next)
     setDuel(result)
     setLastResult(summary)
@@ -302,9 +308,9 @@ export default function App() {
 
   function interactNearby(objectId: string) {
     try {
-      const result = interactWorldObject(adventure, objectId, poses.current[adventure.roomId] ?? ROOMS[adventure.roomId].spawn)
-      const message = worldInteractionMessage(adventure, result)
-      if (result.kind === 'encounter' && !result.duel) throw new ExplorationViolation('No se pudo preparar el encuentro.')
+      const result = adapter.interact(adventure, objectId, poses.current[adapter.roomKey(adventure)] ?? adapter.room(adventure).spawn)
+      const message = result.message
+      if (result.pose) poses.current[result.pose.key] = result.pose.pose
       setAdventure(result.state)
       setLastResult(null)
       if (result.duel) {
@@ -325,14 +331,14 @@ export default function App() {
   function changeDeck(copyId: string, included: boolean) {
     try {
       const next = included ? addCopyToActiveDeck(session, copyId) : removeCopyFromActiveDeck(session, copyId)
-      setAdventure({ ...adventure, session: next })
+      setAdventure(adapter.withSession(adventure, next))
       setNotice(included ? 'Copia añadida a la baraja activa.' : 'Copia retirada de la baraja; sigue en tu colección.')
     } catch (error) { reject(error) }
   }
 
   function recoverType(cardId: string) {
     try {
-      setAdventure({ ...adventure, session: reinvokeCreatureType(session, cardId, PLAYER_CARD_TYPES) })
+      setAdventure(adapter.withSession(adventure, reinvokeCreatureType(session, cardId, adapter.reinvokeCardTypes)))
       setNotice('Nueva copia básica recuperada en reserva. Puedes añadirla a la baraja.')
     } catch (error) { reject(error) }
   }
@@ -341,7 +347,7 @@ export default function App() {
   function activateSessionOrb() {
     try {
       const preview = restorationPreview(session)
-      setAdventure({ ...adventure, session: activateOrb(session) })
+      setAdventure(adapter.withSession(adventure, activateOrb(session)))
       setNotice(`Orbe activado: ${preview.healedCopies} copias sanadas, vida máxima +${preview.maxLifeRecovered}, fatiga ${preview.fatigueRemoved ? 'eliminada' : 'sin cambios'}.`)
     } catch (error) {
       setNotice(error instanceof RuleViolation ? error.message : 'No se pudo activar el orbe.')
@@ -349,24 +355,27 @@ export default function App() {
     resumeExploration()
   }
   const orbControl = orbControlFor(session, activateSessionOrb)
-  const dungeonComplete = isExpeditionComplete(adventure)
-  const objects = objectsForRoom(adventure)
-  const activeEncounter = DUNGEON_ENCOUNTERS.find((entry) => entry.id === duel.encounterId)
+  const location = adapter.location(adventure)
+  const objects = adapter.objects(adventure)
+  const room = adapter.room(adventure)
+  const roomKey = adapter.roomKey(adventure)
+  const activeEncounter = adapter.encounter(duel)
   return (
     <main className={`game-shell ${isDuelActive ? 'mode-duel' : 'mode-exploration'}`}>
       {!isDuelActive ? <div className="exploration-world">
-        <ExplorationScene room={ROOMS[adventure.roomId]} initialPose={poses.current[adventure.roomId] ?? ROOMS[adventure.roomId].spawn} objects={objects} resumeRevision={resumeRevision} disabled={view === 'collection' || lastResult !== null} onInteract={interactNearby} onPoseChange={(pose) => { poses.current[adventure.roomId] = pose }} />
+        <ExplorationScene room={room} initialPose={poses.current[roomKey] ?? room.spawn} objects={objects} resumeRevision={resumeRevision} disabled={view === 'collection' || lastResult !== null} onInteract={interactNearby} onPoseChange={(pose) => { poses.current[roomKey] = pose }}
+          ObjectView={adapter.id === 'v04b' ? V04BWorldObject : undefined} perf={perf} />
         <div className="exploration-atmosphere" aria-hidden="true" />
-        <ExplorationHUD life={session.invokerLife} maxLife={session.invokerMaxLife} mana={usableMana} fatigue={session.fatigue} level={player.level} roomName={ROOMS[adventure.roomId].name} complete={dungeonComplete} onCollection={() => setView('collection')} orb={orbControl} />
+        <ExplorationHUD life={session.invokerLife} maxLife={session.invokerMaxLife} mana={usableMana} fatigue={session.fatigue} level={player.level} roomName={location.roomName} zoneName={location.zoneName} complete={location.complete} onCollection={() => setView('collection')} orb={orbControl} />
         {view !== 'collection' && !lastResult && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} />}
-        {view === 'collection' && <CollectionOverlay session={session} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
+        {view === 'collection' && <CollectionOverlay session={session} cardTypes={adapter.collectionCardTypes} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
         {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'}`} onClose={closeResult}>
           <span className="result-seal"><Icon name={lastResult.won ? 'check' : 'skull'} /></span>
           <p className="section-kicker">{lastResult.won ? 'Encuentro superado' : 'La aventura continúa'}</p><h1>{lastResult.title}</h1><p className="result-outcome">{lastResult.outcome}</p><p className="result-resources">{lastResult.resources}</p>
           <details open><summary>Heridas, bajas, mejoras y descubrimientos</summary><ul>{lastResult.details.map((detail) => <li key={detail}>{detail}</li>)}</ul></details>
           <button type="button" className="button button-primary" onClick={closeResult}>Continuar explorando<Icon name="arrow" /></button>
         </GameOverlay>}
-      </div> : <CombatView duel={duel} session={session} enemyName={activeEncounter?.enemyName ?? 'Oponente'} enemyMaxLife={activeEncounter?.opponentLife ?? 0}
+      </div> : <CombatView duel={duel} session={session} enemyName={activeEncounter.name} enemyMaxLife={activeEncounter.maxLife}
         notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} selectedCardId={selectedCardId} sacrificeIds={sacrificeIds} attackerIds={attackerIds} targetChoices={targetChoices} blockerChoices={blockerChoices} presenting={presenting}
         pending={controls.current.pending} onActivateN01={(creatureId) => dispatchCombat({ type: 'activate-n01', creatureId })}
         onChooseEffectTarget={(creatureId) => dispatchCombat({ type: 'effect-target', creatureId })} onConfirmRitual={() => dispatchCombat({ type: 'confirm-ritual' })} onEditRitual={() => dispatchCombat({ type: 'edit-ritual' })}

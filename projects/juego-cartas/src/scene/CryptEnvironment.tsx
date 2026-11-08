@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { Group } from 'three'
 import type { RoomDefinition, SpatialObstacle } from '../engine/spatial.js'
-import { Block, Flame, FuneralSeal, GothicArch, Masonry, Orb, Pebble, Round } from './CryptGeometry.js'
+import { Block, Flame, FuneralSeal, Glow, GothicArch, Masonry, Orb, Pebble, Round } from './CryptGeometry.js'
 import { boundaryMasonry, cryptTheme } from './cryptVisuals.js'
 import type { CryptTheme } from './cryptVisuals.js'
 import { buildStaticCryptBatch, disposeStaticCryptBatch } from './staticCryptBatch.js'
@@ -29,6 +29,7 @@ function StoneFloor({ room, theme }: { room: RoomDefinition; theme: CryptTheme }
     {(theme.kind === 'ceremony' || theme.kind === 'lair') && <group position={[room.anchors.enemy.x, 0.014, room.anchors.enemy.z]}>
       <FuneralSeal radius={theme.kind === 'lair' ? 1.6 : 2} color={theme.trim} />
     </group>}
+    {theme.kind === 'runic' && <RunicFloor theme={theme} />}
     {theme.kind === 'catacombs' && [-4.7, 4.7].map((x) => <Block key={x} at={[x, 0.006, 0]} size={[0.04, 0.003, 10.5]} color={theme.trim} />)}
   </group>
 }
@@ -104,7 +105,7 @@ function Backdrop({ room, theme }: { room: RoomDefinition; theme: CryptTheme }) 
       {[-3.8, 3.8].map((x) => <group key={x} position={[x, 0, rearZ]}><Pillar theme={theme} height={3.4} /></group>)}
       <group position={[0, 0, rearZ]}><GothicArch width={3.2} height={3.6} depth={0.55} color={theme.stone} trim={theme.trim} /></group>
       {[-5.6, 5.6].map((x) => <group key={x} position={[x, 0.55, rearZ]}><Niche theme={theme} /></group>)}
-      <group position={[leftX, 0, 2.4]} rotation={[0, Math.PI / 2, 0]}><Burrow theme={cryptTheme('rats-1')} /></group>
+      {theme.motif !== 'umbral' && <group position={[leftX, 0, 2.4]} rotation={[0, Math.PI / 2, 0]}><Burrow theme={cryptTheme('rats-1')} /></group>}
     </>}
     {theme.kind === 'catacombs' && <>
       {[-5.5, -3.5, 3.5, 5.5].map((x) => <group key={x} position={[x, 0.2, rearZ]}>
@@ -121,7 +122,9 @@ function Backdrop({ room, theme }: { room: RoomDefinition; theme: CryptTheme }) 
         <Block at={[0, 2.4, 0]} size={[1, 0.16, 0.18]} color={theme.trim} />
       </group>
       {[-3.8, -0.8, 2.2].map((z) => <group key={z} position={[leftX, 0, z]}><Pillar theme={theme} height={2.8} /></group>)}
+      {theme.motif === 'throne' && <Throne theme={theme} z={rearZ + 0.05} />}
     </>}
+    {(theme.kind === 'runic' || theme.kind === 'deep' || theme.kind === 'altar') && <V04BBackdrop theme={theme} rearZ={rearZ} leftX={leftX} />}
     {theme.wing && <>
       <group position={[-4.7, 0.2, rearZ]}><Niche theme={theme} /></group>
       {(theme.kind === 'infiltration' ? [3.8] : theme.kind === 'burrows' ? [-2.7, 1, 4.8] : [-3.1, 2.8]).map((x) => <group key={x} position={[x, 0, rearZ]}><Burrow theme={theme} large={theme.kind === 'burrows'} /></group>)}
@@ -146,6 +149,103 @@ function Backdrop({ room, theme }: { room: RoomDefinition; theme: CryptTheme }) 
         {[-0.6, 0, 0.6].map((x) => <Pebble key={x} at={[x, 2.85 + (x === 0 ? 0.2 : 0), 0]} size={[0.2, 0.38, 0.12]} color={theme.trim} />)}
       </group>}
     </>}
+  </group>
+}
+
+/** Flush mana inlays along the route; never raised or colliding. */
+function RunicFloor({ theme }: { theme: CryptTheme }) {
+  const glow = theme.glow ?? theme.light
+  return <group>
+    {Array.from({ length: 5 }, (_, i) => <Glow key={i} at={[0, 0.008, i * 2 - 4]} size={[0.2, 0.003, 0.2]} rotation={[0, Math.PI / 4, 0]} color={glow} />)}
+    {theme.motif === 'core' && <group position={[0, 0.014, -1.4]}><FuneralSeal radius={1.7} color={glow} /></group>}
+  </group>
+}
+
+function Throne({ theme, z }: { theme: CryptTheme; z: number }) {
+  return <group position={[0, 0, z]}>
+    <Block at={[0, 0.3, 0.1]} size={[1.5, 0.6, 0.85]} color={theme.inset} />
+    <Block at={[0, 1.5, -0.25]} size={[1.5, 2.4, 0.25]} color={theme.stone} />
+    {[-0.7, 0.7].map((x) => <Block key={x} at={[x, 0.85, 0.1]} size={[0.16, 0.5, 0.85]} color={theme.trim} />)}
+    {[-0.45, 0, 0.45].map((x) => <Pebble key={x} at={[x, 2.85, -0.25]} size={[0.1, x ? 0.22 : 0.32, 0.1]} color={theme.trim} />)}
+  </group>
+}
+
+const CHAIN_SPOTS: readonly (readonly [number, number, boolean])[] = [[-4.6, 0, false], [-1.6, 0, false], [1.6, 0, false], [4.6, 0, false], [0, -1.6, true], [0, 4, true]]
+
+/** Runic chambers, deep crypt and the neutral altar (M6b). Everything stays outside the walkable rectangle. */
+function V04BBackdrop({ theme, rearZ, leftX }: { theme: CryptTheme; rearZ: number; leftX: number }) {
+  const glow = theme.glow ?? theme.light
+  if (theme.kind === 'runic') return <group>
+    {[-5.4, -2.6, 2.6, 5.4].map((x) => <group key={x} position={[x, 0, rearZ]}>
+      <Pillar theme={theme} height={3.2} />
+      <Glow at={[0, 1.75, 0.255]} size={[0.06, 1.3, 0.01]} color={glow} />
+      {[1.25, 2.25].map((y) => <Glow key={y} at={[0, y, 0.255]} size={[0.24, 0.05, 0.01]} rotation={[0, 0, 0.6]} color={glow} />)}
+    </group>)}
+    {theme.motif === 'archive' && [-3.6, -0.4, 2.8].map((z) => <group key={z} position={[leftX + 0.05, 0, z]}>
+      <Block at={[0, 1.1, 0]} size={[0.5, 2.2, 1.7]} color={theme.inset} />
+      {[0.35, 1.05, 1.75].map((y) => <group key={y}>
+        <Block at={[0.22, y, 0]} size={[0.12, 0.06, 1.6]} color={theme.trim} />
+        {[-0.55, -0.3, -0.1, 0.2, 0.45].map((offset, i) => <Block key={offset} at={[0.2, y + 0.2, offset]} size={[0.16, 0.32 - i % 2 * 0.06, 0.14]} color={i % 3 ? theme.stone : '#6b5a48'} />)}
+      </group>)}
+    </group>)}
+    {theme.motif === 'core' && <group position={[0, 0, rearZ]}>
+      <Block at={[0, 0.3, 0]} size={[2.2, 0.6, 0.8]} color={theme.inset} />
+      <Block at={[0, 0.66, 0]} size={[1.6, 0.12, 0.6]} color={theme.trim} />
+      <Pebble at={[0, 1.6, 0]} size={[0.5, 0.85, 0.4]} color={theme.trim} />
+      <Glow at={[0, 1.6, 0.2]} size={[0.22, 0.55, 0.22]} rotation={[0, Math.PI / 4, 0]} color={glow} />
+    </group>}
+    {theme.motif === 'titan' && <group position={[0, 0, rearZ - 0.05]}>
+      <Block at={[0, 0.35, 0]} size={[3.2, 0.7, 0.9]} color={theme.inset} />
+      {[-0.5, 0.5].map((x) => <Block key={x} at={[x, 1.1, 0.05]} size={[0.55, 0.9, 0.7]} color={theme.stone} />)}
+      <Block at={[0, 2.35, -0.05]} size={[1.8, 1.7, 0.7]} color={theme.stone} />
+      {[-1.15, 1.15].map((x) => <Block key={x} at={[x, 2.1, 0.05]} size={[0.45, 1.5, 0.55]} color={theme.stone} />)}
+      <Block at={[0, 3.5, -0.05]} size={[0.75, 0.7, 0.6]} color={theme.stone} />
+      {[-0.17, 0.17].map((x) => <Glow key={x} at={[x, 3.55, 0.26]} size={[0.12, 0.05, 0.02]} color={glow} />)}
+      <Glow at={[0, 2.4, 0.31]} size={[0.08, 0.9, 0.02]} color={glow} />
+      <Glow at={[0, 2.55, 0.31]} size={[0.6, 0.06, 0.02]} color={glow} />
+    </group>}
+  </group>
+  if (theme.kind === 'altar') return <group>
+    {[-3.8, 3.8].map((x) => <group key={x} position={[x, 0, rearZ]}><Pillar theme={theme} height={3.4} /></group>)}
+    <group position={[0, 0, rearZ]}>
+      <Block at={[0, 1.4, -0.15]} size={[2.4, 2.8, 0.3]} color={theme.inset} />
+      <GothicArch width={3.2} height={3.6} depth={0.5} color={theme.stone} trim={theme.trim} />
+      <Block at={[0, 2.6, 0.02]} size={[0.14, 0.9, 0.08]} color={theme.trim} />
+      <Block at={[0, 2.75, 0.02]} size={[0.6, 0.1, 0.08]} color={theme.trim} />
+    </group>
+    {[-5.6, 5.6].map((x) => <group key={x} position={[x, 0.55, rearZ]}><Niche theme={theme} /></group>)}
+    {[-2.2, 2.2].map((x) => <group key={x} position={[x, 0, rearZ + 0.1]}>
+      <Round at={[0, 0.6, 0]} size={[0.07, 1.2, 0.07]} color={theme.trim} metal />
+      <group position={[0, 1.32, 0]}><Flame color={theme.light} /></group>
+    </group>)}
+    {[-3.8, 4.4].map((z) => <group key={z} position={[leftX, 0, z]}><Pillar theme={theme} height={3} /></group>)}
+  </group>
+  // Deep crypt: broken columns, sealed niches and the room motif.
+  return <group>
+    {[-5.6, -3.2, 3.2, 5.6].map((x, i) => <group key={x} position={[x, 0, rearZ]}><Pillar theme={theme} height={[3.1, 1.3, 2.1, 3.1][i]} /></group>)}
+    {[-3.8, 4.2].map((z) => <group key={z} position={[leftX, 0.2, z]} rotation={[0, Math.PI / 2, 0]}><Niche theme={theme} size={0.85} /></group>)}
+    {[-4.4, -2.1, 4.3].map((x, i) => <Pebble key={x} at={[x, 0.12, rearZ + 0.25]} size={[0.28, 0.2, 0.22]} rotation={[0, i, 0]} color={theme.stone} />)}
+    {theme.motif === 'antechamber' && [-1.6, 1.6].map((x) => <group key={x} position={[x, 0, rearZ + 0.1]}>
+      <Block at={[0, 2.35, 0]} size={[0.75, 1.9, 0.04]} color="#3e3346" />
+      <Block at={[0, 3.32, 0]} size={[0.9, 0.08, 0.08]} color={theme.trim} metal />
+      <Glow at={[0, 2.4, 0.03]} size={[0.1, 0.5, 0.01]} color={glow} />
+    </group>)}
+    {theme.motif === 'pit' && <>
+      {[-1.6, -0.9, 0.8, 1.7].map((x, i) => <Pebble key={x} at={[x, 0.16, rearZ + 0.2]} size={[0.32, 0.22 + i % 2 * 0.08, 0.2]} rotation={[0, i * 1.3, 0]} color={i % 2 ? '#cdc5ad' : '#a39b86'} />)}
+      {[-1.25, 1.25].map((x) => <Orb key={x} at={[x, 0.45, rearZ + 0.1]} size={[0.16, 0.18, 0.15]} color="#cdc5ad" />)}
+    </>}
+    {theme.motif === 'chains' && CHAIN_SPOTS.map(([x, z, side]) => <group key={`${x}:${z}`} position={side ? [leftX + 0.15, 0, z] : [x, 0, rearZ + 0.15]} rotation={[0, side ? Math.PI / 2 : 0, 0]}>
+      <Round at={[0, 2.2, 0]} size={[0.025, 1.6, 0.025]} color="#5f666e" metal />
+      {[1.75, 2.05, 2.35, 2.65].map((y) => <Block key={y} at={[0, y, 0]} size={[0.07, 0.12, 0.03]} color="#6c737b" metal />)}
+      <Block at={[0, 1.35, 0]} size={[0.24, 0.1, 0.06]} color="#6c737b" metal />
+    </group>)}
+    {theme.motif === 'sacrifice' && <group position={[0, 0, rearZ]}>
+      <Block at={[0, 0.45, 0.05]} size={[2.4, 0.9, 0.9]} color={theme.inset} />
+      <Block at={[0, 0.94, 0.05]} size={[2.6, 0.1, 1]} color={theme.trim} />
+      {[-0.7, 0, 0.7].map((x) => <Glow key={x} at={[x, 0.5, 0.51]} size={[0.06, 0.45, 0.01]} color={glow} />)}
+      <Glow at={[0, 2.2, -0.05]} size={[1.2, 0.06, 0.01]} color={glow} />
+      <Glow at={[0, 2.2, -0.05]} size={[0.06, 1.2, 0.01]} color={glow} />
+    </group>}
   </group>
 }
 

@@ -23,6 +23,10 @@ npm run preview
 
 `test` y `build` generan sus salidas locales habituales. Estos comandos son instrucciones, no resultados ejecutados al editar esta guía.
 
+### Expedición V0.4B (ensayo) y medición
+
+Añade `?expedicion=v04b` a la URL (por ejemplo `http://localhost:5173/?expedicion=v04b`) para jugar la expedición V0.4B de 19 salas; sin el parámetro se juega el juego normal. `?perf` (combinable, también en el juego normal) muestra un panel con FPS y `renderer.info` y publica los mismos datos en `window.__gfPerf`.
+
 ## Controles
 
 1. **WASD/flechas** mueve el avatar. Acércate a un objeto disponible y pulsa **E** o su botón contextual. **?** abre ayuda y controles alternativos; Tab navega los controles. No hay combates por simple contacto.

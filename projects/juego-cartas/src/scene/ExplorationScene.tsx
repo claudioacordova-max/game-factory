@@ -1,6 +1,6 @@
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { MutableRefObject } from 'react'
+import type { ComponentType, MutableRefObject } from 'react'
 import { Group, Vector3 } from 'three'
 import {
   cameraRelativeDirection, closestInteractable, INTERACTION_RANGE, isWalkable,
@@ -9,6 +9,7 @@ import {
 import type { ExplorationObject, RoomDefinition, SpatialPose } from '../engine/spatial.js'
 import { Avatar, WorldObject } from './ExplorationActors.js'
 import { CryptLighting, CryptRoom } from './CryptEnvironment.js'
+import { PerfPanel, PerfProbe } from './PerfProbe.js'
 import './exploration.css'
 
 export type { ExplorationObject, RoomDefinition, SpatialPose } from '../engine/spatial.js'
@@ -20,10 +21,15 @@ export interface ExplorationSceneProps {
   onPoseChange: (pose: SpatialPose) => void
   disabled?: boolean
   resumeRevision?: number
+  /** Alternative object renderer (V0.4B); defaults to the approved legacy WorldObject. */
+  ObjectView?: WorldObjectView
+  /** Mounts the performance probe and panel (?perf). Nothing is measured without it. */
+  perf?: boolean
 }
+export type WorldObjectView = ComponentType<{ object: ExplorationObject; roomId: string; onInteract: (id: string) => void }>
 
 const MOVEMENT_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright'])
-const ACTION_TEXT = { enemy: 'Desafiar', chest: 'Abrir cofre', shrine: 'Usar santuario', exit: 'Entrar' }
+const ACTION_TEXT = { enemy: 'Desafiar', chest: 'Abrir cofre', shrine: 'Usar santuario', exit: 'Entrar', feature: 'Examinar' }
 interface Runtime {
   pose: SpatialPose
   roomId: string
@@ -33,9 +39,9 @@ interface Runtime {
   disabled: boolean
 }
 
-function MovingWorld({ room, objects, runtime, onInteract, onTick }: {
+function MovingWorld({ room, objects, runtime, onInteract, onTick, ObjectView = WorldObject }: {
   room: RoomDefinition; objects: readonly ExplorationObject[]; runtime: MutableRefObject<Runtime>
-  onInteract: (id: string) => void; onTick: (delta: number) => void
+  onInteract: (id: string) => void; onTick: (delta: number) => void; ObjectView?: WorldObjectView
 }) {
   const avatar = useRef<Group>(null), walking = useRef(0)
   const cameraRoom = useRef('')
@@ -68,14 +74,15 @@ function MovingWorld({ room, objects, runtime, onInteract, onTick }: {
   return <>
     <CryptLighting roomId={room.id} />
     <CryptRoom room={room} />
-    {objects.map((object) => <WorldObject key={object.id} object={object} roomId={room.id} onInteract={onInteract} />)}
+    {objects.map((object) => <ObjectView key={object.id} object={object} roomId={room.id} onInteract={onInteract} />)}
     <group ref={avatar}><Avatar walking={walking} /></group>
   </>
 }
 
 /** initialPose is sampled at mount / room.id change, never on ordinary parent rerenders. */
 export function ExplorationScene(props: ExplorationSceneProps) {
-  const { room, objects, disabled = false, resumeRevision = 0 } = props
+  const { room, objects, disabled = false, resumeRevision = 0, perf = false } = props
+  const perfPanel = useRef<HTMLDivElement>(null)
   const callbacks = useRef(props)
   callbacks.current = props
   const viewport = useRef<HTMLDivElement>(null)
@@ -162,10 +169,14 @@ export function ExplorationScene(props: ExplorationSceneProps) {
     time.current = 0
     reportPose()
     const close = objects.filter((object) => Math.hypot(object.position.x - runtime.current.pose.x, object.position.z - runtime.current.pose.z) <= INTERACTION_RANGE)
-    const key = `${room.id}:${closestInteractable(runtime.current.pose, close)?.id ?? ''}:` + close.map((object) => `${object.id}:${object.status}:${object.label}`).join('|')
+    const key = `${room.id}:${closestInteractable(runtime.current.pose, close)?.id ?? ''}:` + close.map((object) => `${object.id}:${object.status}:${object.label}:${object.reason ?? ''}`).join('|')
     if (key !== nearbyKey.current) { nearbyKey.current = key; setNearby(close) }
   }
   const contextualObject = closestInteractable(runtime.current.pose, nearby)
+  // Only objects that carry a reason (V0.4B exits) explain why they are closed; legacy locked objects stay silent.
+  const lockedObject = contextualObject ? undefined : nearby
+    .filter((object) => object.status === 'locked' && object.reason)
+    .sort((a, b) => Math.hypot(a.position.x - runtime.current.pose.x, a.position.z - runtime.current.pose.z) - Math.hypot(b.position.x - runtime.current.pose.x, b.position.z - runtime.current.pose.z))[0]
   return <section className="exploration-scene" aria-label={`Exploración: ${room.name}`}>
     <div className={`exploration-viewport${focused ? ' exploration-focused' : ''}`} ref={viewport} tabIndex={disabled ? -1 : 0}
       role="group" aria-label="Control del avatar" aria-describedby="exploration-help"
@@ -191,11 +202,14 @@ export function ExplorationScene(props: ExplorationSceneProps) {
       onKeyUp={(event) => { runtime.current.keys.delete(event.key.toLowerCase()) }}>
       {/* One render pixel per CSS pixel avoids the measured supersampling cost; MSAA and shadows stay enabled. */}
       <Canvas shadows dpr={1} camera={{ position: [9, 12, 12], fov: 43, near: 0.1, far: 60 }}>
-        <MovingWorld room={room} objects={objects} runtime={runtime} onInteract={interact} onTick={tick} />
+        <MovingWorld room={room} objects={objects} runtime={runtime} onInteract={interact} onTick={tick} ObjectView={props.ObjectView} />
+        {perf && <PerfProbe roomId={room.id} panel={perfPanel} />}
       </Canvas>
     </div>
+    {perf && <PerfPanel ref={perfPanel} />}
     <p id="exploration-help" className="sr-only">WASD o flechas para caminar; E para interactuar con un objeto cercano; I para abrir Colección. Tab permite navegar los controles.</p>
-    {!disabled && contextualObject && <div className="exploration-context" aria-live="polite"><button type="button" onClick={() => interact(contextualObject.id)}><kbd>E</kbd><span><strong>{ACTION_TEXT[contextualObject.kind]}</strong><small>{contextualObject.label}</small></span></button></div>}
+    {!disabled && contextualObject && <div className="exploration-context" aria-live="polite"><button type="button" onClick={() => interact(contextualObject.id)}><kbd>E</kbd><span><strong>{contextualObject.action ?? ACTION_TEXT[contextualObject.kind]}</strong><small>{contextualObject.label}</small></span></button></div>}
+    {!disabled && lockedObject && <div className="exploration-context exploration-context-locked" aria-live="polite"><p><span className="exploration-lock" aria-hidden="true">✕</span><span><strong>{lockedObject.label}</strong><small>{lockedObject.reason}</small></span></p></div>}
     {!disabled && <button type="button" className="exploration-help-toggle" aria-label="Ayuda y controles de exploración" aria-expanded={showHelp} aria-controls="exploration-input-help" onClick={() => {
       if (callbacks.current.disabled) return
       if (showHelp) {

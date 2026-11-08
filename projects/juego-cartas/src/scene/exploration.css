@@ -22,3 +22,8 @@
 .exploration-direction-s { grid-column: 2; grid-row: 2; }
 .exploration-direction-d { grid-column: 3; grid-row: 2; }
 @media (max-width: 640px) { .exploration-help-toggle { right: 16px; bottom: 23px; }.exploration-input-help { right: 16px; }.exploration-context { bottom: 115px; }.exploration-context button { padding: 10px 14px 10px 10px; } }
+.exploration-context-locked p { display: flex; align-items: center; gap: 14px; margin: 0; border: 1px solid #6b6f6a88; border-radius: 5px; padding: 12px 22px 12px 13px; background: linear-gradient(120deg,#1d2228f2,#1d2228dd); color: #d9d2c0; box-shadow: 0 8px 30px #0005; }
+.exploration-lock { display: grid; place-items: center; min-width: 32px; height: 32px; border: 1px solid #8a8370aa; border-radius: 3px; color: #b9ad8d; font: 600 14px Georgia,serif; }
+.exploration-context-locked strong { display: block; font-size: 14px; font-weight: 500; }
+.exploration-context-locked small { display: block; margin-top: 3px; color: #b8b3a5; font-size: 11px; }
+.exploration-perf { position: absolute; z-index: 6; top: 8px; right: 8px; padding: 4px 8px; border-radius: 3px; background: #0009; color: #9fe0c8; font: 11px/1.35 ui-monospace,Consolas,monospace; white-space: pre; pointer-events: none; }

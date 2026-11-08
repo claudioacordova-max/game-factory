@@ -48,7 +48,7 @@ export function Avatar({ walking }: { walking: MutableRefObject<number> }) {
   </group>
 }
 
-function Sentinel() {
+export function Sentinel() {
   return <group>
     {[-0.13, 0.13].map((x) => <Block key={x} at={[x, 0.35, 0]} size={[0.14, 0.58, 0.22]} color={IRON} />)}
     <Block at={[0, 1, 0]} size={[0.3, 0.72, 0.23]} color="#58666d" />
@@ -65,7 +65,7 @@ function Sentinel() {
   </group>
 }
 
-function Custodian() {
+export function Custodian() {
   return <group>
     <mesh position={[0, 0.76, 0]} castShadow><coneGeometry args={[0.31, 1.5, 7]} /><meshStandardMaterial color="#403b59" roughness={0.94} /></mesh>
     <Block at={[0, 0.73, 0.25]} size={[0.095, 1.1, 0.025]} color="#9c969f" />
@@ -80,7 +80,7 @@ function Custodian() {
   </group>
 }
 
-function Guardian() {
+export function Guardian() {
   return <group>
     {[-0.19, 0.19].map((x) => <group key={x}>
       <Block at={[x, 0.42, 0]} size={[0.24, 0.72, 0.29]} color={IRON} />
@@ -100,7 +100,7 @@ function Guardian() {
   </group>
 }
 
-function Rat({ appearance = 'rat' }: { appearance?: RatAppearance }) {
+export function Rat({ appearance = 'rat' }: { appearance?: RatAppearance }) {
   const color = appearance === 'large' ? '#847261' : appearance === 'clumsy' ? '#9a927b' : appearance === 'biter' ? '#514d43' : '#796858'
   return <group>
     <Orb at={[0, 0.25, -0.04]} size={[appearance === 'clumsy' ? 0.27 : 0.23, appearance === 'large' ? 0.27 : 0.2, 0.22]} color={color} />
@@ -118,7 +118,7 @@ function Rat({ appearance = 'rat' }: { appearance?: RatAppearance }) {
   </group>
 }
 
-function RatMatriarch() {
+export function RatMatriarch() {
   return <group>
     <Orb at={[0, 0.5, -0.035]} size={[0.32, 0.44, 0.27]} color="#726458" />
     <Orb at={[0, 0.93, 0.035]} size={[0.245, 0.27, 0.22]} color="#978573" />

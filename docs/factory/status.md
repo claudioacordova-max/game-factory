@@ -8,15 +8,15 @@ Lectura obligatoria al iniciar cualquier sesión (Codex o Claude Code), junto co
 
 | Campo | Valor |
 |---|---|
-| Último cambio | Adaptación a Claude Code (fase A) y eficiencia de tokens v1.2 (fase B), 2026-11-07; commit local en el historial Git (`factory: adapt to Claude Code and token efficiency v1.2`) |
+| Último cambio | Harness reutilizable de inspección visual (`scripts/visual-inspect.mjs`), 2026-11-07; commit local en el historial Git (`factory: add shared headless visual-inspect harness`). Anterior: adaptación a Claude Code y eficiencia de tokens v1.2 |
 | Juegos | `juego-cartas`: M3 cerrado, M4 no autorizado ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: sin intervención activa |
-| Limitaciones vigentes | Agentes de Claude Code requieren sesión nueva; `deny` de `.claude/settings.json` cubre Bash, no PowerShell; ejecutor instalado en `%USERPROFILE%\.codex\bin\` |
+| Limitaciones vigentes | Agentes de Claude Code requieren sesión nueva; `deny` de `.claude/settings.json` cubre Bash, no PowerShell; ejecutor instalado en `%USERPROFILE%\.codex\bin\`; CLI Playwright 0.1.22 instalada fuera del repo en `%USERPROFILE%\.game-factory\tools\` (no en `%LOCALAPPDATA%`, que Claude Desktop virtualiza) |
 
 Pendientes de Factory (ninguno autorizado para ejecución):
 
 | Pendiente | Estado | Qué falta |
 |---|---|---|
-| Harness reutilizable de inspección visual | Propuesto 2026-11-07; el diseñador quiere abordarlo próximamente | Diseñar e implementar, en el template o en `scripts/`, un servidor/arranque reutilizable con inicializadores controlados y capturas a 1440×900/1024×768, en lugar de montar uno temporal por hito. Requiere plan y aprobación (código de herramientas) |
+| Ajustes menores del harness visual | Hallazgos no bloqueantes de la revisión, 2026-11-07 | `patches.mjs` exige `export default` (un export con nombre se ignora sin aviso): validar o documentar; la skill dice que el escenario debe estar fuera del repo pero solo se comprueban fixture y salida. Los errores de consola se cuentan pero no cambian el código de salida |
 | Adopción v1.2 en `comerciante-medieval` | Diferido por el diseñador | Crear ficha de continuidad y `decisions.md`, compactar el plan y archivar evidencia, en su próxima intervención o cuando se autorice |
 
 ## Capacidades existentes
@@ -27,7 +27,7 @@ Pendientes de Factory (ninguno autorizado para ejecución):
 | Hitos e iteraciones | [Workflow](workflow-v1.md), [AGENTS.md](../../AGENTS.md) y registros de ambos juegos documentan implementación, checks, revisión y aceptación. Los planes vivos enlazan el historial anterior. |
 | Roles especializados | Perfiles [implementer](../../.codex/agents/implementer.toml) y [reviewer](../../.codex/agents/reviewer.toml) presentes; coordinación en la sesión principal. |
 | Briefs y presentación | Skills [game-iteration](../../.agents/skills/game-iteration/SKILL.md) y [game-ui-ux](../../.agents/skills/game-ui-ux/SKILL.md) presentes y utilizadas según los registros. |
-| Inspección visual | Procedimiento documentado y regla para Playwright CLI `0.1.22` offline. Los registros distinguen inspecciones ejecutadas, limitaciones y aprobación humana. No se presupone disponibilidad actual de navegador o caché. |
+| Inspección visual | Harness compartido Codex/Claude [`scripts/visual-inspect.mjs`](../../scripts/visual-inspect.mjs): Vite del juego + Playwright CLI `0.1.22` headless (no ocupa pantalla ni navegador del diseñador), fixtures/parches en memoria fuera del repo, 1440×900/1024×768 por defecto, resumen compacto. Uso en la skill [game-ui-ux](../../.agents/skills/game-ui-ux/SKILL.md). Los registros distinguen inspecciones ejecutadas, limitaciones y aprobación humana. |
 | Protección de commits | [Ejecutor controlado](../../.codex/tools/local-commit-executor.cjs) y [preflight](../../.codex/tools/commit-format-preflight.cjs) admiten archivos existentes y bajas regulares verificadas contra HEAD e índice, con rutas explícitas para ambos extremos de un traslado. Las pruebas y revisión de la ampliación constan abajo. Autorización, revisión y playtesting siguen siendo controles del workflow. |
 | Continuidad documental | Referencias de Factory en esta carpeta y de cada juego en `projects/<juego>/docs/`; planes vivos separados de antecedentes históricos. Sin nueva arquitectura de ejecución. |
 
@@ -79,3 +79,11 @@ Los [contextos originales](history/00-contexto-comun.md) y las [instrucciones de
 - **Fase B (autorizada):** sección *Token efficiency (v1.2)* en el [workflow](workflow-v1.md#token-efficiency-v12): lectura por capas (ficha de continuidad → `decisions.md` → spec → código), invariantes obligatorias en cada brief, registros compactos, archivo al cerrar tras consolidar decisiones, revisión proporcional y ruteo de modelos. [Plantillas](templates/) reutilizables para nuevos juegos.
 - Aplicado en `juego-cartas`: [decisions.md](../../projects/juego-cartas/docs/decisions.md), ficha en `status.md`, plan vivo compacto; registros M0–M3 y plan anterior archivados íntegros en `history/`. `comerciante-medieval` adopta el formato en su próxima intervención.
 - Limitaciones: los agentes de Claude Code requieren sesión nueva para cargarse; las reglas `deny` de `.claude/settings.json` cubren Bash, no PowerShell; el ejecutor instalado sigue en `%USERPROFILE%\.codex\bin\`.
+
+## Harness reutilizable de inspección visual — 2026-11-07
+
+- Autorización: el diseñador aprobó la alternativa B (script Node compartido, Playwright headless) frente a seguir con harness temporales, el navegador integrado de Claude, Playwright MCP o Computer Use, priorizando tokens, velocidad, no ocupar su equipo y una sola herramienta para Codex y Claude Code. Decisiones: CLI fijada en ruta estable fuera del repo, herramienta en `scripts/`, fixtures por hito fuera del repo.
+- Baseline `4c664374b44ff2ace3df98fb4274d1ebba688ad3`, estado limpio. Rutas: `scripts/visual-inspect.mjs`, `scripts/visual-inspect.test.mjs`, `.codex/rules/visual-inspect.rules`, `.claude/settings.json`, `.agents/skills/game-ui-ux/SKILL.md`, este documento.
+- Entorno: CLI 0.1.22 copiada sin descargas desde la caché temporal de M1 a `%USERPROFILE%\.game-factory\tools\playwright-cli-0.1.22`; `NO_UPDATE_NOTIFIER=1` evita su consulta de actualizaciones.
+- Checks: `node --test scripts/*.test.mjs` 7/7. Reproducción real de la inspección inicial M3 de `juego-cartas` con fixture en temporal: pass, 16 PNG, 0 errores, 17 s; capturas 1440×900 y 1024×768 abiertas y correctas. Sin cambios en juegos ni dependencias.
+- Revisión independiente `reviewer`: aprobada, sin hallazgos bloqueantes; hallazgos menores en la tabla de pendientes. Cero ciclos correctivos. No requiere playtesting humano.

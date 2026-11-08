@@ -77,27 +77,27 @@ Report what was checked, what changed in the player's experience, and any remain
 
 For work that changes the interface, 3D composition, legibility, feedback, or placement of elements, inspect the running result when a compatible browser tool is available. Keep the inspection proportional: a small correction may need only the affected screen and one relevant state; broader layout work may need several desktop sizes and states.
 
-Use the project's documented development command and a local loopback URL. Check the installed Node.js version with `node --version`; the README published for `@playwright/cli@0.1.22` lists Node.js 18 or newer. Requirements may differ for later CLI versions. On Windows/PowerShell, the validated temporary invocation is:
+Use the Factory harness. It starts the project's own Vite on a free loopback port, drives the pinned Playwright CLI headless in its own session (it does not take over the designer's screen or browser), and stops both when done. Do not start a dev server or call the CLI by hand.
 
 ```powershell
-$visualDir = Join-Path $env:TEMP ("game-factory-visual-" + [guid]::NewGuid())
-New-Item -ItemType Directory -Path $visualDir | Out-Null
-Push-Location $visualDir
-node --version
-npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli --version
-npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual open http://127.0.0.1:5173/ --browser=chrome --headed
-npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual snapshot
-npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual eval "() => ({ title: document.title, canvases: Array.from(document.querySelectorAll('canvas')).map(c => { const gl = c.getContext('webgl2') || c.getContext('webgl'); return { width: c.width, height: c.height, webgl: Boolean(gl) }; }) })"
-npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual resize 1440 900
-npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual screenshot --filename=desktop-1440x900.png
-npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual resize 1024 768
-npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual screenshot --filename=desktop-1024x768.png
-npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli -s=gf-visual close
-Pop-Location
+node scripts/visual-inspect.mjs --project projects/<game> --scenario <scenario.js> [--fixture <dir>] [--out <dir>] [--viewports 1440x900,1024x768] [--settle 400] [--timeout 120000] [--headed]
 ```
 
-Replace the example URL and sizes with those used by the project and task. The sizes are examples, not a fixed test matrix. Run the development server separately, and stop it after inspection. Run the CLI from the temporary directory so screenshots and CLI snapshots/logs stay outside source files and Git staging. This procedure requires Node.js 18 or newer, the pinned CLI package already present in npm's cache, and Chrome installed. `--offline` prevents npm from accessing the network; it will not fetch the package. If the CLI is missing from cache, or Chrome is unavailable, report the limitation. Obtaining the package over the network requires authorization before changing the execution policy. Do not install the CLI globally or add it to project dependencies. Do not run `playwright-cli install`, `install-browser`, or skill installation as part of this procedure. Consult `playwright-cli --help` or `playwright-cli --help <command>` when command syntax differs.
+The scenario is one expression `async (page, gf) => {...}` (Playwright `page`). `gf` offers `baseUrl`, `outDir`, `viewports`, `goto(path)`, `snap(name)` (saves `<name>-<w>x<h>.png` for the current viewport after a short settle) and `forEachViewport(async ([w, h]) => ...)`. Its return value, page errors, console errors and warnings go to `summary.json`; stdout is a compact summary, and the exit code is 0 only if the scenario did not fail and no page errors occurred. Minimal example:
 
-Confirm that the expected page loaded and that a 3D canvas has non-zero dimensions and an active WebGL context when the game uses WebGL. A canvas or DOM snapshot alone does not prove the scene rendered: open the saved PNGs in an image-capable tool and inspect the pixels. Check the relevant composition, legibility, overlap, scale, element placement, and visual feedback at the chosen sizes. For interaction changes, use CLI input commands such as `click` or `press` to reach representative states and capture those states when feasible; a complete playthrough is not required for a focused visual change.
+```js
+async (page, gf) => {
+  await gf.goto('/');
+  await page.locator('canvas').first().waitFor();
+  await gf.forEachViewport(async () => { await gf.snap('home'); });
+  return page.evaluate(() => [...document.querySelectorAll('canvas')].map((c) => ({ w: c.width, h: c.height, webgl: !!(c.getContext('webgl2') || c.getContext('webgl')) })));
+}
+```
 
-Correct evident visual defects only within the approved scope, then repeat the affected captures and visual inspection. Report the sizes and states actually inspected, concrete observations, anything that could not be checked, and whether human playtesting remains necessary. If PNGs were generated but could not be opened and examined, state that visual review was not completed. Close only the browser session started for this inspection, stop its development server, and keep generated evidence outside the repository and staging.
+To reach states the real flow makes hard to reach, use a fixture directory kept outside the repository (for example in the temp directory): `entry.tsx` is served at `/__inspect` (`gf.goto('/__inspect')`), `@gf-fixture/...` imports fixture files, and an optional `patches.mjs` exporting `[{ source: 'src/App.tsx', replace: [[from, to]], prepend? }]` serves a patched virtual copy at `/src/__gf_App.tsx` (each `from` must match exactly once, otherwise the run aborts). Source files are never modified and no debug routes are added to the product. Scenario, fixture and output (default: a new directory under the system temp) must be outside the repository; the harness refuses in-repo fixture and output paths. Choose viewports and states proportional to the change; the sizes are examples.
+
+The harness needs Node.js 18 or newer, Chrome, and the pinned CLI at `%USERPROFILE%\.game-factory\tools\playwright-cli-0.1.22` (override with `GF_PLAYWRIGHT_CLI`). If the CLI is missing it stops with a message; obtaining it requires the designer's authorization, and neither the harness nor you should download or install it, add it to project dependencies, or run `playwright-cli install`.
+
+Confirm that the expected page loaded and that a 3D canvas has non-zero dimensions and an active WebGL context when the game uses WebGL. A canvas or DOM check alone does not prove the scene rendered: open the saved PNGs in an image-capable tool and inspect the pixels. Check the relevant composition, legibility, overlap, scale, element placement, and visual feedback at the chosen sizes. For interaction changes, use scenario input such as `page.click` or `page.keyboard.press` to reach representative states and capture those states when feasible; a complete playthrough is not required for a focused visual change.
+
+Correct evident visual defects only within the approved scope, then repeat the affected captures and visual inspection. Report the sizes and states actually inspected, concrete observations, anything that could not be checked, and whether human playtesting remains necessary. If PNGs were generated but could not be opened and examined, state that visual review was not completed. The harness closes its own browser session and stops its server; keep generated evidence outside the repository and staging.

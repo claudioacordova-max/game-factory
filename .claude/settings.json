@@ -6,6 +6,8 @@
       "Bash(node .codex/tools/commit-format-preflight.cjs:*)",
       "Bash(node --test .codex/tools/:*)",
       "Bash(npm.cmd exec --offline --yes --package=@playwright/cli@0.1.22 -- playwright-cli:*)",
+      "Bash(node scripts/visual-inspect.mjs:*)",
+      "Bash(node --test scripts/:*)",
       "Bash(npm test:*)",
       "Bash(npm run build:*)",
       "Bash(npm run test:*)",

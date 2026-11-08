@@ -1,0 +1,11 @@
+prefix_rule(
+    pattern = ["node", "scripts/visual-inspect.mjs"],
+    decision = "allow",
+    justification = "Permitir el arnes de inspeccion visual headless de Game Factory.",
+)
+
+prefix_rule(
+    pattern = ["node", "--test", ["scripts/*.test.mjs", "scripts/visual-inspect.test.mjs"]],
+    decision = "allow",
+    justification = "Permitir las pruebas de los scripts de Game Factory.",
+)

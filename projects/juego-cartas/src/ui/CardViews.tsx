@@ -1,4 +1,4 @@
-import type { DragEvent, MouseEvent } from 'react'
+import type { DOMAttributes, MouseEvent } from 'react'
 import type { Creature, CreatureCard } from '../engine/index.js'
 import { effectiveAttack, effectiveMaxHealth } from '../engine/index.js'
 import { CreaturePortrait, Icon } from './GameIcons.js'
@@ -45,25 +45,25 @@ export function N01ActivationButton({ creature, disabled = false, onActivate }: 
     <span>Activar Urna maldita</span><small>Sacrifica {reference} · destruye una enemiga</small>
   </button>
 }
-export function CreatureTile({ creature, selected = false, onClick, hint, draggable = false, onDragStart, onDragEnd }: {
-  creature: Creature; selected?: boolean; onClick?: (event: MouseEvent<HTMLButtonElement>) => void; hint?: string
-  draggable?: boolean; onDragStart?: (event: DragEvent<HTMLButtonElement>) => void; onDragEnd?: () => void
+/** UI-2: pointer-gesture handlers; the whole card is the grip (no native drag). */
+export type CardGrip = Pick<DOMAttributes<HTMLButtonElement>, 'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel' | 'onLostPointerCapture'>
+export function CreatureTile({ creature, selected = false, onClick, hint, grip }: {
+  creature: Creature; selected?: boolean; onClick?: (event: MouseEvent<HTMLButtonElement>) => void; hint?: string; grip?: CardGrip
 }) {
   const wounded = creature.health < effectiveMaxHealth(creature)
   const content = <><CreaturePortrait cardId={creature.card.id} /><strong>{creature.card.name}</strong>{creature.echo ? <span className="card-rarity echo-label" title="Refuerzo rival por mazo agotado: no bloquea y no se sacrifica.">Refuerzo de la cripta</span> : <RarityLabel card={creature.card} compact />}<CardStats attack={effectiveAttack(creature)} health={creature.health} maxHealth={effectiveMaxHealth(creature)} />{creature.shieldCharges !== undefined && <span className="creature-shield" aria-label={`Escudo: ${creature.shieldCharges}`}><Icon name="shield" />Escudo: {creature.shieldCharges}</span>}<span className="tile-state">{selected ? '✓ ' : ''}{hint || (wounded ? 'Herida' : 'En mesa')}</span></>
-  const className = `creature-tile${creature.echo ? ' is-echo' : ''}${selected ? ' is-selected' : ''}${wounded ? ' is-wounded' : ''}`
-  return onClick || draggable ? <button type="button" className={className} onClick={onClick ? (event) => activateOnce(event, () => onClick(event)) : undefined} onKeyDown={preventRepeatedActivationKey} aria-pressed={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd}>{content}</button> : <article className={className}>{content}</article>
+  const className = `creature-tile${creature.echo ? ' is-echo' : ''}${selected ? ' is-selected' : ''}${wounded ? ' is-wounded' : ''}${grip ? ' is-grabbable' : ''}`
+  return onClick || grip ? <button type="button" className={className} onClick={onClick ? (event) => activateOnce(event, () => onClick(event)) : undefined} onKeyDown={preventRepeatedActivationKey} aria-pressed={selected} draggable={false} {...grip}>{content}</button> : <article className={className} draggable={false}>{content}</article>
 }
-export function HandCard({ card, selected, unavailableReason, draggable, onDragStart, onClick }: {
+export function HandCard({ card, selected, unavailableReason, grip, onClick }: {
   card: CreatureCard
   selected: boolean
   unavailableReason: string
-  draggable: boolean
-  onDragStart: (event: DragEvent<HTMLButtonElement>) => void
+  grip?: CardGrip
   onClick: () => void
 }) {
   const health = card.startingHealth ?? card.maxHealth
-  return <button type="button" className={`hand-card${selected ? ' is-selected' : ''}${health < card.maxHealth ? ' is-wounded' : ''}`} disabled={Boolean(unavailableReason)} draggable={draggable} onDragStart={onDragStart} onClick={(event) => activateOnce(event, onClick)} onKeyDown={preventRepeatedActivationKey} aria-pressed={selected}>
+  return <button type="button" className={`hand-card${selected ? ' is-selected' : ''}${health < card.maxHealth ? ' is-wounded' : ''}${grip ? ' is-grabbable' : ''}`} disabled={Boolean(unavailableReason)} draggable={false} {...grip} onClick={(event) => activateOnce(event, onClick)} onKeyDown={preventRepeatedActivationKey} aria-pressed={selected}>
     <span className="card-cost" title={`${card.cost.mana} maná`}><Icon name="mana" />{card.cost.mana}<span className="sr-only">maná</span></span>
     {card.cost.sacrifices > 0 && <span className="sacrifice-cost"><Icon name="skull" />{card.cost.sacrifices}<span className="sr-only">sacrificio permanente</span></span>}
     <CreaturePortrait cardId={card.id} />

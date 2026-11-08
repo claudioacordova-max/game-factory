@@ -247,9 +247,9 @@ function viewProps(c: CombatControls): CombatViewProps {
   const noop = () => {}
   return { duel: c.duel, session: createCopySlotSession([], V04B_CARD_TYPES), enemyName: 'Prueba M3', enemyMaxLife: 20, notice: '', noticeRevision: c.revision,
     selectedCardId: c.pending?.cardId ?? null, sacrificeIds: c.pending?.sacrificeIds ?? [], attackerIds: [], targetChoices: {}, blockerChoices: {},
-    onSelectCard: noop, onActivateR01: noop, onAllowFieldDrop: noop, onDropHandCard: noop, onToggleSacrifice: noop, onSelectAttacker: noop,
-    onCancelSummon: noop, onBeginCombat: noop, onDeclareAttacks: noop, onConfirmBlocks: noop, onStartBlockDrag: () => false,
-    onEndBlockDrag: noop, onDropRelation: noop, onMoveBlocker: noop, onMoveAttacker: noop }
+    onSelectCard: noop, onActivateR01: noop, onDropHandCard: noop, onToggleSacrifice: noop, onSelectAttacker: noop,
+    onCancelSummon: noop, onBeginCombat: noop, onDeclareAttacks: noop, onConfirmBlocks: noop, onStartRelationDrag: () => false,
+    onCancelRelationDrag: noop, onDropRelation: noop, onMoveBlocker: noop, onMoveAttacker: noop }
 }
 test('vista de objetivo real anuncia destino y bloquea mano/paso sin vínculos tácticos por clic', () => {
   const d = fixture(['A03', 'N05'], ['R03', 'N02'], true).duel

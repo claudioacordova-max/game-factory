@@ -8,8 +8,8 @@ Lectura obligatoria al iniciar cualquier sesión (Codex o Claude Code), junto co
 
 | Campo | Valor |
 |---|---|
-| Último cambio | `juego-cartas` iteración LEG-1 (retirada del juego legado) cerrada, 2026-11-08. Anteriores: UI-1 (`047581b`), M8c (`ed83a85`), M8b (`69bb33d`) |
-| Juegos | `juego-cartas`: M8, UI-1 y LEG-1 cerrados 2026-11-08 (solo V0.4B); UI-2 autorizada (combate sin scroll y arrastre); después balance ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: ITER-10 cerrado, sin hito autorizado ([ficha](../../projects/comerciante-medieval/docs/status.md)) |
+| Último cambio | `juego-cartas` iteración UI-2 (combate sin scroll y arrastre por gestos) cerrada, 2026-11-08. Anteriores: LEG-1 (`6f85bdb`), UI-1 (`047581b`), M8c (`ed83a85`) |
+| Juegos | `juego-cartas`: M8, UI-1, LEG-1 y UI-2 cerrados 2026-11-08 (solo V0.4B); sin hito autorizado, candidato balance ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: ITER-10 cerrado, sin hito autorizado ([ficha](../../projects/comerciante-medieval/docs/status.md)) |
 | Limitaciones vigentes | Agentes de Claude Code requieren sesión nueva; `deny` de `.claude/settings.json` cubre Bash, no PowerShell; ejecutor instalado en `%USERPROFILE%\.codex\bin\`; CLI Playwright 0.1.22 instalada fuera del repo en `%USERPROFILE%\.game-factory\tools\` (no en `%LOCALAPPDATA%`, que Claude Desktop virtualiza) |
 
 Pendientes de Factory (ninguno autorizado para ejecución):

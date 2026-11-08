@@ -32,7 +32,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M8b | Integración: V0.4B por defecto, legado con `?expedicion=legado`, recorrido completo | `69bb33d` |
 | V0.4B M8c | IA nivel 2 e informe de balance ([balance-m8c.md](balance-m8c.md)) | `ed83a85` |
 | Iteración UI-1 | Grimorio V0.4B agrupado (Colección/Reinvocar/Filtros, reinvocar todas ≥ 7), 21 retratos V0.4B, foco del orbe | `047581b` |
-| Iteración LEG-1 | Retirada del juego legado; solo V0.4B | commit local de cierre LEG-1 (hash en Git) |
+| Iteración LEG-1 | Retirada del juego legado; solo V0.4B | `6f85bdb` |
+| Iteración UI-2 | Combate sin scroll, arrastre por gestos con Pointer Events, mano solo en invocación, bug de arrastre bloqueado | commit local de cierre UI-2 (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -323,7 +324,7 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Revisión: aprobada sin bloqueantes; corregidos por el coordinador decisions.md §2 y comentarios con `ACTIVE_CONTENT`.
 - Comprobación del diseñador: **aceptada** (2026-11-08, «Todo bien, cerrar»).
 
-## Iteración UI-2 — combate sin scroll y arrastre por gestos (en curso)
+## Iteración UI-2 — combate sin scroll y arrastre por gestos (cerrada)
 
 ### Brief
 
@@ -333,3 +334,17 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Criterios: sin scroll vertical ni horizontal del tablero en ninguna fase a ambos tamaños (capturas); gestos de asignar, mover y retirar en bloqueo, escaramuza y ataque de duelo; arrastre en fases sin arrastre no altera nada y no bloquea el tablero (reproducción del bug antes/después); invocación desde la mano sigue funcionando; pruebas de cancelación; suite y build correctos.
 - Revisión: completa. Playtesting humano: **requerido**.
 - Modelos: implementer opus (UI), reviewer sonnet.
+
+### Baseline
+
+- `HEAD 6f85bdbad77b8420b6217034c3cb78d21d68070b` (tras LEG-1), árbol limpio salvo este plan.
+
+### Resultado
+
+- Rutas: `src/ui/combatGesture.ts` (nuevo: lógica pura del gesto, umbral 6 px, zonas, destino más cercano, cancelaciones), `src/ui/CombatView.tsx` (Pointer Events con captura, cancelación por pointercancel/lostpointercapture/Esc/blur/visibilidad/cambio de fase/desmontaje; escala de mesa sin scroll con ResizeObserver; mano solo en principal e indicador «Mano N · Mazo M»), `src/ui/blockDrag.ts` (token en memoria en lugar de payload JSON; misma validación de duelo/turno/revisión), `src/ui/{CardViews,GameIcons}.tsx`, `src/ui/combatActions.ts`, `src/ui/combat.css`, `src/App.tsx`, `src/styles.css` (CSS muerto); tests `tests/ui2.tsx` (nuevo) y adaptaciones en `tests/{blockDrag,iterationUx}.ts`, `tests/{combatPresentation,m1,m2,m3,m8a}.tsx`, `tests/run.ts`.
+- Bug de arrastre: en principal, arrastrar sobre criaturas seleccionaba texto e iniciaba un drag nativo que el soltado de la mano intentaba invocar (reproducido); el cuelgue permanente de Windows no se reproduce con ratón sintético. Eliminado por diseño: sin drag nativo, `dragstart` bloqueado, sin selección de texto.
+- Checks del coordinador: tests 359/359 + spatial, build correcto, `git diff --check` limpio.
+- Sin scroll medido en todas las fases a 1440×900 y 1024×768 (duelo y escaramuza con 7 y 9 criaturas); escala mínima observada 0,665 (9 criaturas a 1024×768).
+- Decisiones de presentación del implementer: escalar la mesa completa (no reflujo a dos filas); zona de retirada = todo bajo el eje; carta de mano soltada en la mitad rival no hace nada.
+- Revisión: aprobada sin bloqueantes. No bloqueantes: CSS muerto eliminado por el coordinador; un arrastre rechazado al cruzar el umbral puede acabar como clic (raro, bajo impacto). Observación: ciclo de vida real del puntero solo verificable en playtesting.
+- Playtesting: aceptado por el diseñador 2026-11-08 («Todo bien, cerrar»). Cerrada sin ciclos de corrección.

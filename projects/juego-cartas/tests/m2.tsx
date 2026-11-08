@@ -485,9 +485,9 @@ function combatProps(controls: CombatControls, session = sessionOf('R01', 'R01',
     duel: controls.duel, session, enemyName: 'Prueba P5', enemyMaxLife: 20, notice: '', noticeRevision: controls.revision,
     selectedCardId: controls.pending?.cardId ?? null, sacrificeIds: controls.pending?.sacrificeIds ?? [],
     attackerIds: [], targetChoices: {}, blockerChoices: {}, onSelectCard: noop, onActivateR01: noop,
-    onAllowFieldDrop: noop, onDropHandCard: noop, onToggleSacrifice: noop, onSelectAttacker: noop,
+    onDropHandCard: noop, onToggleSacrifice: noop, onSelectAttacker: noop,
     onCancelSummon: noop, onBeginCombat: noop, onDeclareAttacks: noop, onConfirmBlocks: noop,
-    onStartBlockDrag: () => false, onEndBlockDrag: noop, onDropRelation: noop, onMoveBlocker: noop, onMoveAttacker: noop,
+    onStartRelationDrag: () => false, onCancelRelationDrag: noop, onDropRelation: noop, onMoveBlocker: noop, onMoveAttacker: noop,
   }
 }
 

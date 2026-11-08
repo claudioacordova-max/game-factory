@@ -281,9 +281,9 @@ const noop = () => {}
 function viewProps(duel: DuelState, session: GameSession = createV04BInitialSession()): CombatViewProps {
   return {
     duel, session, enemyName: 'El Centinela', enemyMaxLife: 12, notice: '', noticeRevision: 0, selectedCardId: null, sacrificeIds: [], attackerIds: [], targetChoices: {}, blockerChoices: {}, presenting: false,
-    onSelectCard: noop, onAllowFieldDrop: noop, onDropHandCard: noop, onToggleSacrifice: noop, onSelectAttacker: noop,
+    onSelectCard: noop, onDropHandCard: noop, onToggleSacrifice: noop, onSelectAttacker: noop,
     onCancelSummon: noop, onBeginCombat: noop, onDeclareAttacks: noop, onConfirmBlocks: noop,
-    onStartBlockDrag: () => true, onEndBlockDrag: noop, onDropRelation: noop, onMoveBlocker: noop, onMoveAttacker: noop, onSurrender: noop,
+    onStartRelationDrag: () => true, onCancelRelationDrag: noop, onDropRelation: noop, onMoveBlocker: noop, onMoveAttacker: noop, onSurrender: noop,
   }
 }
 const html = (props: CombatViewProps) => renderToStaticMarkup(<CombatView {...props} />)

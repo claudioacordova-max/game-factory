@@ -11,6 +11,7 @@ import { m8aTests } from './m8a.js'
 import { m8bTests } from './m8b.js'
 import { m8cTests } from './m8c.js'
 import { ui1Tests } from './ui1.js'
+import { ui2Tests } from './ui2.js'
 import { requireInvoker } from '../src/engine/rules.js'
 import { addCopyToActiveDeck, advanceMainPhaseIfNoLegalSummons, baseMana, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, hasLegalSummon, removeCopyFromActiveDeck, resolveCombat, RuleViolation, startCombat, summonAvailability, summonCreature, unlockCreatureType } from '../src/engine/index.js'
 import { createDuel as createShuffledDuel, startSessionDuel as startShuffledSessionDuel } from '../src/engine/index.js'
@@ -665,7 +666,7 @@ test('la colección inicial no duplica tipos repetidos', () => {
 })
 
 tests.push(...iterationUxTests, ...presentationTests, ...explorationUiTests, ...combatPresentationTests, ...combatActionTests, ...blockAssignmentTests, ...boardGeometryTests, ...blockDragTests, ...activationTests, ...cryptVisualTests, ...cryptRenderingTests)
-tests.push(...m1Tests, ...m2Tests, ...m3Tests, ...m4Tests, ...m5Tests, ...m6aTests, ...m6bTests, ...m7Tests, ...m8aTests, ...m8bTests, ...m8cTests, ...ui1Tests)
+tests.push(...m1Tests, ...m2Tests, ...m3Tests, ...m4Tests, ...m5Tests, ...m6aTests, ...m6bTests, ...m7Tests, ...m8aTests, ...m8bTests, ...m8cTests, ...ui1Tests, ...ui2Tests)
 let failed = 0
 for (const entry of tests) {
   try {

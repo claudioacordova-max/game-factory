@@ -1,11 +1,6 @@
 import { activateN01, activateR01, advanceMainPhaseIfNoLegalSummons, cardInstanceId, findHandCard, declareAttackers, declareBlockers, endTurn, healingCandidates, mainHealingSource, n01ActivationAvailability, resolveMainHealing, resolveCombat, RuleViolation, sacrificeCandidates, startCombat, summonAvailability, summonCreature, surrender } from '../engine/rules.js'
 import { chooseEnemyBlockers, runEnemyTurn } from '../engine/enemy.js'
-import type { CreatureCard, DuelState } from '../engine/types.js'
-
-export function writeHandCardDrag(dataTransfer: Pick<DataTransfer, 'setData' | 'effectAllowed'>, card: CreatureCard): void {
-  dataTransfer.setData('text/plain', cardInstanceId(card))
-  dataTransfer.effectAllowed = 'move'
-}
+import type { DuelState } from '../engine/types.js'
 
 /** cardId is a combat instance reference, never a V04B type ID. */
 export interface RitualMaterial { id: string; copyId?: string; instanceId: string; health: number }

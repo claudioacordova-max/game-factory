@@ -13,7 +13,7 @@ import { CollectionView, DeckPanel } from '../src/ui/CollectionViews.js'
 import { CombatView } from '../src/ui/CombatView.js'
 import type { CombatViewProps } from '../src/ui/CombatView.js'
 import { activateOnce } from '../src/ui/activation.js'
-import { applyCombatAction, createCombatControls, writeHandCardDrag } from '../src/ui/combatActions.js'
+import { applyCombatAction, createCombatControls } from '../src/ui/combatActions.js'
 import { seededRandom } from './duelFixtures.js'
 
 export const m1Tests: { name: string; run: () => void }[] = []
@@ -188,10 +188,9 @@ test('clic/teclado y payload real de arrastre eligen la copia exacta; ID de tipo
     activateOnce({detail,preventDefault() {}}, () => { selected = applyCombatAction(fresh,{type:'summon',cardId:cardInstanceId(fresh.duel.players.player.hand[1])},fresh.revision).state })
     equal(selected.duel.players.player.creatures.map((c) => [c.copyId,c.health]), [[second.copyId,3]])
   }
-  let payload = '', format = ''
-  const transfer: Pick<DataTransfer,'effectAllowed' | 'setData'> = {effectAllowed:'none',setData: (type: string,value: string) => { format=type; payload=value }}
-  writeHandCardDrag(transfer,first)
-  equal([format,payload,transfer.effectAllowed], ['text/plain',first.instanceId,'move'])
+  // UI-2: the hand gesture keeps the instance reference in memory (its sourceId) instead of a dataTransfer payload.
+  const payload = cardInstanceId(first)
+  equal(payload, first.instanceId)
   controls = applyCombatAction(controls,{type:'summon',cardId:payload},controls.revision).state
   equal([controls.duel.players.player.creatures[0].copyId,controls.duel.players.player.creatures[0].health,controls.duel.players.player.hand[0].copyId], [first.copyId,1,second.copyId])
 })
@@ -334,8 +333,8 @@ test('mano duplicada renderizada selecciona solo una instancia y muestra copia, 
   const props: CombatViewProps = {
     duel,session,enemyName:'Prueba M1',enemyMaxLife:20,notice:'',noticeRevision:0,
     selectedCardId:cardInstanceId(duel.players.player.hand[1]),sacrificeIds:[],attackerIds:[],targetChoices:{},blockerChoices:{},
-    onSelectCard:noop,onAllowFieldDrop:noop,onDropHandCard:noop,onToggleSacrifice:noop,onSelectAttacker:noop,onCancelSummon:noop,
-    onBeginCombat:noop,onDeclareAttacks:noop,onConfirmBlocks:noop,onStartBlockDrag:()=>false,onEndBlockDrag:noop,onDropRelation:noop,onMoveBlocker:noop,onMoveAttacker:noop,
+    onSelectCard:noop,onDropHandCard:noop,onToggleSacrifice:noop,onSelectAttacker:noop,onCancelSummon:noop,
+    onBeginCombat:noop,onDeclareAttacks:noop,onConfirmBlocks:noop,onStartRelationDrag:()=>false,onCancelRelationDrag:noop,onDropRelation:noop,onMoveBlocker:noop,onMoveAttacker:noop,
   }
   const markup = renderToStaticMarkup(<CombatView {...props} />)
   equal((markup.match(/class="hand-card is-selected/g) ?? []).length,1)

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import type { DragEvent } from 'react'
 import {
   activateOrb,
   restorationPreview,
@@ -32,10 +31,11 @@ import { collectionShortcut } from './ui/explorationControls.js'
 import { applyCombatAction, cancelSummonShortcut, createCombatControls } from './ui/combatActions.js'
 import type { CombatAction, CombatControls } from './ui/combatActions.js'
 import { movePlayerBlocker } from './ui/blockAssignments.js'
-import { applyCombatBlockDrop, COMBAT_DRAG_MIME, createCombatDrag, readCombatDrag } from './ui/blockDrag.js'
+import { applyRelationGesture, createCombatDrag } from './ui/blockDrag.js'
+import type { CombatDragToken } from './ui/blockDrag.js'
+import type { GestureDrop } from './ui/combatGesture.js'
 import { Icon } from './ui/GameIcons.js'
 import {
-  assignDirectedAttacker,
   moveDirectedAttacker,
   togglePlayerAttacker,
 } from './ui/combatSelection.js'
@@ -68,8 +68,8 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
   const [targetChoices, setTargetChoices] = useState<Record<string, string>>({})
   const [blockerChoices, setBlockerChoicesState] = useState<Record<string, string[]>>({})
   const blockSelection = useRef({ choices: {} as Record<string, string[]>, revision: 0 })
-  const [blockDragOrigin] = useState(() => crypto.randomUUID())
-  const activeBlockDrag = useRef<string | null>(null)
+  /** UI-2: the in-memory token of the creature gesture in progress (no dataTransfer payload). */
+  const activeBlockDrag = useRef<CombatDragToken | null>(null)
   const relationRevision = useRef(0)
   const attackSelection = useRef({ attackerIds, targetChoices })
   attackSelection.current = { attackerIds, targetChoices }
@@ -202,17 +202,9 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
     dispatchCombat({ type: 'summon', cardId })
   }
 
-  function allowFieldDrop(event: DragEvent<HTMLElement>) {
-    if (!isPlayerMain) return
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }
-
-  function dropHandCard(event: DragEvent<HTMLElement>) {
-    if (!isPlayerMain) return
-    event.preventDefault()
-    const cardId = event.dataTransfer.getData('text/plain')
-    if (cardId) attemptSummonDrop(cardId)
+  function dropHandCard(cardId: string) {
+    if (!isPlayerMain || !cardId) return
+    attemptSummonDrop(cardId)
   }
 
   function toggleSacrifice(creatureId: string) {
@@ -256,40 +248,34 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
 
   function blockDragContext() {
     const current = controls.current
-    return { origin: blockDragOrigin, duelId: current.duel.id, turn: current.duel.turn, revision: current.revision, selectionRevision: relationRevision.current }
+    return { duelId: current.duel.id, turn: current.duel.turn, revision: current.revision, selectionRevision: relationRevision.current }
   }
 
-  function startBlockDrag(event: DragEvent<HTMLButtonElement>, blockerId: string): boolean {
+  function startRelationDrag(creatureId: string): boolean {
+    activeBlockDrag.current = null
     try {
       if (presentationBusy.current || renderedRevision !== controls.current.revision) throw new RuleViolation('La decisión cambió. Vuelve a arrastrar la criatura.')
-      const raw = createCombatDrag(controls.current.duel, blockDragContext(), blockerId)
-      activeBlockDrag.current = raw
-      event.dataTransfer.setData(COMBAT_DRAG_MIME, raw)
-      event.dataTransfer.effectAllowed = 'move'
+      activeBlockDrag.current = createCombatDrag(controls.current.duel, blockDragContext(), creatureId)
       return true
-    } catch (error) { event.preventDefault(); reject(error); return false }
+    } catch (error) { reject(error); return false }
   }
 
-  function endBlockDrag() { activeBlockDrag.current = null }
+  function cancelRelationDrag() { activeBlockDrag.current = null }
 
-  function dropRelation(event: DragEvent<HTMLElement>, targetId: string | null) {
-    event.preventDefault()
-    event.stopPropagation()
-    const raw = event.dataTransfer.getData(COMBAT_DRAG_MIME)
+  function dropRelation(drop: GestureDrop) {
     const registered = activeBlockDrag.current
     activeBlockDrag.current = null
-    if (presentationBusy.current) return
+    if (presentationBusy.current || drop.type === 'click' || drop.type === 'none') return
     try {
-      if (!registered || registered !== raw) throw new RuleViolation('Arrastra una criatura propia de este tablero.')
-      const current = controls.current.duel
-      if (current.phase === 'blockers') {
-        setBlockerChoices(applyCombatBlockDrop(current, blockSelection.current.choices, blockDragContext(), raw, targetId))
-      } else {
-        const id = readCombatDrag(current, blockDragContext(), raw)
-        const selection = assignDirectedAttacker(current, { ...attackSelection.current, focusedAttackerId: null }, id, targetId)
-        attackSelection.current = selection
-        setAttackerIds(selection.attackerIds)
-        setTargetChoices(selection.targetChoices)
+      if (!registered) throw new RuleViolation('Arrastra una criatura propia de este tablero.')
+      const current = { blocks: blockSelection.current.choices, attack: { ...attackSelection.current, focusedAttackerId: null } }
+      const next = applyRelationGesture(controls.current.duel, current, blockDragContext(), registered, drop)
+      if (next === current) return
+      if (next.blocks !== current.blocks) setBlockerChoices(next.blocks)
+      if (next.attack !== current.attack) {
+        attackSelection.current = next.attack
+        setAttackerIds(next.attack.attackerIds)
+        setTargetChoices(next.attack.targetChoices)
       }
       relationRevision.current++
     } catch (error) { reject(error) }
@@ -297,6 +283,7 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
 
   function selectPlayerAttacker(unitId: string) {
     if (presentationBusy.current || controls.current.duel.mode !== 'duel' || controls.current.duel.phase !== 'attackers' || controls.current.duel.activePlayer !== 'player') return
+    relationRevision.current++
     const selection = togglePlayerAttacker({ ...attackSelection.current, focusedAttackerId: null }, unitId)
     attackSelection.current = selection
     setAttackerIds(selection.attackerIds)
@@ -395,8 +382,8 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
         notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} selectedCardId={selectedCardId} sacrificeIds={sacrificeIds} attackerIds={attackerIds} targetChoices={targetChoices} blockerChoices={blockerChoices} presenting={presenting}
         pending={controls.current.pending} onActivateN01={(creatureId) => dispatchCombat({ type: 'activate-n01', creatureId })}
         onChooseEffectTarget={(creatureId) => dispatchCombat({ type: 'effect-target', creatureId })} onSurrender={() => dispatchCombat({ type: 'surrender' })} onConfirmRitual={() => dispatchCombat({ type: 'confirm-ritual' })} onEditRitual={() => dispatchCombat({ type: 'edit-ritual' })}
-        onSelectCard={selectCard} onActivateR01={activateRune} onAllowFieldDrop={allowFieldDrop} onDropHandCard={dropHandCard} onToggleSacrifice={toggleSacrifice} onSelectAttacker={selectPlayerAttacker}
-        onStartBlockDrag={startBlockDrag} onEndBlockDrag={endBlockDrag} onDropRelation={dropRelation} onMoveBlocker={moveBlocker} onMoveAttacker={moveAttacker}
+        onSelectCard={selectCard} onActivateR01={activateRune} onDropHandCard={dropHandCard} onToggleSacrifice={toggleSacrifice} onSelectAttacker={selectPlayerAttacker}
+        onStartRelationDrag={startRelationDrag} onCancelRelationDrag={cancelRelationDrag} onDropRelation={dropRelation} onMoveBlocker={moveBlocker} onMoveAttacker={moveAttacker}
         onCancelSummon={cancelSummon} onBeginCombat={beginCombat} onDeclareAttacks={declarePlayerAttacks} onConfirmBlocks={confirmBlocks} />}
     </main>
   )

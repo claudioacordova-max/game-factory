@@ -18,9 +18,9 @@ function fixture(skirmish = false): CombatViewProps {
     duel: createDuel({ playerDeck: cards, opponentDeck: [], mode: skirmish ? 'skirmish' : 'duel', opponentLife: 17, playerLife: 11, opponentInitialField: skirmish ? [cards[0]] : [] }),
     session: { ...createGameSession(cards), invokerMaxLife: 11, invokerLife: 11 }, enemyName: skirmish ? 'Ratas de la cripta' : 'Centinela', enemyMaxLife: 17,
     notice: '', noticeRevision: 0, selectedCardId: null, sacrificeIds: [], attackerIds: [], targetChoices: {}, blockerChoices: {}, presenting: false,
-    onSelectCard: noop, onAllowFieldDrop: noop, onDropHandCard: noop, onToggleSacrifice: noop, onSelectAttacker: noop,
+    onSelectCard: noop, onDropHandCard: noop, onToggleSacrifice: noop, onSelectAttacker: noop,
     onCancelSummon: noop, onBeginCombat: noop, onDeclareAttacks: noop, onConfirmBlocks: noop,
-    onStartBlockDrag: () => true, onEndBlockDrag: noop, onDropRelation: noop, onMoveBlocker: noop, onMoveAttacker: noop,
+    onStartRelationDrag: () => true, onCancelRelationDrag: noop, onDropRelation: noop, onMoveBlocker: noop, onMoveAttacker: noop,
   }
 }
 
@@ -61,7 +61,8 @@ test('las cartas no se deshabilitan por maná insuficiente en fase principal', (
   const hand = [...props.duel.players.player.hand, costly]
   props.duel = { ...props.duel, players: { ...props.duel.players, player: { ...props.duel.players.player, mana: 0, hand } } }
   const markup = renderToStaticMarkup(<CombatView {...props} />)
-  ok((markup.match(/draggable="true"/g) ?? []).length === hand.length, 'Incluso la carta cuyo coste excede el maná debe admitir el intento por arrastre.')
+  // UI-2: the grip is a pointer gesture (class is-grabbable); native draggable is never enabled.
+  ok((markup.match(/class="hand-card[^"]*is-grabbable/g) ?? []).length === hand.length && !markup.includes('draggable="true"'), 'Incluso la carta cuyo coste excede el maná debe admitir el intento por arrastre.')
 })
 
 test('el sacrificio conserva progreso y advertencia sin depender del aviso temporal', () => {
@@ -101,9 +102,10 @@ test('defensa integra arrastre en la carta, orden, retirada y conexiones sin lis
   props.duel = blockDefenseFixture('skirmish')
   props.blockerChoices = { 'enemy-a': ['own-a', 'own-b'] }
   const markup = renderToStaticMarkup(<CombatView {...props} />)
-  ok((markup.match(/class="creature-tile[^\"]*"[^>]*draggable="true"/g) ?? []).length === 3, 'Se debe arrastrar la carta propia, no solo su contenedor.')
+  ok((markup.match(/class="creature-tile[^"]*is-grabbable/g) ?? []).length === 3 && !markup.includes('draggable="true"'), 'Se debe arrastrar la carta propia, no solo su contenedor.')
   ok(markup.includes('aria-label="Orden de bloqueo 1"') && markup.includes('aria-label="Orden de bloqueo 2"'), 'Cada bloqueador muestra su orden actual.')
-  ok(markup.includes('Sin asignar; arrastra aquí') && markup.includes('Adelantar en daño a own-b'), 'Retirada por arrastre y prioridad deben permanecer disponibles.')
+  // UI-2: no «Sin asignar» box; releasing on your own half withdraws (gesture by zones).
+  ok(!markup.includes('Sin asignar') && markup.includes('suelta en tu lado para retirar') && markup.includes('Adelantar en daño a own-b'), 'Retirada por arrastre y prioridad deben permanecer disponibles.')
   ok(markup.includes('data-board-link-count="2"'), 'Las dos asignaciones deben alimentar la capa de conexiones.')
   ok(!markup.includes('combat-field-order') && !markup.includes('attack-list') && !markup.includes('blocker-picker'), 'La defensa no mezcla el índice de represalia con orden de bloqueos ni usa listas laterales.')
   ok(renderToStaticMarkup(<CombatView {...props} />).includes('Arrastra para bloquear'), 'La criatura sin asignar debe presentar el arrastre como interacción principal.')

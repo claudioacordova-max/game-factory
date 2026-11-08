@@ -15,7 +15,8 @@ function equal(actual: unknown, expected: unknown) { if (JSON.stringify(actual) 
 function ok(value: unknown, message: string): asserts value { if (!value) throw new Error(message) }
 function rejects(action: () => unknown) { try { action() } catch (error) { if (error instanceof RuleViolation) return; throw error } throw new Error('Falta rechazo') }
 const directed = (): DuelState => ({ ...blockDefenseFixture('skirmish'), activePlayer: 'player', phase: 'attackers', attackers: [] })
-const context = (state: DuelState) => ({ origin: 'local', duelId: state.id, turn: state.turn, revision: 3, selectionRevision: 0 })
+// UI-2: in-memory drag token; the tab origin field no longer exists (nothing leaves the page).
+const context = (state: DuelState) => ({ duelId: state.id, turn: state.turn, revision: 3, selectionRevision: 0 })
 const empty = (): AttackSelection => ({ attackerIds: [], targetChoices: {}, focusedAttackerId: null })
 
 test('arrastre dirigido asigna varios, reasigna al final y retira sin perder prioridades existentes', () => {
@@ -41,7 +42,7 @@ test('arrastre dirigido asigna varios, reasigna al final y retira sin perder pri
 test('drag compartido rechaza datos externos/obsoletos y conserva exclusividad al mover y retirar', () => {
   const state = blockDefenseFixture(), frame = context(state), raw = createCombatDrag(state, frame, 'own-a')
   equal(readCombatDrag(state, frame, raw), 'own-a')
-  for (const value of ['[]', '{', 'x'.repeat(2049), JSON.stringify({ ...JSON.parse(raw), extra: true }), JSON.stringify({ ...JSON.parse(raw), origin: 'other' })]) rejects(() => readCombatDrag(state, frame, value))
+  for (const value of [[], '{', 'x'.repeat(2049), JSON.stringify(raw), { ...raw, extra: true }, { ...raw, origin: 'other' }, { ...raw, duelId: 'other' }]) rejects(() => readCombatDrag(state, frame, value))
   rejects(() => readCombatDrag(state, { ...frame, selectionRevision: 1 }, raw))
   rejects(() => readCombatDrag({ ...state, phase: 'main' }, frame, raw))
   let choices = applyCombatBlockDrop(state, { 'enemy-b': ['own-c'] }, frame, raw, 'enemy-a')

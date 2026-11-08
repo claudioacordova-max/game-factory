@@ -41,7 +41,6 @@
 .combat-creature-slot.has-directed-focus .combat-target { border-color: #b9dfb7; background: #2b4741; }
 @media (max-height: 800px) { .combat-view.is-sacrificing { grid-template-rows: 74px minmax(0,1fr) 64px minmax(0,1fr) 86px 207px; }.combat-view.is-sacrificing .combat-axis p { padding: 5px 12px; } }
 @media (max-width: 700px) { .combat-view.is-sacrificing { grid-template-rows: 76px minmax(0,1fr) 74px minmax(0,1fr) 92px 202px; }.combat-view.is-sacrificing .combat-axis { padding-left: 0; padding-right: 0; gap: 5px; }.combat-view.is-sacrificing .combat-axis p { padding: 6px 8px; }.combat-view.is-sacrificing .combat-axis p > strong { font-size: 13px; }.combat-view.is-sacrificing .combat-axis p > span { font-size: 10px; }.combat-action > .combat-cancel { padding: 8px; font-size: 10px; } }
-.combat-view .creature-tile[draggable=true] { cursor: grab; }.combat-view .creature-tile[draggable=true]:active { cursor: grabbing; }
 .combat-view .is-blocker-dragging .creature-tile { opacity: .65; border-style: dashed; }
 .combat-view.is-dragging-blocker .enemy-attacker .creature-tile { border-color: #a7dfbd; box-shadow: 0 0 13px #7ac5a833,inset 0 0 0 2px #76b59844; }
 .combat-view.is-dragging-blocker .is-block-drop-target .creature-tile { border-color: #e2f7c8; background: linear-gradient(145deg,#5c7959,#26484a); box-shadow: 0 0 24px #9bdb9c77,inset 0 0 0 2px #b9e6af66; }
@@ -51,33 +50,24 @@
 .board-link-block { color: #93dfc0; filter: drop-shadow(0 1px 3px #061710); }.board-link-target { color: #d8b879; filter: drop-shadow(0 1px 3px #171006); }.board-link-target line { stroke-dasharray: 6 4; }
 @media (max-height: 800px) { .combat-view .has-block-controls .creature-tile { height: 134px; }.combat-view .has-block-controls .creature-tile > .creature-portrait { height: 23px; }.combat-view .has-block-controls .creature-tile > strong { min-height: 28px; }.combat-view .has-block-controls .tile-state { min-height: 21px; } }
 
-/* Shared tactical canvas: stable card nodes move only when their relation changes. */
-.combat-view { grid-template-rows: 82px minmax(0,1fr) 90px 216px; }
-.combat-table-scroll { position: relative; min-height: 0; min-width: 0; overflow: auto; padding-bottom: 36px; scrollbar-width: thin; scrollbar-color: #738e7a #15272c; }
-.combat-table { --combat-row-step: 146px; position: relative; width: 100%; height: 100%; }
+/* Shared tactical canvas: stable card nodes move only when their relation changes.
+   UI-2: rows are placed by CombatView in logical pixels and the whole table is scaled to fit (no scroll). */
+.combat-view { grid-template-rows: 82px minmax(0,1fr) 90px; }
+.combat-view.has-hand { grid-template-rows: 82px minmax(0,1fr) 90px 216px; }
+.combat-table-scroll { position: relative; min-height: 0; min-width: 0; overflow: hidden; }
+.combat-table { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .combat-table .combat-field { position: absolute; inset: 0; pointer-events: none; }
 .combat-table .combat-creature-row { display: block; overflow: visible; padding: 0; }
 .combat-table .combat-creature-row::before,.combat-table .combat-creature-row::after { display: none; }
-.combat-table .combat-creature-slot { position: absolute; left: 50%; margin-top: -83px; pointer-events: auto; transition: left 200ms ease-out, transform 200ms ease-out, top 200ms ease-out, margin-top 200ms ease-out; }
+.combat-table .combat-creature-slot { position: absolute; top: 0; left: 50%; pointer-events: auto; }
+.combat-table.is-fitted .combat-creature-slot { transition: left 200ms ease-out, transform 200ms ease-out; }
 /* Entering the short duel preview: separate rows before crossing their horizontal paths. */
-.uses-preview-transition .combat-table .combat-creature-slot { transition: left 100ms ease-out 100ms, transform 100ms ease-out, top 100ms ease-out, margin-top 100ms ease-out; }
-.combat-table .enemy-field .combat-creature-slot { top: 25%; }
-.combat-table .own-field .combat-creature-slot { top: 75%; }
-.combat-table .own-field.accepts-card-drop { top: 50%; pointer-events: auto; }
-.combat-table .own-field.accepts-card-drop .combat-creature-slot { top: 50%; }
-.combat-table .combat-empty { position: absolute; left: 50%; transform: translate(-50%,-50%); width: 100%; }
-.combat-table .enemy-field .combat-empty { top: 25%; }
-.combat-table .own-field .combat-empty { top: 75%; }
-.combat-table .own-field.accepts-card-drop .combat-empty { top: 50%; }
-.combat-table .has-block-controls { margin-top: -83px; }
-.combat-layout-group { position: absolute; left: 50%; top: 5px; bottom: 5px; border: 1px solid #a9c69a35; border-radius: 14px; background: #8cae7410; pointer-events: none; }
+.uses-preview-transition .combat-table.is-fitted .combat-creature-slot { transition: left 100ms ease-out 100ms, transform 100ms ease-out; }
+.combat-table .combat-empty { position: absolute; left: 50%; transform: translate(-50%,-50%); width: 100%; margin: 0; }
+.combat-layout-group { position: absolute; left: 50%; top: 0; border: 1px solid #a9c69a35; border-radius: 14px; background: #8cae7410; pointer-events: none; }
 .combat-layout-group.is-neutral { border-color: transparent; background: none; }
-.combat-table .combat-axis { position: absolute; top: calc(50% - 12px); left: 0; right: 0; z-index: 5; }
+.combat-table .combat-axis { position: absolute; left: 0; right: 0; z-index: 5; transform: translateY(-50%); }
 .combat-table .combat-axis p { background: #172b30e8; padding: 4px 9px; border-radius: 4px; }
-.combat-table.is-contextual { min-height: calc(var(--combat-row-step) * var(--combat-row-count)); }
-.combat-table.is-contextual .combat-creature-slot { top: 0; margin-top: 0; }
-.combat-table.is-contextual .combat-layout-group { bottom: auto; height: calc(var(--combat-row-step) * 2 - 8px); }
-.combat-table.is-contextual .combat-axis { top: calc(var(--combat-row-step) * (var(--combat-enemy-row) + 1) - 22px); }
 .combat-table.is-contextual .combat-field { background: none; box-shadow: none; }
 .combat-table.is-contextual .creature-tile { height: 112px; padding: 5px 9px; }
 .combat-table.is-contextual .creature-tile.is-selected { padding: 4px 8px; }
@@ -89,10 +79,6 @@
 .combat-table.is-contextual .tile-state { min-height: 19px; font-size: 9px; }
 .combat-view.turn-player.has-contextual-layout .combat-table-scroll { box-shadow: inset 0 -2px #71c5bc88; }
 .combat-view.turn-opponent.has-contextual-layout .combat-table-scroll { box-shadow: inset 0 2px #c6a16e99; }
-.combat-unassign-zone { position: absolute; z-index: 6; bottom: 310px; left: 50%; transform: translateX(-50%); border: 1px dashed #85958288; border-radius: 5px; padding: 5px 14px; color: #becbbd; background: #14282ff0; text-align: center; font-size: 11px; }
-.combat-unassign-zone small { display: block; font-size: 9px; color: #9aafa5; }
-.combat-unassign-zone.accepts-relation { border-color: #a3dfbe; }
-.combat-unassign-zone.is-over { background: #36574a; box-shadow: 0 0 12px #71c5bc33; }
 .combat-view .is-valid-drop-target .creature-tile { border-color: #a7dfbd; box-shadow: inset 0 0 0 2px #76b59844; }
 .combat-view .is-block-drop-target .creature-tile { border-color: #e2f7c8; background: linear-gradient(145deg,#5c7959,#26484a); }
 .combat-view.turn-player .own-field { box-shadow: inset 0 -3px #71c5bc88; background: linear-gradient(0deg,#71c5bc0c,transparent 45%); }
@@ -101,28 +87,21 @@
 .combat-turn .combat-decision { display: block; margin-top: 4px; color: #d6dfc6; font: 10px system-ui; }
 .combat-view.is-defending .combat-action { border-right: 2px solid #a3dfbe; padding-right: 9px; }
 .combat-view.is-presenting .combat-action { color: #acc1b3; }
-.combat-view.is-sacrificing { grid-template-rows: 82px minmax(0,1fr) 90px 216px; }
-.combat-view.is-sacrificing .combat-table { grid-template-rows: minmax(0,1fr) 64px minmax(0,1fr); }
+.combat-view.is-sacrificing { grid-template-rows: 82px minmax(0,1fr) 90px; }
+.combat-view.is-sacrificing.has-hand { grid-template-rows: 82px minmax(0,1fr) 90px 216px; }
 @media (max-height: 800px) {
-  .combat-view,.combat-view.is-sacrificing { grid-template-rows: 74px minmax(0,1fr) 86px 207px; }
-  .combat-table .combat-creature-slot { margin-top: -76px; }
-  .combat-table .has-block-controls { margin-top: -81px; }
-  .combat-unassign-zone { bottom: 296px; padding-top: 3px; padding-bottom: 3px; }
-  .combat-view.has-contextual-layout { grid-template-rows: 74px minmax(0,1fr) 72px 180px; }
-  .has-contextual-layout .combat-table-scroll { padding-bottom: 30px; }
-  .has-contextual-layout .combat-table { --combat-row-step: 126px; }
+  .combat-view,.combat-view.is-sacrificing { grid-template-rows: 74px minmax(0,1fr) 86px; }
+  .combat-view.has-hand,.combat-view.is-sacrificing.has-hand { grid-template-rows: 74px minmax(0,1fr) 86px 207px; }
+  .combat-view.has-contextual-layout { grid-template-rows: 74px minmax(0,1fr) 72px; }
   .has-contextual-layout .combat-table .creature-tile { height: 100px; padding-top: 3px; padding-bottom: 3px; }
   .has-contextual-layout .combat-table .creature-tile > .creature-portrait { height: 14px; }
   .has-contextual-layout .combat-table .creature-tile > strong { min-height: 26px; font-size: 13px; }
   .has-contextual-layout .combat-table .tile-state { min-height: 17px; font-size: 9px; }
   .has-contextual-layout .combat-block-tools,.has-contextual-layout .combat-block-tools button { height: 21px; }
-  .has-contextual-layout .combat-hand .hand-card { height: 145px; }
-  .has-contextual-layout .combat-hand .hand-card > .creature-portrait { height: 29px; }
-  .combat-view.has-contextual-layout .combat-unassign-zone { bottom: 255px; }
 }
 @media (max-width: 700px) {
-  .combat-view,.combat-view.is-sacrificing { grid-template-rows: 76px minmax(0,1fr) 92px 202px; }
-  .combat-unassign-zone { bottom: 296px; }
+  .combat-view,.combat-view.is-sacrificing { grid-template-rows: 76px minmax(0,1fr) 92px; }
+  .combat-view.has-hand,.combat-view.is-sacrificing.has-hand { grid-template-rows: 76px minmax(0,1fr) 92px 202px; }
 }
 @media (prefers-reduced-motion: reduce) { .combat-table .combat-creature-slot,.combat-field { transition: none; } }
 
@@ -173,3 +152,30 @@
 .surrender-confirmation h2 { margin: 6px 0 14px; }
 .surrender-confirmation p { line-height: 1.5; }
 .surrender-confirmation .ritual-actions kbd { margin-left: 8px; font: 10px system-ui; color: #9eafa9; }
+
+/* UI-2: pointer gestures (no native drag), zones, guide line, compact hand indicator, overlapping hand. */
+.combat-view { -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }
+.combat-view img,.combat-view svg,.combat-view .creature-portrait { -webkit-user-drag: none; }
+.combat-view .is-grabbable { touch-action: none; cursor: grab; }
+.combat-view.is-gesturing,.combat-view.is-gesturing .is-grabbable { cursor: grabbing; }
+.combat-view:not(.has-hand) .combat-stonework::after { bottom: 95px; }
+.combat-gesture-zone { position: absolute; z-index: 1; left: 8px; right: 8px; display: flex; align-items: flex-start; justify-content: center; border: 1px dashed #a3dfbe88; border-radius: 18px; background: #71c5bc12; pointer-events: none; }
+.combat-gesture-zone.is-rival { top: 0; border-color: #e0b98288; background: #c6a16e14; }
+.combat-gesture-zone.is-own { bottom: 0; align-items: flex-end; }
+.combat-gesture-zone > span { margin: 6px; padding: 3px 10px; border-radius: 3px; background: #14282ff0; color: #d9ead0; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.combat-gesture-guide { position: absolute; z-index: 7; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; color: #c9f0d2; }
+.combat-gesture-guide line { stroke: currentColor; stroke-width: 3; stroke-linecap: round; filter: drop-shadow(0 1px 3px #061710); }
+.combat-gesture-guide line.is-withdrawing { stroke: #c9b49a; stroke-dasharray: 7 6; }
+.combat-gesture-guide circle { fill: currentColor; }
+.combat-view .is-block-drop-target .creature-tile { box-shadow: 0 0 24px #9bdb9c77,inset 0 0 0 2px #b9e6af66; }
+.combat-hand-indicator { display: flex; align-items: center; gap: 6px; padding: 4px 9px; border: 1px solid #ac9b5b44; border-radius: 4px; background: #0c1c22aa; color: #bcb89f; font-size: 11px; white-space: nowrap; }
+.combat-hand-indicator > .icon { width: 13px; height: 13px; }
+.combat-hand-indicator strong { color: #dfd3ae; font-weight: 500; }
+.combat-hand-indicator small.deck-exhausted { font-size: 10px; color: #e6c9a0; border: 1px solid #c79a6a88; border-radius: 3px; padding: 1px 5px; background: #3a2b2288; }
+.combat-hand-row { overflow: hidden; }
+.combat-hand-row > .hand-card + .hand-card { margin-left: calc(-1 * var(--hand-overlap, 0px)); }
+.combat-hand-row > .hand-card { position: relative; }
+.combat-hand-row > .hand-card:hover,.combat-hand-row > .hand-card:focus-visible,.combat-hand-row > .hand-card.is-selected { z-index: 2; }
+@media (max-width: 1100px) { .combat-own-resources { flex-wrap: wrap; row-gap: 4px; } }
+.combat-view:not(.has-hand) .combat-action { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: center; max-width: 440px; }
+.combat-view:not(.has-hand) .combat-action > span { flex-basis: 100%; }

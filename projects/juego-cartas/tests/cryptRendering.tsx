@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Masonry } from '../src/scene/CryptGeometry.js'
 import { CryptRoom } from '../src/scene/CryptEnvironment.js'
 import { buildStaticCryptBatch, disposeStaticCryptBatch } from '../src/scene/staticCryptBatch.js'
-import { ROOMS } from '../src/engine/spatial.js'
+import { V04B_SPATIAL_ROOMS } from '../src/engine/index.js'
 
 function assert(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message)
@@ -169,12 +169,13 @@ export const cryptRenderingTests = [
     disposeStaticCryptBatch(batch)
     geometry.dispose(); material.dispose()
   } },
-  { name: 'siete salas reales conservan arte exacto y un solo batch tras retornos y desmontaje', run: async () => {
+  { name: 'las 19 salas V0.4B conservan arte exacto y un solo batch tras retornos y desmontaje', run: async () => {
     await withRoot(async (root) => {
       let store!: ReturnType<typeof root.render>
       let previousBatch: THREE.Group | undefined
       let expectedDisposals = 0, disposals = 0
-      const route = [...Object.values(ROOMS), ...Object.values(ROOMS).reverse(), ROOMS['sector-1'], ROOMS['rats-1'], ROOMS['sector-1']]
+      const rooms = Object.values(V04B_SPATIAL_ROOMS)
+      const route = [...rooms, ...rooms.slice().reverse(), V04B_SPATIAL_ROOMS['01'], V04B_SPATIAL_ROOMS['07'], V04B_SPATIAL_ROOMS['01']]
       for (const room of route) {
         await act(async () => { store = root.render(<StrictMode><CryptRoom room={room} /></StrictMode>) })
         const scene = store.getState().scene

@@ -1,5 +1,5 @@
 import {
-  ACTIVE_CONTENT, createDuel, createGameSession, createV04BCatalogSandbox, createV04BEncounterDuel, createV04BInitialSession,
+  createDuel, createGameSession, createV04BCatalogSandbox, createV04BEncounterDuel, createV04BInitialSession,
   declareAttackers, declareBlockers, endTurn, finishSessionDuel, healingCandidates, mainHealingSource, requireInvoker, resolveCombat, resolveMainHealing,
   RuleViolation, sacrificeCandidates, startCombat, summonAvailability, summonCreature, validateCombatIdentities, V04B_CARD_TYPES, V04B_ENCOUNTERS,
 } from '../src/engine/index.js'
@@ -64,9 +64,8 @@ test('diez encuentros: composiciones, vidas, orden y nombres oficiales', () => {
   equal(V04B_ENCOUNTERS.filter((e) => e.tentativeName).map((e) => e.id), ['04', '07', '08', '16', '17'])
   equal(V04B_ENCOUNTERS.map((e) => e.roomName).slice(0, 5), ['Sala del Centinela', 'Corte de las Ratas', 'Salón del Osario', 'Cámara del Sacrificio', 'Salón del Trono'])
 })
-test('A04 no aparece en ningún rival y el contenido activo sigue siendo el legado', () => {
+test('A04 no aparece en ningún rival', () => {
   ok(V04B_ENCOUNTERS.every((e) => ![...e.deckIds, ...e.fieldIds].includes('A04')))
-  equal(ACTIVE_CONTENT.id, 'legacy-v1')
 })
 test('preparación aislada: rechaza sesión legada e ID desconocido; bloquea la sesión', () => {
   rejects(() => createV04BEncounterDuel(createGameSession([]), '02'))

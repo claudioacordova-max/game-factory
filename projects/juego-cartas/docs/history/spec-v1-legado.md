@@ -1,12 +1,14 @@
+> **Documento histórico — retirado el 2026-11-08 (iteración LEG-1).** Describe las reglas del prototipo legado de siete salas, eliminado del juego; ya no es una especificación vigente. El último commit con el legado es `047581b`. Las reglas vigentes de la expedición V0.4B están en [decisions.md](../decisions.md) y el estado en [status.md](../status.md). Se conserva solo como procedencia; los enlaces a código eliminado remiten a ese commit.
+
 # Duelo en la cripta — especificación consolidada v1
 
 Ámbito: demo RPG de cartas de `projects/juego-cartas/`. Revisión documental: 2026-10-28; corte contrastado: `54955677ec9430695b233c99a8fb4067b103a86d`. Estado: consolidación de requisitos y decisiones ya aprobados, con implementación existente. **No representa una nueva aprobación de diseño, un rebalanceo ni autorización de funciones futuras.**
 
 ## 1. Autoridad y procedencia
 
-Esta referencia reúne las partes compatibles de la [especificación original v0.2](history/prototype-spec-v0.2.md), el [plan histórico](history/implementation-plan-v0.1.md), el [anexo aprobado de expedición D01–D12](history/iteration-v1.md) y las iteraciones posteriores allí registradas. Las decisiones posteriores expresamente aprobadas sustituyen solo los comportamientos afectados. El código permite corroborar qué está implementado; no concede por sí solo aprobación de una regla.
+Esta referencia reúne las partes compatibles de la [especificación original v0.2](prototype-spec-v0.2.md), el [plan histórico](implementation-plan-v0.1.md), el [anexo aprobado de expedición D01–D12](iteration-v1.md) y las iteraciones posteriores allí registradas. Las decisiones posteriores expresamente aprobadas sustituyen solo los comportamientos afectados. El código permite corroborar qué está implementado; no concede por sí solo aprobación de una regla.
 
-Actualización autorizada 2026-10-28: la [iteración UX y fatiga](implementation-plan.md) sustituye las asignaciones carta-a-carta por clic/teclado y la reducción de un punto de D12 por los contratos siguientes. Su continuación autoriza disposición vertical contextual y prioridad de represalia elegida por el jugador, sustituyendo el orden fijo de mesa para ese caso. El diseñador aceptó las mejoras de foco, combate/interfaz y fatiga, y autorizó cerrar con alcance parcialmente aceptado: el scroll de colección sigue defectuoso, conocido y diferido según el [estado vigente](status.md), sin nueva corrección autorizada ni fecha comprometida. El cierre no valida ese comportamiento.
+Actualización autorizada 2026-10-28: la [iteración UX y fatiga](../implementation-plan.md) sustituye las asignaciones carta-a-carta por clic/teclado y la reducción de un punto de D12 por los contratos siguientes. Su continuación autoriza disposición vertical contextual y prioridad de represalia elegida por el jugador, sustituyendo el orden fijo de mesa para ese caso. El diseñador aceptó las mejoras de foco, combate/interfaz y fatiga, y autorizó cerrar con alcance parcialmente aceptado: el scroll de colección sigue defectuoso, conocido y diferido según el [estado vigente](../status.md), sin nueva corrección autorizada ni fecha comprometida. El cierre no valida ese comportamiento.
 
 | Fuente y cierre comprobado en Git | Autoridad que se conserva |
 |---|---|
@@ -17,7 +19,7 @@ Actualización autorizada 2026-10-28: la [iteración UX y fatiga](implementation
 | Interfaz A1–A6, `a16c9c560335be109f11ffe58a258f27b82d9f13` | Colección modal, tablero e invocadores, sacrificio al completar selección, arrastre de bloqueos, conexiones y eliminación del fin de turno manual. |
 | Exploración/estabilización, `54955677ec9430695b233c99a8fb4067b103a86d` | Arte programático de siete salas/personajes, preservación de gameplay y corrección de mosaico/rendimiento. |
 
-Los materiales de [planificación integral, CSV y XLSX](history/iteration-v1/) se conservan juntos como procedencia. Sus afirmaciones «no implementar todavía», crecimiento por eliminación, pendientes y heurísticas corresponden a la preparación anterior. No sustituyen D01–D12 ni las autorizaciones posteriores. Sus cifras siguen siendo un baseline experimental autorizado; no balance definitivo.
+Los materiales de [planificación integral, CSV y XLSX](iteration-v1/) se conservan juntos como procedencia. Sus afirmaciones «no implementar todavía», crecimiento por eliminación, pendientes y heurísticas corresponden a la preparación anterior. No sustituyen D01–D12 ni las autorizaciones posteriores. Sus cifras siguen siendo un baseline experimental autorizado; no balance definitivo.
 
 ## 2. Alcance y ciclo aprobado
 
@@ -57,7 +59,7 @@ Todas las enemigas empiezan desplegadas: sin invocador, vida rival, mano, mazo n
 - Avanzar principal automáticamente solo cuando no existe una invocación legal ni selección pendiente. Resolver ataque propio encadena turno enemigo; resolver defensa inicia turno propio. No existe paso manual «Terminar turno».
 - Omitir una defensa sin atacantes enemigos; cuando los hay, conservar la confirmación incluso de cero bloqueadores. Liquidar victoria/derrota antes de cualquier mantenimiento posterior. No duplicar robo, pagos o premios por activaciones repetidas.
 
-Detalles de estados, accesibilidad y composición: [interfaz v1](design/interface-v1.md). Procedencia de estos cambios: iteraciones H1–H3 y A1–A6 del [plan archivado](history/implementation-plan-v0.1.md).
+Detalles de estados, accesibilidad y composición: [interfaz v1](../design/interface-v1.md). Procedencia de estos cambios: iteraciones H1–H3 y A1–A6 del [plan archivado](implementation-plan-v0.1.md).
 
 ## 5. Catálogo, copias y recuperación
 
@@ -131,7 +133,7 @@ Los valores siguientes pertenecen al baseline implementado y aprobado para prueb
 | B2 Custodia de catacumbas | Duelo, 22 | Vacío | E08/E09/E07/E11/E10 | Máximo +4, fatiga a 0, P15/P17 y acceso sector 3 |
 | B3 Guardián de la cripta | Duelo, 30 | E06 | E11/E13/E08/E09/E14/E12 | Máximo 20, fatiga a 0 y final de demo |
 
-R1–R4 son repetibles por visita; B1–B3 no. Los cofres de sectores entregan P09, P10 y P14/P18 y no requieren combate adicional. Cofres y primeros descubrimientos son únicos durante la sesión. Fuente literal: [cartas propias](history/iteration-v1/rpg_cartas_jugador_v01.csv), [enemigas](history/iteration-v1/rpg_cartas_enemigos_v01.csv) y [encuentros](history/iteration-v1/rpg_encuentros_v01.csv), contrastados con [contenido implementado](../src/engine/content.ts) y [mundo](../src/engine/world.ts).
+R1–R4 son repetibles por visita; B1–B3 no. Los cofres de sectores entregan P09, P10 y P14/P18 y no requieren combate adicional. Cofres y primeros descubrimientos son únicos durante la sesión. Fuente literal: [cartas propias](iteration-v1/rpg_cartas_jugador_v01.csv), [enemigas](iteration-v1/rpg_cartas_enemigos_v01.csv) y [encuentros](iteration-v1/rpg_encuentros_v01.csv), contrastados con contenido implementado (código retirado; recuperable en `047581b`) y mundo (código retirado; recuperable en `047581b`).
 
 ## 8. Exploración y presentación
 
@@ -141,12 +143,12 @@ Movimiento WASD/flechas y controles accesibles de ayuda; orientación, cámara e
 
 Al cerrar una superposición y retornar a exploración, el control del avatar recupera foco sin clic adicional y sin reutilizar teclas retenidas. Un aviso dentro de otro modal no devuelve foco al mundo. La exclusividad de arrastre para vincular cartas elimina deliberadamente la posibilidad de completar esas asignaciones solo con teclado; se conservan etiquetas, foco y controles accesibles de las demás acciones.
 
-Exploración llena el área; HUD compacto, colección superpuesta con I/Esc, mensajes y resultados internos. Combate con mano inferior, campos por lados, vida de invocadores y acción contextual; R1–R3 sin recursos rivales ficticios. Filas/listas sin límite disponen de desplazamiento y controles accesibles. Referencias: [interfaz](design/interface-v1.md) y [exploración 3D](design/exploration-3d-v1.md). Los PNG son referencias conceptuales, no datos de cartas ni capturas que acrediten la implementación.
+Exploración llena el área; HUD compacto, colección superpuesta con I/Esc, mensajes y resultados internos. Combate con mano inferior, campos por lados, vida de invocadores y acción contextual; R1–R3 sin recursos rivales ficticios. Filas/listas sin límite disponen de desplazamiento y controles accesibles. Referencias: [interfaz](../design/interface-v1.md) y [exploración 3D](../design/exploration-3d-v1.md). Los PNG son referencias conceptuales, no datos de cartas ni capturas que acrediten la implementación.
 
 ## 9. Verificación y límites de autorización
 
-Conservar cobertura de costes y rechazos atómicos, identidades/tipos únicos, daño/bloqueos, persistencia, liquidación idempotente, recuperación severa, crecimiento elegible, visitas, objetos y retorno espacial. Las pruebas técnicas, revisión independiente e inspección renderizada tienen alcances distintos; no sustituyen playtesting humano cuando la experiencia lo requiere conforme al [workflow de Factory](../../../docs/factory/workflow-v1.md).
+Conservar cobertura de costes y rechazos atómicos, identidades/tipos únicos, daño/bloqueos, persistencia, liquidación idempotente, recuperación severa, crecimiento elegible, visitas, objetos y retorno espacial. Las pruebas técnicas, revisión independiente e inspección renderizada tienen alcances distintos; no sustituyen playtesting humano cuando la experiencia lo requiere conforme al [workflow de Factory](../../../../docs/factory/workflow-v1.md).
 
-La aceptación H6 posterior dispensó la ejecución manual exhaustiva de tres protocolos: no deben reabrirse sus casillas históricas como tareas actuales. A1–A6 y la estabilización tienen aceptación humana registrada. El [plan de continuidad](implementation-plan.md) enlaza resultados anteriores y sus límites; la migración no crea una nueva validación completa.
+La aceptación H6 posterior dispensó la ejecución manual exhaustiva de tres protocolos: no deben reabrirse sus casillas históricas como tareas actuales. A1–A6 y la estabilización tienen aceptación humana registrada. El [plan de continuidad](../implementation-plan.md) enlaza resultados anteriores y sus límites; la migración no crea una nueva validación completa.
 
 Fuera de este alcance: monedas/tiendas, narrativa completa, guardado permanente, niveles ganados, generación procedural, cuarta rareza, hechizos/fichas, nuevas habilidades, rendición, multijugador, música/doblaje y arte definitivo. La representación 3D de invocaciones se mencionó como futura intervención independiente, sin autorización de implementación actual. No se identificó una discrepancia material de reglas sin resolver en las fuentes utilizadas; el equilibrio y la experiencia a largo plazo siguen siendo experimentales, no decisiones automáticamente delegadas.

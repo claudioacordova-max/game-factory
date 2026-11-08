@@ -4,7 +4,7 @@ import type { MutableRefObject } from 'react'
 import { Group } from 'three'
 import type { ExplorationObject } from '../engine/spatial.js'
 import { Block, Flame, GothicArch, Orb, Pebble, Round } from './CryptGeometry.js'
-import { cryptTheme, RAT_GROUPS } from './cryptVisuals.js'
+import { cryptTheme } from './cryptVisuals.js'
 import type { RatAppearance } from './cryptVisuals.js'
 
 const COAT = '#20202b', EDGE = '#505063', IRON = '#525c68', BRONZE = '#b69a67', BONE = '#cdc5ad'
@@ -139,24 +139,14 @@ export function RatMatriarch() {
   </group>
 }
 
-export function EnemyModel({ roomId }: { roomId: string }) {
-  if (roomId === 'sector-1') return <Sentinel />
-  if (roomId === 'sector-2') return <Custodian />
-  if (roomId === 'sector-3') return <Guardian />
-  if (roomId === 'rats-4') return <RatMatriarch />
-  return <group>{(RAT_GROUPS[roomId] ?? RAT_GROUPS['rats-1']).map((rat) => <group key={rat.cardId} position={[rat.x, 0, rat.z]} scale={[rat.scale, rat.scale * rat.heightScale, rat.scale]}><Rat appearance={rat.appearance} /></group>)}</group>
-}
-
 export function WorldObject({ object, roomId, onInteract }: { object: ExplorationObject; roomId: string; onInteract: (id: string) => void }) {
   if (object.kind === 'enemy' && object.status === 'completed') return null
   const theme = cryptTheme(roomId)
   const available = object.status === 'available'
   const color = available ? '#8bd8ca' : object.status === 'locked' ? '#697780' : '#b49b70'
-  const wingGate = object.id.endsWith(':wing')
   return <group position={[object.position.x, 0, object.position.z]} onClick={(event) => { event.stopPropagation(); onInteract(object.id) }}>
     {/* Flat halo communicates interaction without suggesting a raised, traversable plinth. */}
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, 0]} scale={[1, object.kind === 'exit' ? 0.45 : 1, 1]}><ringGeometry args={[object.kind === 'exit' ? 0.68 : 0.43, object.kind === 'exit' ? 0.72 : 0.47, 32]} /><meshBasicMaterial color={color} /></mesh>
-    {object.kind === 'enemy' && <EnemyModel roomId={roomId} />}
     {object.kind === 'chest' && <group>
       <Block at={[0, 0.28, 0]} size={[0.75, 0.5, 0.6]} color="#5f4738" />
       {[-0.24, 0.24].map((x) => <Block key={x} at={[x, 0.29, 0]} size={[0.07, 0.51, 0.62]} color={BRONZE} metal />)}
@@ -174,15 +164,12 @@ export function WorldObject({ object, roomId, onInteract }: { object: Exploratio
       {[-0.26, 0.26].map((x) => <group key={x} position={[x, 0.99, 0]}><Round size={[0.03, 0.24, 0.03]} color={BONE} />{available && <group position={[0, 0.16, 0]}><Flame color="#92ded2" /></group>}</group>)}
     </group>}
     {object.kind === 'exit' && <group>
-      <GothicArch width={1.3} height={2.05} depth={0.28} color={wingGate || theme.wing ? '#756849' : theme.stone} trim={theme.trim} />
+      <GothicArch width={1.3} height={2.05} depth={0.28} color={theme.wing ? '#756849' : theme.stone} trim={theme.trim} />
       <Block at={[0, 0.055, 0]} size={[1.3, 0.11, 0.3]} color={theme.inset} />
       <mesh position={[0, 0.9, 0]}><planeGeometry args={[0.92, 1.6]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={available ? 0.3 : 0.01} transparent opacity={available ? 0.24 : 0.55} side={2} /></mesh>
       {/* A real barrier in both states matches the unchanged interaction-only portal occupancy. */}
       {[-0.3, 0, 0.3].map((x) => <Block key={x} at={[x, 0.85, 0]} size={[0.045, 1.5, 0.06]} color={available ? theme.trim : '#48515a'} />)}
-      {wingGate ? <group position={[0, 1.74, 0.15]}>
-        <Orb at={[0, 0, 0]} size={[0.11, 0.12, 0.035]} color={theme.trim} />
-        {[-0.09, 0.09].map((x) => <Orb key={x} at={[x, 0.09, 0]} size={[0.055, 0.065, 0.025]} color={theme.trim} />)}
-      </group> : <Pebble at={[0, 1.76, 0.15]} size={[0.075, 0.11, 0.035]} color={color} />}
+      <Pebble at={[0, 1.76, 0.15]} size={[0.075, 0.11, 0.035]} color={color} />
     </group>}
     {object.status === 'locked' && <group position={[0, object.kind === 'exit' ? 1 : 0.75, 0.32]}>
       <Block size={[0.2, 0.2, 0.06]} color={BRONZE} metal />

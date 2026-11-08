@@ -10,7 +10,7 @@ export interface CreatureCopy {
   bonusHealth: number
 }
 
-/** V0.4B restoration orb: single-use activatable, capacity 1. Absent in legacy sessions. */
+/** V0.4B restoration orb: single-use activatable, capacity 1. Absent in base-profile sessions. */
 export interface OrbState { charges: number; capacity: number }
 
 export type RatRoomId = '07' | '08' | '09'
@@ -29,7 +29,7 @@ export interface RatCycleState {
 export interface GameSession {
   collectionProfile: CollectionProfile
   copies: CreatureCopy[]
-  /** Legacy compatibility projection; V04B discovery is derived from unlockedCopySlots. */
+  /** Base-profile compatibility projection; V04B discovery is derived from unlockedCopySlots. */
   unlockedCardIds: string[]
   unlockedCopySlots: Record<string, number>
   grantedCopyEventIds: string[]

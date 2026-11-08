@@ -3,21 +3,18 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createRoot, extend } from '@react-three/fiber'
 import * as THREE from 'three'
 import {
-  ACTIVE_CONTENT, chestAvailability, chestEventId, createV04BEncounterDuel, createV04BExpedition, createV04BInitialSession, createV04BPlay,
+  chestAvailability, chestEventId, createV04BEncounterDuel, createV04BExpedition, createV04BInitialSession, createV04BPlay,
   ExplorationViolation, interactV04BObject, isChestOpened, openChest, reinvokeStatus, RuleViolation, settleV04BEncounter, unlockedSlotsForType,
   v04bObjectsForRoom, v04bRoom, v04bSpatialRoom, V04B_CARD_TYPES, V04B_CHEST_ANCHOR, V04B_INITIAL_CARD_IDS, V04B_ROOMS,
 } from '../src/engine/index.js'
 import type { DuelState, V04BExpedition, V04BInteraction, V04BPlayState, V04BRoomId } from '../src/engine/index.js'
-import { closestInteractable, INTERACTION_RANGE, isWalkable, ROOMS, roomWithObjects } from '../src/engine/spatial.js'
+import { closestInteractable, INTERACTION_RANGE, isWalkable, roomWithObjects } from '../src/engine/spatial.js'
 import type { ExplorationObject, Point2, RoomDefinition, SpatialObstacle, SpatialPose } from '../src/engine/spatial.js'
-import { createExpeditionState, objectsForRoom } from '../src/engine/world.js'
-import { LEGACY_ADVENTURE } from '../src/adventure/legacyAdventure.js'
 import { V04B_ADVENTURE } from '../src/adventure/v04bAdventure.js'
 import { v04bInteractionMessage } from '../src/ui/v04bMessages.js'
 import { ChestRewardOverlay } from '../src/ui/ChestRewardOverlay.js'
 import { CollectionView } from '../src/ui/CollectionViews.js'
 import { CryptRoom } from '../src/scene/CryptEnvironment.js'
-import { WorldObject } from '../src/scene/ExplorationActors.js'
 import { V04BWorldObject } from '../src/scene/V04BActors.js'
 
 export const m7Tests: { name: string; run: () => void | Promise<void> }[] = []
@@ -248,7 +245,7 @@ test('eventos incoherentes lanzan: otra sala, sala sin cofre, objeto lejano', ()
 })
 
 // ---------- Interfaz ----------
-test('panel y Colección: nombres oficiales, copias en reserva y cierre con E/Esc; el legado no devuelve premios', () => {
+test('panel y Colección: nombres oficiales, copias en reserva y cierre con E/Esc', () => {
   const w = new Walker().go('02').win().go('03')
   const pose = poseNear(w.play, chestId('03'), w.pose)
   const result = V04B_ADVENTURE.interact(w.play, chestId('03'), pose)
@@ -264,9 +261,6 @@ test('panel y Colección: nombres oficiales, copias en reserva y cierre con E/Es
     ok(collection.includes(`data-card-id="${rewardSession.copies.find((copy) => copy.id === entry.copyId)!.cardId}"`), `Colección muestra ${entry.copyId}`)
   }
   ok(collection.includes('aria-label="4 copias en reserva"'), 'Las cuatro copias nuevas aparecen en reserva')
-  const legacy = LEGACY_ADVENTURE.create()
-  equal(LEGACY_ADVENTURE.objects(legacy), objectsForRoom(createExpeditionState()))
-  ok(ACTIVE_CONTENT.id === 'legacy-v1')
 })
 
 // ---------- Espacio ----------
@@ -310,7 +304,6 @@ test('espacio: cofres alcanzables, sin solaparse con salidas, obstáculos ni obj
     }
   }
   for (const id of V04B_ROOMS.map((room) => room.id).filter((id) => !CHEST_ROOMS.includes(id))) ok(!v04bSpatialRoom(id).features.chest, `${id}: sin cofre`)
-  equal(Object.keys(ROOMS).length, 7, 'Salas legadas sin cambios')
 })
 
 // ---------- Presupuesto y recursos ----------
@@ -357,23 +350,21 @@ const presented = (roomId: V04BRoomId, chestStatus: ExplorationObject['status'])
       : object.kind === 'chest' ? { ...object, id: chestId(roomId), status: chestStatus, visual: `chest:${chestStatus}` }
         : { ...object, visual: object.id === 'wall' ? 'cracked-wall' : object.id.startsWith('pedestal') ? `${object.id}:lit` : object.id === 'altar' ? 'altar:ready' : object.id })
 
-test('presupuesto: con cofre en cualquier estado ninguna sala supera el 125 % del máximo legado (envíos, triángulos, geometrías, materiales)', async () => {
+test('presupuesto: con cofre en cualquier estado ninguna sala supera el 125 % del presupuesto de referencia (envíos, triángulos, geometrías, materiales)', async () => {
   await withRoot(async (root) => {
-    const measure = async (room: RoomDefinition, objects: ExplorationObject[], v04b: boolean) => {
+    const measure = async (room: RoomDefinition, objects: ExplorationObject[]) => {
       let store!: ReturnType<typeof root.render>
       await act(async () => {
-        store = root.render(<group><CryptRoom room={room} />{objects.map((object) => v04b
-          ? <V04BWorldObject key={object.id} object={object} roomId={room.id} onInteract={() => {}} />
-          : <WorldObject key={object.id} object={object} roomId={room.id} onInteract={() => {}} />)}</group>)
+        store = root.render(<group><CryptRoom room={room} />{objects.map((object) => <V04BWorldObject key={object.id} object={object} roomId={room.id} onInteract={() => {}} />)}</group>)
       })
       return budget(store.getState().scene)
     }
-    const legacy: Budget[] = []
-    for (const roomId of Object.keys(ROOMS) as (keyof typeof ROOMS)[]) legacy.push(await measure(ROOMS[roomId], objectsForRoom({ ...createExpeditionState(), roomId }), false))
-    const max = (key: 'submissions' | 'triangles') => Math.max(...legacy.map((entry) => entry[key]))
-    const maxSet = (key: 'geometries' | 'materials') => Math.max(...legacy.map((entry) => entry[key].size))
+    // Fixed reference measured on the retired seven-room prototype (last commit with it: 047581b).
+    const reference = { submissions: 237, triangles: 10357, geometries: 38, materials: 67 }
+    const max = (key: 'submissions' | 'triangles') => reference[key]
+    const maxSet = (key: 'geometries' | 'materials') => reference[key]
     for (const id of CHEST_ROOMS) for (const status of ['locked', 'available', 'completed'] as const) {
-      const result = await measure(v04bSpatialRoom(id), presented(id, status), true)
+      const result = await measure(v04bSpatialRoom(id), presented(id, status))
       ok(result.submissions <= max('submissions') * 1.25, `${id}/${status}: ${result.submissions} envíos > 125 % de ${max('submissions')}`)
       ok(result.triangles <= max('triangles') * 1.25, `${id}/${status}: ${result.triangles} triángulos > 125 % de ${max('triangles')}`)
       ok(result.geometries.size <= maxSet('geometries') * 1.25, `${id}/${status}: ${result.geometries.size} geometrías > 125 % de ${maxSet('geometries')}`)

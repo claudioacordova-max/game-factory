@@ -1,6 +1,6 @@
 /**
  * Isolated V0.4B map data (M6a): 19 rooms, official names/zones, exact graph, return exits and planned chests.
- * Pure data. Chests are informational for M7 (nothing here grants cards). Not wired to ACTIVE_CONTENT.
+ * Pure data. Chests are informational for M7 (nothing here grants cards).
  */
 export type V04BRoomId = '01' | '02' | '03' | '04' | '05' | '06' | '07' | '08' | '09' | '10' | '11' | '12' | '13' | '14' | '15' | '16' | '17' | '18' | '19'
 export type V04BZone = 'El Umbral' | 'Las Catacumbas' | 'Las Madrigueras' | 'Las Cámaras Rúnicas' | 'La Cripta Profunda'

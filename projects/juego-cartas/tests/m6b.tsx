@@ -3,26 +3,22 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createRoot, extend } from '@react-three/fiber'
 import * as THREE from 'three'
 import {
-  ACTIVE_CONTENT, addCopyToActiveDeck, createV04BEncounterDuel, createV04BExpedition, createV04BInitialSession, createV04BPlay, ExplorationViolation,
+  addCopyToActiveDeck, createV04BEncounterDuel, createV04BExpedition, createV04BInitialSession, createV04BPlay, ExplorationViolation,
   interactV04BObject, isEncounterDefeated, isV04BExpeditionComplete, litRunes, recordRoomVictory, roomExits, RuleViolation, settleV04BEncounter, travel,
   v04bArrivalPose, v04bNeighbours, v04bObjectsForRoom, v04bRoom, v04bSpatialRoom, V04B_CARD_TYPES, V04B_ENCOUNTERS, V04B_INSCRIPTION_TEXT,
   V04B_ONE_WAY_EDGES, V04B_ROOMS, V04B_SPATIAL_ROOMS, WALL_EXITS,
 } from '../src/engine/index.js'
 import type { DuelState, V04BExpedition, V04BInteraction, V04BPlayState, V04BRoomId } from '../src/engine/index.js'
 import {
-  closestInteractable, INTERACTION_RANGE, isWalkable, ROOMS, roomWithObjects,
+  closestInteractable, INTERACTION_RANGE, isWalkable, roomWithObjects,
 } from '../src/engine/spatial.js'
 import type { ExplorationObject, Point2, RoomDefinition, SpatialPose } from '../src/engine/spatial.js'
-import { createExpeditionState, objectsForRoom } from '../src/engine/world.js'
-import { expeditionModeFromSearch, perfEnabledFromSearch } from '../src/adventure/mode.js'
-import { adventureForMode } from '../src/adventure/select.js'
-import { LEGACY_ADVENTURE } from '../src/adventure/legacyAdventure.js'
+import { perfEnabledFromSearch } from '../src/adventure/mode.js'
 import { V04B_ADVENTURE } from '../src/adventure/v04bAdventure.js'
 import { ExplorationHUD, orbControlFor } from '../src/ui/ExplorationHUD.js'
 import { v04bEncounterSummary, v04bInteractionMessage } from '../src/ui/v04bMessages.js'
-import { boundaryMasonry, CRYPT_THEMES, cryptTheme, V04B_CRYPT_THEMES, V04B_FIGURE_GROUPS } from '../src/scene/cryptVisuals.js'
+import { boundaryMasonry, cryptTheme, V04B_CRYPT_THEMES, V04B_FIGURE_GROUPS } from '../src/scene/cryptVisuals.js'
 import { CryptRoom } from '../src/scene/CryptEnvironment.js'
-import { WorldObject } from '../src/scene/ExplorationActors.js'
 import { V04BWorldObject } from '../src/scene/V04BActors.js'
 
 export const m6bTests: { name: string; run: () => void | Promise<void> }[] = []
@@ -39,7 +35,7 @@ function rejects(run: () => unknown) {
 const ROOM_IDS = V04B_ROOMS.map((room) => room.id)
 const incoming = (id: V04BRoomId) => ROOM_IDS.filter((other) => v04bNeighbours(other).includes(id))
 
-/** Grid flood fill from a pose, as tests/spatial.ts does for the legacy rooms. */
+/** Grid flood fill from a pose, as tests/spatial.ts does for the shared rooms. */
 function reachable(definition: RoomDefinition, from: Point2): Point2[] {
   const step = 0.2, queue: Point2[] = [{ x: from.x, z: from.z }], seen = new Set(['0:0'])
   for (let i = 0; i < queue.length; i++) {
@@ -108,23 +104,8 @@ class Walker {
 }
 
 // ---------- Acceso por parámetro ----------
-// M8b replaces the access expectation: V0.4B is the default and the legacy game needs ?expedicion=legado.
-test('acceso: ?expedicion=v04b y el arranque por defecto crean V0.4B; ?expedicion=legado crea el juego legado idéntico', () => {
-  equal(expeditionModeFromSearch(''), 'v04b')
-  equal(expeditionModeFromSearch('?expedicion=otra'), 'v04b')
-  equal(expeditionModeFromSearch('?v04b'), 'v04b')
-  equal(expeditionModeFromSearch('?expedicion=legado'), 'legacy')
-  equal(expeditionModeFromSearch('?expedicion=v04b'), 'v04b')
-  equal(expeditionModeFromSearch('?perf&expedicion=v04b'), 'v04b')
-  ok(adventureForMode('legacy') === LEGACY_ADVENTURE && adventureForMode('v04b') === V04B_ADVENTURE)
-  const legacy = LEGACY_ADVENTURE.create()
-  equal(legacy, createExpeditionState())
-  equal(LEGACY_ADVENTURE.room(legacy), ROOMS['sector-1'])
-  equal(LEGACY_ADVENTURE.objects(legacy), objectsForRoom(legacy))
-  equal(LEGACY_ADVENTURE.session(legacy).collectionProfile, 'legacy')
-  equal(LEGACY_ADVENTURE.location(legacy), { roomName: ROOMS['sector-1'].name, complete: false })
-  ok(LEGACY_ADVENTURE.collectionCardTypes === undefined, 'El legado conserva el catálogo por defecto de Colección')
-  ok(ACTIVE_CONTENT.id === 'legacy-v1' && ACTIVE_CONTENT.playerCardTypes === LEGACY_ADVENTURE.reinvokeCardTypes, 'El contenido activo sigue siendo el legado')
+// The V0.4B expedition is the only game: URL switches no longer select a different one.
+test('acceso: el arranque crea siempre V0.4B', () => {
   const v04b = V04B_ADVENTURE.create()
   equal(v04b.expedition, createV04BExpedition(v04b.expedition.session))
   equal(V04B_ADVENTURE.session(v04b).collectionProfile, 'v04b')
@@ -138,12 +119,12 @@ test('rendimiento: ?perf es combinable y solo se activa con el parámetro', () =
 })
 
 // ---------- Salas 3D ----------
-test('salas: 19 definiciones con nombre oficial, tamaño legado compacto y salidas exactas del grafo', () => {
+test('salas: 19 definiciones con nombre oficial, tamaño compacto 14×12 y salidas exactas del grafo', () => {
   equal(Object.keys(V04B_SPATIAL_ROOMS).sort(), ROOM_IDS)
   for (const id of ROOM_IDS) {
     const room = v04bSpatialRoom(id)
     equal(room.name, v04bRoom(id).name)
-    equal([room.width, room.depth], [ROOMS['sector-1'].width, ROOMS['sector-1'].depth], id)
+    equal([room.width, room.depth], [14, 12], id)
     equal(Object.keys(room.exits).sort(), [...v04bNeighbours(id)].sort(), `Salidas de ${id}`)
     ok(Object.keys(room.exits).length <= 4, `${id}: hasta cuatro salidas`)
     const sides = Object.values(room.exits).map((exit) => exit!.side)
@@ -185,7 +166,7 @@ test('salas: apariciones válidas por arista, frente a su salida y fuera de su a
   }
 })
 
-test('salas: temas por zona; 03 catacumbas, Altar neutro sin ratas, rúnicas y cripta profunda nuevas; legado intacto', () => {
+test('salas: temas por zona; 03 catacumbas, Altar neutro sin ratas, rúnicas y cripta profunda nuevas', () => {
   for (const id of ROOM_IDS) ok(V04B_CRYPT_THEMES[`v04b-${id}`] && cryptTheme(`v04b-${id}`) === V04B_CRYPT_THEMES[`v04b-${id}`], `Falta tema de ${id}`)
   equal(cryptTheme('v04b-03').kind, 'catacombs')
   const altar = cryptTheme('v04b-10')
@@ -196,11 +177,9 @@ test('salas: temas por zona; 03 catacumbas, Altar neutro sin ratas, rúnicas y c
   for (const id of ROOM_IDS) {
     const hasNorth = Object.values(v04bSpatialRoom(id).exits).some((exit) => exit!.side === 'north')
     if (cryptTheme(`v04b-${id}`).rearOpening === false) ok(!hasNorth, `${id}: el muro trasero cerrado no tapa una salida`)
-    // 19 keeps the approved ceremonial arch framing the rear opening, as the legacy final chamber.
+    // 19 keeps the approved ceremonial arch framing the rear opening, as in the final chamber.
     else ok(hasNorth || id === '19', `${id}: sin salida norte el muro trasero se cierra`)
   }
-  equal(Object.keys(CRYPT_THEMES), ['sector-1', 'sector-2', 'sector-3', 'rats-1', 'rats-2', 'rats-3', 'rats-4'])
-  for (const room of Object.values(ROOMS)) ok(cryptTheme(room.id) === CRYPT_THEMES[room.id])
 })
 
 test('enemigos: figuras de escaramuza y ratas corresponden al campo real de cada encuentro', () => {
@@ -376,7 +355,7 @@ test('muro 14: «Examinar el muro agrietado» abre 14↔18 para el resto de la e
 })
 
 // ---------- HUD ----------
-test('HUD V0.4B: zona y nombre oficial de la sala, vitales y orbe; HUD legado sin cambios', () => {
+test('HUD V0.4B: zona y nombre oficial de la sala, vitales y orbe', () => {
   const play = V04B_ADVENTURE.create()
   const location = V04B_ADVENTURE.location(play)
   equal(location, { roomName: 'Atrio de la Cripta', zoneName: 'El Umbral', complete: false })
@@ -388,8 +367,6 @@ test('HUD V0.4B: zona y nombre oficial de la sala, vitales y orbe; HUD legado si
   const session = V04B_ADVENTURE.session(play)
   const markup = renderToStaticMarkup(<ExplorationHUD life={20} maxLife={20} mana={1} fatigue={0} level={1} roomName={location.roomName} zoneName={location.zoneName} complete={false} onCollection={() => {}} orb={orbControlFor(session, () => {})} />)
   ok(markup.includes('Atrio de la Cripta') && markup.includes('El Umbral') && markup.includes('orb-launcher') && markup.includes('Invocador'))
-  const legacy = renderToStaticMarkup(<ExplorationHUD life={20} maxLife={20} mana={1} fatigue={0} level={1} roomName="Sector 1 · El umbral" complete={false} onCollection={() => {}} orb={orbControlFor(createExpeditionState().session, () => {})} />)
-  ok(legacy.includes('La cripta') && !legacy.includes('orb-launcher'))
 })
 
 // ---------- Presupuesto estático y liberación de recursos ----------
@@ -430,30 +407,24 @@ function budget(scene: THREE.Object3D): Budget {
   return { submissions, triangles }
 }
 
-/** Legacy objects per room: every encounter, chest, shrine and exit of the room present. */
-function legacyObjects(roomId: keyof typeof ROOMS): ExplorationObject[] {
-  return objectsForRoom({ ...createExpeditionState(), roomId })
-}
+/** Fixed reference measured on the retired seven-room prototype (last commit with it: 047581b); V0.4B rooms may not exceed 125 % of it. */
+const REFERENCE_ROOM_BUDGET = { submissions: 237, triangles: 10357, geometries: 38, materials: 67 } as const
 
-test('presupuesto estático: ninguna sala V0.4B supera el 125 % del máximo legado en envíos y triángulos', async () => {
+test('presupuesto estático: ninguna sala V0.4B supera el 125 % del presupuesto de referencia en envíos y triángulos', async () => {
   await withRoot(async (root) => {
-    const measure = async (room: RoomDefinition, objects: ExplorationObject[], v04b: boolean) => {
+    const measure = async (room: RoomDefinition, objects: ExplorationObject[]) => {
       let store!: ReturnType<typeof root.render>
       await act(async () => {
-        store = root.render(<group><CryptRoom room={room} />{objects.map((object) => v04b
-          ? <V04BWorldObject key={object.id} object={object} roomId={room.id} onInteract={() => {}} />
-          : <WorldObject key={object.id} object={object} roomId={room.id} onInteract={() => {}} />)}</group>)
+        store = root.render(<group><CryptRoom room={room} />{objects.map((object) => <V04BWorldObject key={object.id} object={object} roomId={room.id} onInteract={() => {}} />)}</group>)
       })
       return budget(store.getState().scene)
     }
-    const legacy: Budget[] = []
-    for (const roomId of Object.keys(ROOMS) as (keyof typeof ROOMS)[]) legacy.push(await measure(ROOMS[roomId], legacyObjects(roomId), false))
-    const maxLegacy = { submissions: Math.max(...legacy.map((b) => b.submissions)), triangles: Math.max(...legacy.map((b) => b.triangles)) }
+    const maxLegacy = REFERENCE_ROOM_BUDGET
     for (const id of ROOM_IDS) {
       const objects = allObjects(id).map((object): ExplorationObject => object.kind === 'enemy' ? { ...object, id: `v04b-${id}:enemy`, visual: `enemy:${id}` }
         : object.kind === 'exit' ? { ...object, visual: id === '03' && object.id === 'exit:13' ? 'exit:titan:sealed' : 'exit:door:open' }
           : { ...object, visual: object.id === 'wall' ? 'cracked-wall' : object.id.startsWith('pedestal') ? `${object.id}:lit` : object.id === 'altar' ? 'altar:ready' : object.id })
-      const result = await measure(v04bSpatialRoom(id), objects, true)
+      const result = await measure(v04bSpatialRoom(id), objects)
       ok(result.submissions <= maxLegacy.submissions * 1.25, `${id}: ${result.submissions} envíos > 125 % de ${maxLegacy.submissions}`)
       ok(result.triangles <= maxLegacy.triangles * 1.25, `${id}: ${result.triangles} triángulos > 125 % de ${maxLegacy.triangles}`)
     }

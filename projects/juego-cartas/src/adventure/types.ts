@@ -10,12 +10,11 @@ import type { EncounterSummary } from '../ui/encounterSummary.js'
 export interface ChestReward { source: string; cards: { copyId: string; card: CreatureCard }[] }
 
 export interface AdventureAdapter<S> {
-  id: 'legacy' | 'v04b'
   create(): S
   session(state: S): GameSession
   withSession(state: S, session: GameSession): S
-  /** Catalogue for the collection overlay; undefined keeps the legacy default. */
-  collectionCardTypes?: readonly CreatureCard[]
+  /** Catalogue for the collection overlay. */
+  collectionCardTypes: readonly CreatureCard[]
   reinvokeCardTypes: readonly CreatureCard[]
   /** Placeholder combat state before the first encounter (never active). */
   initialDuel(state: S): DuelState

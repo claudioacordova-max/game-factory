@@ -217,7 +217,7 @@ function SideAware({ object, children }: { object: ExplorationObject; children: 
 
 export function V04BWorldObject({ object, roomId, onInteract }: { object: ExplorationObject; roomId: string; onInteract: (id: string) => void }) {
   if (object.kind === 'enemy' && object.status === 'completed') return null
-  // M7 chests reuse the approved legacy chest (shared geometry/materials): locked with padlock, available, or lid open.
+  // M7 chests reuse the approved chest (shared geometry/materials): locked with padlock, available, or lid open.
   if (object.kind === 'chest') return <WorldObject object={object} roomId={roomId} onInteract={onInteract} />
   const theme = cryptTheme(roomId)
   const [kind, a, b] = (object.visual ?? '').split(':')

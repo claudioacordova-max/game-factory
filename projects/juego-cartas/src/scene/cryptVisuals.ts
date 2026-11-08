@@ -12,32 +12,28 @@ export interface CryptTheme {
   rearOpening?: boolean
 }
 
-export const CRYPT_THEMES: Record<string, CryptTheme> = {
-  'sector-1': { kind: 'threshold', stone: '#59616b', trim: '#a18c66', floor: '#39434c', inset: '#26313b', light: '#efc88a', background: '#101923', wing: false },
-  'sector-2': { kind: 'catacombs', stone: '#485362', trim: '#89939e', floor: '#303b49', inset: '#1e2936', light: '#93c9df', background: '#0e1724', wing: false },
-  'sector-3': { kind: 'ceremony', stone: '#535565', trim: '#b69a67', floor: '#383b4b', inset: '#242332', light: '#bdabe9', background: '#151321', wing: false },
-  'rats-1': { kind: 'infiltration', stone: '#626052', trim: '#9c8b60', floor: '#45483c', inset: '#30372d', light: '#d5c38b', background: '#191d17', wing: true },
-  'rats-2': { kind: 'burrows', stone: '#605746', trim: '#a08c58', floor: '#4b4233', inset: '#352e23', light: '#ddba7f', background: '#201b15', wing: true },
-  'rats-3': { kind: 'colony', stone: '#555c48', trim: '#9e9162', floor: '#414534', inset: '#292f23', light: '#bfd09a', background: '#161d15', wing: true },
-  'rats-4': { kind: 'lair', stone: '#655547', trim: '#be9e61', floor: '#4e4036', inset: '#352920', light: '#e2ad77', background: '#241a19', wing: true },
-}
+const SECTOR_1: CryptTheme = { kind: 'threshold', stone: '#59616b', trim: '#a18c66', floor: '#39434c', inset: '#26313b', light: '#efc88a', background: '#101923', wing: false }
+const SECTOR_2: CryptTheme = { kind: 'catacombs', stone: '#485362', trim: '#89939e', floor: '#303b49', inset: '#1e2936', light: '#93c9df', background: '#0e1724', wing: false }
+const SECTOR_3: CryptTheme = { kind: 'ceremony', stone: '#535565', trim: '#b69a67', floor: '#383b4b', inset: '#242332', light: '#bdabe9', background: '#151321', wing: false }
+const RATS_1: CryptTheme = { kind: 'infiltration', stone: '#626052', trim: '#9c8b60', floor: '#45483c', inset: '#30372d', light: '#d5c38b', background: '#191d17', wing: true }
+const RATS_3: CryptTheme = { kind: 'colony', stone: '#555c48', trim: '#9e9162', floor: '#414534', inset: '#292f23', light: '#bfd09a', background: '#161d15', wing: true }
+const RATS_4: CryptTheme = { kind: 'lair', stone: '#655547', trim: '#be9e61', floor: '#4e4036', inset: '#352920', light: '#e2ad77', background: '#241a19', wing: true }
 
-const LEGACY = CRYPT_THEMES
 const RUNIC = { kind: 'runic', stone: '#4c5466', trim: '#8c9bbd', floor: '#2e3446', inset: '#1c2132', light: '#86b8f2', background: '#0d1221', wing: false, glow: '#7fc4ff' } as const
 const DEEP = { kind: 'deep', stone: '#474a53', trim: '#837867', floor: '#2b2d34', inset: '#1a1c22', light: '#9fb4cc', background: '#0c0e14', wing: false, glow: '#9b86c9' } as const
 /** V0.4B rooms (M6b): zone ambience reusing approved palettes; new themes only for runic, deep and altar rooms. */
 export const V04B_CRYPT_THEMES: Record<string, CryptTheme> = {
-  // Same threshold art without the legacy rat-wing burrow hint (V0.4B 01/02 have no rat access).
-  'v04b-01': { ...LEGACY['sector-1'], motif: 'umbral' },
-  'v04b-02': { ...LEGACY['sector-1'], motif: 'umbral' },
+  // Same threshold art without the rat-wing burrow hint (V0.4B 01/02 have no rat access).
+  'v04b-01': { ...SECTOR_1, motif: 'umbral' },
+  'v04b-02': { ...SECTOR_1, motif: 'umbral' },
   // 03 keeps the catacombs look; the Titan's runic door is its focal exit object.
-  'v04b-03': { ...LEGACY['sector-2'], glow: '#a68cf2' },
-  'v04b-04': { ...LEGACY['sector-2'] },
-  'v04b-05': { ...LEGACY['sector-2'] },
-  'v04b-06': { ...LEGACY['sector-2'] },
-  'v04b-07': { ...LEGACY['rats-1'] },
-  'v04b-08': { ...LEGACY['rats-3'] },
-  'v04b-09': { ...LEGACY['rats-4'] },
+  'v04b-03': { ...SECTOR_2, glow: '#a68cf2' },
+  'v04b-04': { ...SECTOR_2 },
+  'v04b-05': { ...SECTOR_2 },
+  'v04b-06': { ...SECTOR_2 },
+  'v04b-07': { ...RATS_1 },
+  'v04b-08': { ...RATS_3 },
+  'v04b-09': { ...RATS_4 },
   // Neutral and solemn: no rat motifs.
   'v04b-10': { kind: 'altar', stone: '#5b5c62', trim: '#aa9b7b', floor: '#393a40', inset: '#26272d', light: '#ead7ad', background: '#131317', wing: false, glow: '#e9dcb8', rearOpening: false },
   'v04b-11': { ...RUNIC, motif: 'archive' },
@@ -48,12 +44,11 @@ export const V04B_CRYPT_THEMES: Record<string, CryptTheme> = {
   'v04b-16': { ...DEEP, motif: 'pit' },
   'v04b-17': { ...DEEP, motif: 'chains', rearOpening: false },
   'v04b-18': { ...DEEP, motif: 'sacrifice', light: '#d98b66', glow: '#e0734f', rearOpening: false },
-  'v04b-19': { ...LEGACY['sector-3'], stone: '#4b4c5a', floor: '#2f3140', inset: '#1d1d2a', background: '#100f1a', motif: 'throne' },
+  'v04b-19': { ...SECTOR_3, stone: '#4b4c5a', floor: '#2f3140', inset: '#1d1d2a', background: '#100f1a', motif: 'throne' },
 }
 
 export function cryptTheme(roomId: string): CryptTheme {
-  if (roomId.startsWith('v04b-')) return V04B_CRYPT_THEMES[roomId] ?? CRYPT_THEMES['sector-1']
-  return CRYPT_THEMES[roomId] ?? CRYPT_THEMES['sector-1']
+  return V04B_CRYPT_THEMES[roomId] ?? SECTOR_1
 }
 
 export interface MasonryBlock { x: number; y: number; z: number; width: number; height: number; depth: number }
@@ -88,12 +83,6 @@ export function boundaryMasonry(room: RoomDefinition): MasonryBlock[] {
 }
 
 export type RatAppearance = 'rat' | 'large' | 'clumsy' | 'biter'
-/** IDs correspond to the existing encounter's initial field, not to new creatures. */
-export const RAT_GROUPS: Record<string, readonly { cardId: string; appearance: RatAppearance; x: number; z: number; scale: number; heightScale: number }[]> = {
-  'rats-1': [{ cardId: 'E01', appearance: 'rat', x: 0, z: 0, scale: 0.92, heightScale: 1 }],
-  'rats-2': [{ cardId: 'E01', appearance: 'rat', x: -0.19, z: 0.02, scale: 0.44, heightScale: 1.75 }, { cardId: 'E03', appearance: 'large', x: 0.13, z: -0.02, scale: 0.63, heightScale: 2 }],
-  'rats-3': [{ cardId: 'E01', appearance: 'rat', x: -0.22, z: 0.08, scale: 0.4, heightScale: 1.9 }, { cardId: 'E02', appearance: 'clumsy', x: 0.13, z: -0.08, scale: 0.49, heightScale: 2.1 }, { cardId: 'E04', appearance: 'biter', x: 0.12, z: 0.15, scale: 0.4, heightScale: 2.1 }],
-}
 
 /** V0.4B provisional figures (M6b): one simple low-poly figure per creature, no final art. */
 export type V04BFigure = 'rat' | 'scavenger' | 'risen' | 'slime' | 'skeleton' | 'ghoul' | 'spider' | 'knight' | 'golem'

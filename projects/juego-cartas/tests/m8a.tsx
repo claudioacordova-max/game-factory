@@ -7,7 +7,6 @@ import {
 } from '../src/engine/index.js'
 import type { CreatureCard, DuelState, GameSession } from '../src/engine/index.js'
 import { chooseEnemyBlockers, runEnemyTurn } from '../src/engine/enemy.js'
-import { PLAYER_CARD_TYPES } from '../src/engine/content.js'
 import { createGameSession } from '../src/engine/session.js'
 import { CombatView, SurrenderConfirmation } from '../src/ui/CombatView.js'
 import type { CombatViewProps } from '../src/ui/CombatView.js'
@@ -226,14 +225,14 @@ test('escaramuza: A03 que elimina al último real termina con victoria y limpia 
   equal([d.phase, d.winner, d.players.opponent.creatures.length], ['finished', 'player', 0])
 })
 
-// ---------- Legado idéntico ----------
-test('legado: sin Eco, sin rastro en el estado y sin rendición', () => {
-  const legacyCards: CreatureCard[] = PLAYER_CARD_TYPES.slice(0, 3)
-  const d = passes(createDuel({ playerDeck: legacyCards, opponentDeck: [] }), 6)
+// ---------- Perfil base ----------
+const baseCards: CreatureCard[] = [1, 2, 3].map((n) => ({ id: `base-${n}`, name: `Criatura base ${n}`, attack: n, maxHealth: 3, cost: { mana: 0, sacrifices: 0 }, rarity: 'common', seed: true, reinvokeCost: 0, growthCap: 0 }))
+test('perfil base: sin Eco, sin rastro en el estado y sin rendición', () => {
+  const d = passes(createDuel({ playerDeck: baseCards, opponentDeck: [] }), 6)
   equal([d.players.opponent.creatures.length, d.echoCount, isDeckExhausted(d)], [0, undefined, false])
   ok(!surrenderAvailability(d).allowed)
   rejects(() => surrender(d))
-  const controls = createCombatControls(createDuel({ playerDeck: legacyCards, opponentDeck: [] }))
+  const controls = createCombatControls(createDuel({ playerDeck: baseCards, opponentDeck: [] }))
   const result = applyCombatAction(controls, { type: 'surrender' }, controls.revision)
   ok(result.state === controls && result.message.length > 0)
 })
@@ -299,8 +298,8 @@ test('mesa: indicador de mazo agotado con el tamaño de la próxima invocación 
   ok(markup.includes('Refuerzo de la cripta') && markup.includes('is-echo') && markup.includes('ECO'), 'Representación del Eco en la mesa')
   const stocked = html(viewProps(duelOf(['N05', 'N05', 'H01', 'H01'])))
   ok(!stocked.includes('Mazo agotado') && stocked.includes('1 en mazo'))
-  const legacy = html(viewProps(createDuel({ playerDeck: PLAYER_CARD_TYPES.slice(0, 3), opponentDeck: [] }), createGameSession([])))
-  ok(!legacy.includes('Mazo agotado') && !legacy.includes('Rendirse'), 'El legado no cambia')
+  const base = html(viewProps(createDuel({ playerDeck: baseCards, opponentDeck: [] }), createGameSession([])))
+  ok(!base.includes('Mazo agotado') && !base.includes('Rendirse'), 'El perfil base no cambia')
 })
 test('mesa: «Rendirse» solo en tu turno sin selección pendiente; la confirmación pone «Seguir luchando» primero', () => {
   const d = duelOf(['N05', 'N05', 'H01'])

@@ -4,74 +4,53 @@ Propósito: describir el prototipo implementado de `projects/juego-cartas/`. Rev
 
 ## Ficha de continuidad
 
-Lectura mínima para retomar trabajo (workflow v1.2): esta ficha → [decisions.md](decisions.md) → [spec-v1.md](spec-v1.md) → código afectado. El [plan vivo](implementation-plan.md) registra autorizaciones y cierres; `history/` solo se consulta para procedencia.
+Lectura mínima para retomar trabajo (workflow v1.2): esta ficha → [decisions.md](decisions.md) → código afectado. El [plan vivo](implementation-plan.md) registra autorizaciones y cierres; `history/` solo se consulta para procedencia.
 
 | Campo | Valor |
 |---|---|
-| Último cierre | Iteración UI-1, 2026-11-08 (grimorio V0.4B agrupado con pestañas y filtros, «Reinvocar todas» con umbral 7, retratos propios V0.4B, foco tras el orbe; playtesting aceptado). Anterior: M8c `ed83a85` |
-| Siguiente hito | Ninguno autorizado. Pendientes del diseñador: más ajustes de interfaz, bug de arrastre bloqueado (diferido, ver decisions.md §4) y después balance ([balance-m8c.md](balance-m8c.md)) |
+| Último cierre | Iteración LEG-1, 2026-11-08 (juego legado retirado; solo expedición V0.4B; último commit con legado `047581b`). Anterior: UI-1 `047581b` |
+| Siguiente hito | Iteración UI-2 (autorizada): combate sin scroll, arrastre por gestos y bug de arrastre bloqueado. Después: balance ([balance-m8c.md](balance-m8c.md)) |
 | Decisiones abiertas | Zona de 03/10 provisional; «Mazo exhausto» y «Rendirse» implementados como experimentales (M8a). Ver [decisions.md](decisions.md#4-pendientes-abiertos-requieren-decisión-del-diseñador-antes-de-implementar) |
-| Juego activo | Expedición V0.4B por defecto (desde M8b); legado con `?expedicion=legado` |
-| Comprobaciones | `npm test` (428/428 + spatial al cierre UI-1; balance: `node .test-dist/tests/balanceRun.js [--what-if]` tras compilar tests) y `npm run build` desde `projects/juego-cartas/` |
+| Juego activo | Expedición V0.4B (único juego; el legado se retiró en LEG-1, recuperable en `047581b`) |
+| Comprobaciones | `npm test` (348/348 + spatial al cierre LEG-1; balance: `node .test-dist/tests/balanceRun.js [--what-if]` tras compilar tests) y `npm run build` desde `projects/juego-cartas/` |
 | Incidencias conocidas | Onda de scroll en Colección, diferida sin autorización |
 
 ## Propuesta y experiencia
 
-M3 (perfil V0.4B): escudos agrupados R03/R04, daño de entrada A03 y destrucción N01 con terminales inmediatos, cola obligatoria H02, cura/robo condicional H03 y ritual H04 con previsión/confirmación y retorno a 0/1. Detalle de reglas en [decisions.md](decisions.md); evidencia en el [registro M0–M3](history/migracion-v04b-m0-m3.md).
+RPG de invocaciones que combina exploración de una cripta 3D, colección y preparación de criaturas con combates por cartas. Las decisiones conservan consecuencias: las supervivientes mantienen heridas, morir o sacrificarse elimina su copia (el cupo se conserva) y recuperar una criatura cuesta vida máxima del invocador. El orbe de restauración permite reconstruirse fuera de combate.
 
-Desde M8b el juego arranca en la expedición V0.4B (19 salas, cofres, orbe, Eco y Rendirse); el prototipo legado, accesible con `?expedicion=legado`, continúa con los datos P/E de `src/engine/content/legacy.ts` a través de `ACTIVE_CONTENT = LEGACY_CONTENT`. El catálogo nuevo está disponible para preparaciones aisladas, sin sustituir el inicio ni activar la aventura de 19 salas, efectos M3, orbe o diez encuentros nuevos. El dominio M2 se ejecuta únicamente en su perfil V0.4B; no altera las reglas ni el recorrido del prototipo legado descritos a continuación.
+Es una demo jugable: la **expedición V0.4B** de 19 salas, diez encuentros y once cofres, con un único camino de juego (ningún parámetro de URL cambia de modo; `?perf` solo añade el panel de rendimiento). El jugador controla un avatar con cámara elevada y activa voluntariamente encuentros, salidas, cofres, altar, pedestales y el muro agrietado al acercarse. Los combates usan una mesa 2D; el grimorio se consulta superpuesto al mundo. El [README](../README.md) explica arranque y controles. El prototipo anterior de siete salas se retiró del juego y del código (iteración LEG-1); su especificación se conserva como [documento histórico](history/spec-v1-legado.md) y el código es recuperable en el commit `047581b`.
 
-Capacidades M1 aceptadas: catálogo oficial 21/39; cupos históricos por adquisición; copias, heridas y pérdidas independientes; recuperación 0/1/5 con suelo 1 en reserva; identidades de instancia en mano/campo y perfiles sin motor duplicado. `createV04BInitialSession()` prepara ocho copias/siete tipos y `createV04BCatalogSandbox()` prepara 39/21, con estados separados. M2 añade `temporaryMana` incluido en el total (se gasta primero y expira al salir de principal), renovación R02 futura, `activateR01`, tokens y `attackBonus` A04. P5 conserva principal por activaciones legales, ofrece activar R01 por copia o pasar sin usarla y bloquea activación/paso durante selección. Recalcula al actuar/cancelar; no activa automáticamente ni veta acciones legales por estrategia. M3 implementa en el perfil V0.4B los efectos agrupados R03/R04, A03, N01, H02, H03 y H04 descritos arriba; las etiquetas reflejan estos efectos activos. El ritual H04 incluye vista previa y confirmación con filtro de materiales reales. La aventura normal sigue usando el legado; esta aceptación no acredita IA estratégica, expedición V0.4B integrada ni balance.
+## Sistemas implementados
 
-RPG de invocaciones que combina exploración de una cripta 3D, colección y preparación de criaturas con combates por cartas. Las decisiones conservan consecuencias: las supervivientes mantienen heridas, morir o sacrificarse elimina su copia y recuperar una criatura puede reducir la vida máxima del invocador. El ala opcional permite reconstruirse y entrenar antes de continuar.
-
-Es una demo jugable, con tres sectores principales y cuatro salas del ala de las ratas. El jugador controla un avatar con cámara elevada y activa voluntariamente encuentros, puertas, cofres y santuarios al acercarse. Los combates usan una mesa 2D; la colección se consulta superpuesta al mundo. El [README](../README.md) explica arranque y controles.
-
-## Sistemas implementados del prototipo legado
-
-- **Combate:** turnos alternos, mano inicial de tres cartas, robo de una al mantenimiento posterior, maná y sacrificios combinables. El mazo propio se mezcla al inicio de cada combate; el enemigo conserva mazos y política deterministas. Las criaturas recién invocadas pueden atacar.
-- **Duelos y escaramuzas:** R4 y B1–B3 enfrentan invocadores con vida. R1–R3 son grupos desplegados sin invocador enemigo y exigen un objetivo concreto por atacante. Se admiten bloqueadores múltiples ordenados, daño simultáneo y ausencia de daño sobrante al invocador en ataques bloqueados.
-- **Interacción táctica:** vincular, reasignar y retirar relaciones carta-a-carta requiere arrastre; retirada hacia «Sin asignar», prioridad de bloqueo y de atacantes dirigidos mediante flechas, y selección de ataque directo al invocador por clic conservada. En escaramuzas la prioridad elegida afecta a la recepción real de represalia. Durante relaciones el tablero centra las propias disponibles debajo de los grupos; fuera de ellas recupera filas normales. Mantiene conexiones y desplazamiento compartido con overflow proporcional, distingue turno/fase/decisión y presenta automáticamente durante 420 ms los bloqueos reales del ataque propio en duelo.
-- **Colección:** catálogo de tipos descubiertos separado de las copias y de la baraja. Hay como máximo una copia por tipo, incluida la reserva; puede editarse la baraja fuera de combate y dejarla vacía. Heridas, sacrificios y bajas se conservan durante la sesión.
-- **Recuperación:** reinvocación fuera de combate de tipos conocidos sin copia; crea una identidad básica sana y sin mejoras. Cuesta vida máxima: semillas 0, comunes 1, raras 2 y épicas 3; nunca puede dejar el máximo por debajo de 1. Un premio repetido no repone una copia perdida.
-- **Progreso:** P16/P18 ganan ataque y P17 salud por cada victoria en que fueron invocadas y sobrevivieron, con tope experimental +3 por copia. No se exige causar eliminaciones. Tres santuarios curan todas las copias poseídas heridas, una vez por sector y sesión, sin revivirlas.
+- **Catálogo y copias:** 21 tipos / 39 copias con nombres oficiales; cupos históricos por adquisición, copias con salud e identidad propias y recuperación de vacantes. Se empieza con ocho copias de siete tipos (A01×2, A02, R01, H01, N02, N05, N06). Recuperación individual (suelo de vida máxima 1) y «Reinvocar todas» (solo si la vida máxima resultante queda en 7 o más).
+- **Combate:** turnos alternos con mano inicial de tres cartas; maná renovable `max(0, 1 + R02 vivas − fatiga)`; sacrificios y fichas; habilidades R01, A03, A04, N01, H02, H03, H04 (ritual con vista previa y confirmación) y escudos R03/R04. Mazo exhausto con refuerzos de la cripta («Eco») y «Rendirse» con confirmación, ambos experimentales. Duelos contra invocadores y escaramuzas contra grupos (objetivo concreto por atacante, prioridad de represalia).
+- **IA rival:** nivel 2 por defecto con heurísticas sencillas y legibles; el nivel 1 se conserva como referencia de simulación. Experimentales; ver el [informe de balance](balance-m8c.md).
+- **Interacción táctica:** vincular, reasignar y retirar relaciones carta-a-carta requiere arrastre; prioridad de bloqueo y de atacantes dirigidos mediante flechas; presentación automática de 420 ms de los bloqueos reales del ataque propio. Detalle en el [diseño de interfaz](design/interface-v1.md).
+- **Exploración:** 19 salas con colisiones y salidas por muro; las salas con encuentro bloquean las salidas hacia delante hasta vencerlo; ciclo de ratas con altar, puzle rúnico en 11/12 (Hueso → Sombra → Maná), muro oculto 14↔18 y once cofres únicos cuyas copias van a la reserva (panel superpuesto, E/Esc). Vencer a El Rey Esqueleto completa la expedición y permite seguir explorando; ningún secreto es obligatorio.
+- **Restauración y orbe:** orbe de un solo uso, inicial cargado, activable fuera de combate desde el HUD; sana las copias vivas, devuelve la vida máxima a 20 y elimina la fatiga; se recarga completando el circuito de ratas. Vencer a El Centinela y a El Prior aplica una restauración gratuita.
+- **Grimorio:** copias agrupadas por tipo con contador e indicación de heridas, pestañas Colección / Reinvocar / Filtros (maná y sacrificios) y retratos propios por tipo.
+- **Presentación:** cripta de piedra, bronce y luz turquesa; arquitectura y personajes programáticos de baja geometría, temas por zona, iconos SVG propios, HUD con zona y nombre de sala y conexiones de combate. Detalle en el [diseño de exploración 3D](design/exploration-3d-v1.md).
 
 ## Recursos y recorrido
 
-Se empieza con vida máxima 20, fatiga 0, nivel fijo 1 y ocho copias sanas seleccionadas. El maná utilizable es `max(0, 1 − fatiga)`. Perder añade 1 fatiga; R4/B1/B2/B3 ganados dejan toda la fatiga en 0, mientras que R1–R3 no la reducen. R1–R3 dan +1 de máximo hasta 20; B1/B2 dan +4 hasta 20; R4/B3 restauran máximo a 20. Tras liquidar el resultado, la vida actual del invocador vuelve a su máximo vigente, sin curación automática de criaturas.
-
-B1 y B2 habilitan el sector siguiente y B3 completa la demo manteniendo la exploración. El ala R1→R2→R3→R4 es voluntaria y repetible: salir físicamente al sector 1 y volver a entrar reinicia esos encuentros; una derrota o abrir menús no reinicia la visita. No se reinician colección, heridas, mejoras, fatiga, máximo ni servicios. La primera victoria R4 habilita su cofre único, que debe reclamarse mediante interacción.
-
-## Contenido disponible
-
-| Contenido | Implementación |
-|---|---|
-| Criaturas propias | 18 tipos: diez comunes (cuatro semillas), cinco raras y tres épicas. Ocho iniciales: P01/P02/P11/P03/P04/P05/P06/P07. |
-| Enemigos y encuentros | 14 tipos enemigos, tres jefes principales, tres escaramuzas y un minijefe de ratas. |
-| Descubrimientos | Cofre sector 1: P09; B1: P13/P16; cofre sector 2: P10; B2: P15/P17; cofre sector 3: P14/P18; cofre del ala: P08/P12. |
-| Exploración | Siete salas, colisiones, puertas y retorno seguro, tres santuarios y cuatro cofres. |
-| Presentación | Cripta de piedra, bronce y luz turquesa; arquitectura y personajes programáticos, iconos SVG propios, HUD contextual, colección modal y conexiones de combate. |
-
-El contenido y sus cifras están detallados en la [especificación consolidada](spec-v1.md). Los [CSV originales](history/iteration-v1/) conservan la procedencia del baseline, implementado en [content.ts](../src/engine/content.ts).
+Vida máxima 20, fatiga 0 o 1, nivel fijo 1. Cada derrota (o rendición) deja la fatiga en 1; la restauración gratuita de El Centinela y El Prior y el orbe la eliminan. Tras liquidar un duelo la vida actual del invocador vuelve a su máximo vigente, sin curación automática de criaturas. Ruta mínima sin secretos: 01-02-03-04-05-06-14-15-19. Contenido y reglas: [decisiones vigentes](decisions.md); cifras y propuestas: [informe de balance](balance-m8c.md). Las cifras son baseline experimental.
 
 ## Desarrollo y límites conocidos
 
-Los siete hitos originales y las iteraciones de expedición, combate, interfaz A1–A6 y transformación/estabilización 3D constan cerrados y aceptados en sus registros. La iteración UX y fatiga está cerrada con aceptación parcial e incidencia conocida diferida; no reabre aquellos cierres ni deja implementación automática pendiente. El [plan de continuidad](implementation-plan.md) identifica las fuentes y el cierre actual.
+Los hitos V0.4B M1–M8c y las iteraciones UI-1 y LEG-1 constan en el [plan de continuidad](implementation-plan.md); los registros anteriores permanecen en `history/` solo como procedencia.
 
-- El progreso dura únicamente mientras permanece cargada la página: no hay guardado durable, migración de partidas ni restauración tras recarga.
-- No se gana nivel. No hay monedas, tiendas, habilidades adicionales, hechizos, fichas, multijugador, generación procedural ni representación 3D de invocaciones. Las posibilidades futuras no constituyen requisitos pendientes.
-- Las cifras y el tope de mejoras son baseline experimental; la aceptación de la demo no demuestra equilibrio definitivo. El informe histórico de 26/27 recorridos completos corresponde a políticas y órdenes deterministas de aquella revisión, no a probabilidad de victoria humana ni a la mezcla actual en una partida normal.
-- El diseño principal es de escritorio (1440×900 y 1024×768). La emulación móvil fue valorada manualmente, sin validación móvil dedicada ni requisito adicional.
-- **Incidencia conocida, no resuelta y diferida — scroll de colección:** en el menú abierto con I, al desplazar lentamente con la rueda del mouse, las cartas parecen producir una onda o recolocación. El diseñador confirmó que persiste después del último ajuste. Las pruebas automatizadas no reprodujeron el síntoma completo; sí identificaron transiciones hover heredadas de 130 ms y verificaron su eliminación en los botones, sin resolver el comportamiento observado. Se conserva ese cambio CSS acotado y sin regresiones detectadas. No hay corrección adicional autorizada ni fecha comprometida para retomarlo. No se declara correcto el scroll ni queda esta iteración activa por la incidencia.
-- Las asignaciones carta-a-carta solo por arrastre ya no pueden completarse solo con teclado, por decisión explícita del diseñador. El resto de acciones conserva sus controles; el retorno de foco al avatar y los ajustes de combate tienen aceptación humana.
-- El cierre histórico de estabilización registra 167/167 pruebas más comprobaciones espaciales, build y revisión independiente satisfactorios. El aviso de bundle >500 kB procede de aquel build, no de una compilación nueva de la migración.
-- La aceptación final de fluidez y ausencia del bloque de baldosas fue humana y cualitativa. Las cifras instrumentales del plan preceden al último ajuste de normales; no son una medición del build final. Algunas capturas y diagnósticos están fuera del repositorio.
-
-Durante la migración documental principal del 2026-10-28, el coordinador sí reejecutó `npm.cmd test`: 167/167 pruebas y comprobaciones espaciales satisfactorias. No se repitieron builds, inspecciones visuales, mediciones de rendimiento ni playtesting. La revisión independiente de la migración fue documental y técnica. La limpieza final posterior no vuelve a ejecutar la suite ni amplía esa evidencia; el detalle queda en el [plan de continuidad](implementation-plan.md).
+- El progreso dura únicamente mientras permanece cargada la página: no hay guardado durable ni restauración tras recarga.
+- No se gana nivel. No hay monedas, tiendas, hechizos adicionales, multijugador, generación procedural ni representación 3D de invocaciones. Las posibilidades futuras no constituyen requisitos pendientes.
+- Las cifras, los encuentros y las heurísticas de la IA son baseline experimental; la aceptación de la demo no demuestra equilibrio definitivo. Las propuestas de balance siguen abiertas en el [informe M8c](balance-m8c.md).
+- El diseño principal es de escritorio (1440×900 y 1024×768), sin validación móvil dedicada.
+- **Incidencia conocida, no resuelta y diferida — scroll de colección:** en el grimorio abierto con I, al desplazar lentamente con la rueda del mouse, las cartas parecen producir una onda o recolocación. Persiste tras el último ajuste (se conserva la eliminación de transiciones hover en botones de cartas); no hay corrección autorizada ni fecha comprometida y no se declara resuelta.
+- **Bug diferido — arrastre bloqueado:** si en la fase principal se intenta arrastrar cartas propias creyendo que se puede atacar, después en ataque o bloqueo ya no se pueden arrastrar ni seleccionar hasta recargar. Pendiente de reproducción; ver [decisions.md](decisions.md).
+- Las asignaciones carta-a-carta solo por arrastre no pueden completarse solo con teclado, por decisión explícita del diseñador.
+- El bundle de producción supera el aviso de 500 kB de Vite (three.js y React Three Fiber); no hay división de código.
 
 ## Referencias
 
-- [Reglas y trazabilidad](spec-v1.md), [continuidad y decisiones](implementation-plan.md).
-- [Diseño vigente de interfaz](design/interface-v1.md) y [exploración 3D](design/exploration-3d-v1.md).
-- [Plan histórico](history/implementation-plan-v0.1.md), [anexo D01–D12](history/iteration-v1.md), [balance H6](history/iteration-v1-balance.md) y [protocolo/aceptación H6](history/iteration-v1-playtesting.md).
-- [Validación original y ampliación A1–A6](history/validation-report-v0.1.md). Cada informe mantiene su alcance temporal; no es una validación completa nueva del estado actual.
+- [Decisiones vigentes](decisions.md), [plan de continuidad](implementation-plan.md) e [informe de balance M8c](balance-m8c.md).
+- [Diseño vigente de interfaz](design/interface-v1.md) y [exploración 3D](design/exploration-3d-v1.md) (sus referencias a las siete salas legadas son históricas).
+- [Especificación del prototipo legado (histórica)](history/spec-v1-legado.md), [registro M0–M3](history/migracion-v04b-m0-m3.md) y el resto de registros en `history/`: cada uno mantiene su alcance temporal y no valida el estado actual.

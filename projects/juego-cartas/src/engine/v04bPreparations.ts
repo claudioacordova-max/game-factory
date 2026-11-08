@@ -5,7 +5,7 @@ import type { CreatureCard, DuelState, RandomSource, PlayerId } from './types.js
 import { V04B_CARD_TYPES, V04B_INITIAL_CARD_IDS } from './content/v04b.js'
 import { V04B_ENCOUNTERS } from './content/v04bEncounters.js'
 
-/** Independent M1 fixtures. Neither changes ACTIVE_CONTENT nor starts the new adventure. */
+/** Independent M1 fixtures; they do not start the adventure. */
 /** MIG-D06: the orb starts charged, capacity 1. The rat cycle starts with no rooms defeated. */
 function withOrbAndRats(session: GameSession): GameSession {
   return { ...session, orb: { charges: 1, capacity: 1 }, ratCycle: { defeated: [], returnClosed: false, leftAltarVia04: false } }

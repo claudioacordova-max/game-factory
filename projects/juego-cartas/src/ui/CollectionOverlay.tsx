@@ -36,7 +36,7 @@ export function GameOverlay({ children, label, className = '', onClose, fallback
 
 export function CollectionOverlay({ session, cardTypes, onClose, onChangeDeck, onReinvoke, onReinvokeAll, notice, noticeRevision, noticeExpiresAt, onClearNotice }: {
   session: GameSession; onClose: () => void; onChangeDeck: (id: string, included: boolean) => void; onReinvoke: (id: string) => void
-  /** V0.4B only (UI-1); the legacy grimoire never offers it. */
+  /** UI-1: reinvoke every lost copy at once. */
   onReinvokeAll?: () => void
   cardTypes?: readonly CreatureCard[]
   notice: string; noticeRevision: number; noticeExpiresAt?: number; onClearNotice?: () => void

@@ -21,7 +21,7 @@ export interface ExplorationSceneProps {
   onPoseChange: (pose: SpatialPose) => void
   disabled?: boolean
   resumeRevision?: number
-  /** Alternative object renderer (V0.4B); defaults to the approved legacy WorldObject. */
+  /** Object renderer; defaults to the shared WorldObject (chests, doors). */
   ObjectView?: WorldObjectView
   /** Mounts the performance probe and panel (?perf). Nothing is measured without it. */
   perf?: boolean
@@ -173,7 +173,7 @@ export function ExplorationScene(props: ExplorationSceneProps) {
     if (key !== nearbyKey.current) { nearbyKey.current = key; setNearby(close) }
   }
   const contextualObject = closestInteractable(runtime.current.pose, nearby)
-  // Only objects that carry a reason (V0.4B exits) explain why they are closed; legacy locked objects stay silent.
+  // Only objects that carry a reason (V0.4B exits) explain why they are closed; other locked objects stay silent.
   const lockedObject = contextualObject ? undefined : nearby
     .filter((object) => object.status === 'locked' && object.reason)
     .sort((a, b) => Math.hypot(a.position.x - runtime.current.pose.x, a.position.z - runtime.current.pose.z) - Math.hypot(b.position.x - runtime.current.pose.x, b.position.z - runtime.current.pose.z))[0]

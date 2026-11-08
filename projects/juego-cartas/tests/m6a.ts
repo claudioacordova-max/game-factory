@@ -1,12 +1,10 @@
 import {
-  ACTIVE_CONTENT, activatePedestal, availableChests, chestAvailability, createV04BEncounterDuel, createV04BExpedition,
+  activatePedestal, availableChests, chestAvailability, createGameSession, createV04BEncounterDuel, createV04BExpedition,
   createV04BInitialSession, examineWall, ExplorationViolation, isEncounterDefeated, isSealOpen, isV04BExpeditionComplete, openExits, ratCycleStatus,
   readInscription, recordRoomVictory, roomExits, RuleViolation, travel, useAltar, V04B_ENCOUNTERS, V04B_ONE_WAY_EDGES, V04B_ROOMS,
   V04B_TWO_WAY_EDGES, v04bHasEdge,
 } from '../src/engine/index.js'
 import type { V04BExpedition, V04BRoomId, V04BRune } from '../src/engine/index.js'
-import { ROOMS } from '../src/engine/spatial.js'
-import { createExpeditionState, isExpeditionComplete } from '../src/engine/world.js'
 
 export const m6aTests: { name: string; run: () => void }[] = []
 function test(name: string, run: () => void) { m6aTests.push({ name: `M6a · ${name}`, run }) }
@@ -398,12 +396,7 @@ test('BFS: ningún estado alcanzable queda sin salida y desde todos se puede com
   // 19 after victory is terminal by design but keeps its return exit to 15, so no reachable state is closed.
 })
 
-// ---------- Legado ----------
-test('legado: ACTIVE_CONTENT legado y mundo legado sin cambios', () => {
-  equal(ACTIVE_CONTENT.id, 'legacy-v1')
-  equal(Object.keys(ROOMS).length, 7)
-  const world = createExpeditionState()
-  equal(world.roomId, 'sector-1')
-  ok(!isExpeditionComplete(world))
-  rejects(() => createV04BExpedition(createExpeditionState().session))
+// ---------- Sesión base ----------
+test('la expedición V0.4B rechaza una sesión de perfil base', () => {
+  rejects(() => createV04BExpedition(createGameSession([])))
 })

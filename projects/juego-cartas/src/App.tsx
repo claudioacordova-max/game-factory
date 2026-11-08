@@ -20,8 +20,8 @@ import type { SpatialPose } from './engine/spatial.js'
 import type { EncounterSummary } from './ui/encounterSummary.js'
 import type { AdventureAdapter, ChestReward } from './adventure/types.js'
 import { ChestRewardOverlay } from './ui/ChestRewardOverlay.js'
-import { expeditionModeFromSearch, perfEnabledFromSearch } from './adventure/mode.js'
-import { adventureForMode } from './adventure/select.js'
+import { perfEnabledFromSearch } from './adventure/mode.js'
+import { V04B_ADVENTURE } from './adventure/v04bAdventure.js'
 
 import { CombatView } from './ui/CombatView.js'
 import './ui/combat.css'
@@ -40,11 +40,11 @@ import {
   togglePlayerAttacker,
 } from './ui/combatSelection.js'
 
-/** Without a parameter the V0.4B expedition starts; ?expedicion=legado creates the legacy game exactly as before; ?perf adds the probe. */
+/** The V0.4B expedition is the only game (any ?expedicion value is ignored); ?perf adds the probe. */
 export default function App() {
   const [{ adapter, perf }] = useState(() => {
     const search = typeof window === 'undefined' ? '' : window.location.search
-    return { adapter: adventureForMode(expeditionModeFromSearch(search)) as AdventureAdapter<unknown>, perf: perfEnabledFromSearch(search) }
+    return { adapter: V04B_ADVENTURE as AdventureAdapter<unknown>, perf: perfEnabledFromSearch(search) }
   })
   return <GameApp adapter={adapter} perf={perf} />
 }
@@ -60,7 +60,7 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
   const poses = useRef<Partial<Record<string, SpatialPose>>>({})
   const sacrificedCopies = useRef<string[]>([])
   const [lastResult, setLastResult] = useState<EncounterSummary | null>(null)
-  /** V0.4B chest reward panel; the legacy adapter never returns a reward. */
+  /** Chest reward panel. */
   const [chestReward, setChestReward] = useState<ChestReward | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [sacrificeIds, setSacrificeIds] = useState<string[]>([])
@@ -350,7 +350,7 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
     } catch (error) { reject(error) }
   }
 
-  /** UI-1, V0.4B only: one atomic recovery of every lost copy (threshold checked by the domain). */
+  /** UI-1: one atomic recovery of every lost copy (threshold checked by the domain). */
   function recoverAll() {
     try {
       const status = reinvokeAllStatus(session, adapter.reinvokeCardTypes)
@@ -359,7 +359,6 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
     } catch (error) { reject(error) }
   }
 
-  /** V0.4B only; the normal game uses the legacy profile, so no orb control is shown there. */
   function activateSessionOrb() {
     try {
       const preview = restorationPreview(session)
@@ -380,15 +379,15 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
     <main className={`game-shell ${isDuelActive ? 'mode-duel' : 'mode-exploration'}`}>
       {!isDuelActive ? <div className="exploration-world">
         <ExplorationScene room={room} initialPose={poses.current[roomKey] ?? room.spawn} objects={objects} resumeRevision={resumeRevision} disabled={view === 'collection' || lastResult !== null || chestReward !== null} onInteract={interactNearby} onPoseChange={(pose) => { poses.current[roomKey] = pose }}
-          ObjectView={adapter.id === 'v04b' ? V04BWorldObject : undefined} perf={perf} />
+          ObjectView={V04BWorldObject} perf={perf} />
         <div className="exploration-atmosphere" aria-hidden="true" />
         <ExplorationHUD life={session.invokerLife} maxLife={session.invokerMaxLife} mana={usableMana} fatigue={session.fatigue} level={player.level} roomName={location.roomName} zoneName={location.zoneName} complete={location.complete} onCollection={() => setView('collection')} orb={orbControl} />
-        {view !== 'collection' && !lastResult && !chestReward && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} keepFocus={adapter.id === 'v04b'} />}
-        {view === 'collection' && <CollectionOverlay session={session} cardTypes={adapter.collectionCardTypes} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} onReinvokeAll={adapter.id === 'v04b' ? recoverAll : undefined} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
-        {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'}${adapter.id === 'v04b' ? ' encounter-result-fit' : ''}`} onClose={closeResult}>
+        {view !== 'collection' && !lastResult && !chestReward && <GameNotice message={notice} revision={noticeRevision} expiresAt={noticeExpiresAt} onClear={clearNotice} onDismiss={resumeExploration} keepFocus />}
+        {view === 'collection' && <CollectionOverlay session={session} cardTypes={adapter.collectionCardTypes} onClose={closeCollection} onChangeDeck={changeDeck} onReinvoke={recoverType} onReinvokeAll={recoverAll} notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} />}
+        {lastResult && <GameOverlay label="Resultado del encuentro" className={`encounter-result ${lastResult.won ? 'victory' : 'defeat'} encounter-result-fit`} onClose={closeResult}>
           <span className="result-seal"><Icon name={lastResult.won ? 'check' : 'skull'} /></span>
           <p className="section-kicker">{lastResult.won ? 'Encuentro superado' : 'La aventura continúa'}</p><h1>{lastResult.title}</h1><p className="result-outcome">{lastResult.outcome}</p><p className="result-resources">{lastResult.resources}</p>
-          <details open><summary>{adapter.id === 'v04b' ? 'Heridas, bajas y sacrificios' : 'Heridas, bajas, mejoras y descubrimientos'}</summary><ul>{lastResult.details.map((detail) => <li key={detail}>{detail}</li>)}</ul></details>
+          <details open><summary>Heridas, bajas y sacrificios</summary><ul>{lastResult.details.map((detail) => <li key={detail}>{detail}</li>)}</ul></details>
           <button type="button" className="button button-primary" onClick={closeResult}>Continuar explorando<Icon name="arrow" /></button>
         </GameOverlay>}
         {chestReward && <ChestRewardOverlay reward={chestReward} onClose={closeChestReward} />}

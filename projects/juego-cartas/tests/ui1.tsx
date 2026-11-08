@@ -4,10 +4,7 @@ import {
   reinvokeCreatureType, reinvokeStatus, RuleViolation, V04B_CARD_TYPES,
 } from '../src/engine/index.js'
 import type { GameSession } from '../src/engine/index.js'
-import { ENEMY_CARD_TYPES, PLAYER_CARD_TYPES } from '../src/engine/content.js'
-import { LEGACY_ADVENTURE } from '../src/adventure/legacyAdventure.js'
 import { CollectionView, DeckPanel } from '../src/ui/CollectionViews.js'
-import { CollectionOverlay } from '../src/ui/CollectionOverlay.js'
 import { activateOrbControl, ExplorationHUD, keepAvatarFocus, orbControlFor } from '../src/ui/ExplorationHUD.js'
 import { CreaturePortrait, V04B_PORTRAIT_IDS } from '../src/ui/GameIcons.js'
 import { CopyChooser, ReinvokeAllConfirm } from '../src/ui/Grimoire.js'
@@ -25,13 +22,6 @@ function rejects(run: () => unknown) {
 }
 const noop = () => {}
 const type = (id: string) => V04B_CARD_TYPES.find((card) => card.id === id)!
-
-/** FNV-1a 32-bit: a dependency-free fingerprint of the legacy markup captured before UI-1. */
-export function fingerprint(text: string): string {
-  let hash = 0x811c9dc5
-  for (let index = 0; index < text.length; index++) { hash ^= text.charCodeAt(index); hash = Math.imul(hash, 0x01000193) >>> 0 }
-  return `${hash.toString(16)}:${text.length}`
-}
 
 /** Initial session plus a reserve of two N02 (copy-9 wounded) and two N03, and a third deck N05 is not possible (limit 2). */
 function reserveSession(): GameSession {
@@ -125,7 +115,7 @@ test('Reinvocar todas: coste total con semillas gratis, umbral de vida máxima r
   const seedsOnly = lose(createV04BInitialSession(), ['copy-1', 'copy-4'])
   equal([reinvokeAllStatus(seedsOnly, V04B_CARD_TYPES).cost, reinvokeAllStatus(seedsOnly, V04B_CARD_TYPES).resultingMaxLife], [0, 20], 'Semillas gratis.')
   rejects(() => reinvokeAllLostCopies({ ...atNine, activeDuelId: 'duel-x' }, V04B_CARD_TYPES))
-  rejects(() => reinvokeAllLostCopies(createGameSession([PLAYER_CARD_TYPES[0]]), PLAYER_CARD_TYPES))
+  rejects(() => reinvokeAllLostCopies(createGameSession([type('N05')]), V04B_CARD_TYPES))
   const enabled = renderToStaticMarkup(<CollectionView session={atNine} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} onReinvokeAll={noop} initialTab="reinvoke" />)
   ok(/<button type="button" class="button button-primary" aria-haspopup="dialog">Reinvocar todas · −2 vida máx\.<\/button>/.test(enabled) && enabled.includes('Máximo: 9 → 7 (umbral 7)'))
   const disabled = renderToStaticMarkup(<CollectionView session={atEight} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} onReinvokeAll={noop} initialTab="reinvoke" />)
@@ -184,33 +174,8 @@ test('orbe: el clic no roba el foco del avatar y el orbe gastado sigue sin poder
   ok(!/orb-launcher charged[^>]*aria-disabled/.test(hud(hurt)), 'Orbe activable sin aria-disabled')
 })
 
-// ---------- Legado ----------
-function legacyVariant(): GameSession {
-  const base = LEGACY_ADVENTURE.session(LEGACY_ADVENTURE.create())
-  const [lost, wounded] = base.copies
-  return { ...base, copies: base.copies.filter((copy) => copy.id !== lost.id).map((copy) => copy.id === wounded.id ? { ...copy, health: Math.max(1, copy.health - 1) } : copy),
-    activeDeckCopyIds: base.activeDeckCopyIds.filter((id) => id !== lost.id), invokerMaxLife: 18, invokerLife: 18 }
-}
-export function legacyMarkups(): Record<string, string> {
-  const initial = LEGACY_ADVENTURE.session(LEGACY_ADVENTURE.create())
-  const variant = legacyVariant()
-  return {
-    overlay: renderToStaticMarkup(<CollectionOverlay session={initial} onClose={noop} onChangeDeck={noop} onReinvoke={noop} notice="" noticeRevision={0} />),
-    overlayVariant: renderToStaticMarkup(<CollectionOverlay session={variant} onClose={noop} onChangeDeck={noop} onReinvoke={noop} notice="Aviso" noticeRevision={1} />),
-    collection: renderToStaticMarkup(<CollectionView session={variant} onChangeDeck={noop} onReinvoke={noop} />),
-    deck: renderToStaticMarkup(<DeckPanel session={variant} onChangeDeck={noop} />),
-    empty: renderToStaticMarkup(<CollectionView session={createGameSession([])} onChangeDeck={noop} onReinvoke={noop} />),
-    hud: renderToStaticMarkup(<ExplorationHUD life={18} maxLife={20} mana={2} fatigue={1} level={2} roomName="Sala" complete={false} onCollection={noop} />),
-    portraits: [...PLAYER_CARD_TYPES, ...ENEMY_CARD_TYPES].map((card) => card.id).concat('crypt-echo').map((id) => renderToStaticMarkup(<CreaturePortrait cardId={id} />)).join('\n'),
-  }
-}
-/** Captured from HEAD ed83a85 (before UI-1) with exactly these fixtures. */
-const LEGACY_FINGERPRINTS: Record<string, string> = {
-  overlay: '2cb72280:24709', overlayVariant: 'f739faf1:24050', collection: '157f1fd5:16920', deck: '2726c46c:5940',
-  empty: '80554cc6:1109', hud: '9c6d4067:2463', portraits: '560ee694:17868',
-}
-test('legado idéntico: Colección, baraja, HUD y retratos legados producen el mismo marcado que antes de UI-1', () => {
-  const now = Object.fromEntries(Object.entries(legacyMarkups()).map(([key, markup]) => [key, fingerprint(markup)]))
-  equal(now, LEGACY_FINGERPRINTS)
-  ok(reinvokeAllStatus(createGameSession([PLAYER_CARD_TYPES[0]]), PLAYER_CARD_TYPES).reason === 'Solo en la expedición V0.4B')
+// ---------- Perfil base ----------
+test('reinvocar todas solo existe en la expedición V0.4B (una sesión de perfil base lo rechaza)', () => {
+  const baseCard = { id: 'base-1', name: 'Criatura base', attack: 1, maxHealth: 2, cost: { mana: 0, sacrifices: 0 }, rarity: 'common' as const, seed: true, reinvokeCost: 0, growthCap: 0 }
+  ok(reinvokeAllStatus(createGameSession([baseCard]), [baseCard]).reason === 'Solo en la expedición V0.4B')
 })

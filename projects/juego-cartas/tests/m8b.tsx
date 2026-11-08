@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
-  activateOrb, activateR01, addCopyToActiveDeck, effectiveAttack, effectiveMaxHealth, hasLegalSummon, r01ActivationAvailability, ACTIVE_CONTENT, createV04BPlay, declareAttackers, declareBlockers, endTurn, healingCandidates, interactV04BObject,
+  activateOrb, activateR01, addCopyToActiveDeck, effectiveAttack, effectiveMaxHealth, hasLegalSummon, r01ActivationAvailability, createV04BPlay, declareAttackers, declareBlockers, endTurn, healingCandidates, interactV04BObject,
   isChestOpened, isV04BExpeditionComplete, mainHealingSource, orbStatus, ratCycleStatus, reinvokeCreatureType, reinvokeStatus, requireInvoker,
   resolveCombat, resolveMainHealing, sacrificeCandidates, surrender, surrenderAvailability, startCombat, summonAvailability, summonCreature, v04bObjectsForRoom, v04bRoom,
   v04bSpatialRoom, V04B_CARD_TYPES, V04B_ENCOUNTERS, V04B_ROOMS, validateCombatIdentities,
@@ -10,16 +10,11 @@ import { chooseEnemyBlockers, runEnemyTurn } from '../src/engine/enemy.js'
 import type { EnemyAiLevel } from '../src/engine/enemy.js'
 import { closestInteractable, isWalkable, roomWithObjects } from '../src/engine/spatial.js'
 import type { Point2, RoomDefinition, SpatialPose } from '../src/engine/spatial.js'
-import { createExpeditionState } from '../src/engine/world.js'
-import { expeditionModeFromSearch } from '../src/adventure/mode.js'
-import { adventureForMode } from '../src/adventure/select.js'
-import { LEGACY_ADVENTURE } from '../src/adventure/legacyAdventure.js'
+import { perfEnabledFromSearch } from '../src/adventure/mode.js'
 import { V04B_ADVENTURE } from '../src/adventure/v04bAdventure.js'
 import type { EncounterSummary } from '../src/ui/encounterSummary.js'
 import { ExplorationHUD } from '../src/ui/ExplorationHUD.js'
 import { CollectionView, DeckPanel } from '../src/ui/CollectionViews.js'
-import { PLAYER_CARD_TYPES } from '../src/engine/content.js'
-import { unlockCreatureType } from '../src/engine/session.js'
 import { seededRandom } from './duelFixtures.js'
 
 export const m8bTests: { name: string; run: () => void | Promise<void> }[] = []
@@ -31,18 +26,9 @@ function equal(actual: unknown, expected: unknown, message = '') {
 const report = (line: string) => { if ((globalThis as { M8B_REPORT?: boolean }).M8B_REPORT) console.log(line) }
 
 // ---------- Modo por defecto ----------
-test('arranque: sin parámetro V0.4B; ?expedicion=legado arranca el legado; ?expedicion=v04b sigue en V0.4B', () => {
-  equal(expeditionModeFromSearch(''), 'v04b')
-  equal(expeditionModeFromSearch('?expedicion=v04b'), 'v04b')
-  equal(expeditionModeFromSearch('?perf'), 'v04b')
-  equal(expeditionModeFromSearch('?expedicion=legado'), 'legacy')
-  equal(expeditionModeFromSearch('?perf&expedicion=legado'), 'legacy')
-  equal(expeditionModeFromSearch('?expedicion=legado&perf=1'), 'legacy')
-  ok(adventureForMode(expeditionModeFromSearch('')) === V04B_ADVENTURE, 'El arranque sin parámetro crea la expedición V0.4B')
-  ok(adventureForMode(expeditionModeFromSearch('?expedicion=legado')) === LEGACY_ADVENTURE, 'El legado sigue accesible')
-  // The legacy binding and its data are unchanged: same initial state and content facade.
-  equal(LEGACY_ADVENTURE.create(), createExpeditionState())
-  ok(ACTIVE_CONTENT.id === 'legacy-v1' && ACTIVE_CONTENT.playerCardTypes === LEGACY_ADVENTURE.reinvokeCardTypes, 'ACTIVE_CONTENT sigue siendo la fachada del legado')
+test('arranque: la expedición V0.4B es la única; el parámetro ?expedicion ya no tiene efecto', () => {
+  // The retired legacy switch is just an unknown parameter: it neither changes the game nor the perf flag.
+  ok(!perfEnabledFromSearch('?expedicion=legado') && perfEnabledFromSearch('?expedicion=legado&perf=1'))
   const start = V04B_ADVENTURE.create()
   equal(V04B_ADVENTURE.location(start), { roomName: 'Atrio de la Cripta', zoneName: 'El Umbral', complete: false })
   equal(V04B_ADVENTURE.session(start).copies.length, 8)
@@ -343,7 +329,7 @@ test('sin secretos obligatorios: B3 alcanzable y vencible sin puzle 11/12, sin m
 })
 
 // ---------- Textos de integración ----------
-test('Colección: V0.4B sin textos de mejoras legadas; el legado conserva los suyos exactos', () => {
+test('Colección: V0.4B sin textos de mejoras legadas', () => {
   const noop = () => {}
   const base = V04B_ADVENTURE.session(V04B_ADVENTURE.create())
   const wounded = { ...base, copies: base.copies.map((copy, index) => (index === 0 ? { ...copy, health: copy.health - 1 } : copy)) }
@@ -357,8 +343,4 @@ test('Colección: V0.4B sin textos de mejoras legadas; el legado conserva los su
   for (const legacyText of ['Sin mejoras', 'sin mejoras', 'Mejoras:', 'Mejora por victoria', 'sus mejoras']) ok(!reinvoke.includes(legacyText) && !deck.includes(legacyText), `V0.4B muestra «${legacyText}»`)
   ok(reinvoke.includes('Vuelven sanas a la reserva.'), 'Recuperación V0.4B')
   ok(v04b.includes('Morir o sacrificarse elimina la copia; su cupo se conserva y recuperarla cuesta vida máxima (las semillas, gratis).'), 'Pie V0.4B')
-  const legacySession = unlockCreatureType(createExpeditionState().session, PLAYER_CARD_TYPES.find((card) => card.growth)!)
-  const legacy = renderToStaticMarkup(<CollectionView session={legacySession} onChangeDeck={noop} onReinvoke={noop} />)
-  for (const text of [' · Sin mejoras', 'Copia básica, sin mejoras.', 'Mejora por victoria', 'Las bajas y sacrificios pierden su copia y sus mejoras. El tipo descubierto se conserva.']) ok(legacy.includes(text), `Legado sin «${text}»`)
-  ok(!legacy.includes('Copia sana') && !legacy.includes('Vuelve sana'), 'El legado no recibe textos V0.4B')
 })

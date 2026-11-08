@@ -1,5 +1,7 @@
 # Duelo en la cripta — exploración 3D v1
 
+> Nota (LEG-1, 2026-11-08): las siete salas de la tabla y el ala de las ratas R1–R4 pertenecen al prototipo legado, retirado del juego (código recuperable en `047581b`). La expedición vigente es la V0.4B de 19 salas (ver [status.md](../status.md)); la geometría compartida, el render estático agrupado y la dirección de arte descritos aquí siguen vigentes.
+
 Propósito: referencia vigente de la representación de salas y personajes. Revisión: 2026-10-28; cierre de transformación y estabilización `54955677ec9430695b233c99a8fb4067b103a86d`. Estado: implementación y arte aprobados en su registro; esta síntesis no añade requisitos ni certifica rendimiento nuevo.
 
 ## Composición aprobada

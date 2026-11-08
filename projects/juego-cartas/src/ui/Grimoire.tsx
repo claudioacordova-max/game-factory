@@ -11,7 +11,7 @@ import {
 } from './grimoireModel.js'
 import type { CopyGroup, GrimoireFilters } from './grimoireModel.js'
 
-/** UI-1 V0.4B grimoire. The legacy collection keeps its original components untouched. */
+/** UI-1 V0.4B grimoire. */
 
 export type GrimoireTab = 'collection' | 'reinvoke'
 type ChangeDeck = (copyId: string, included: boolean) => void

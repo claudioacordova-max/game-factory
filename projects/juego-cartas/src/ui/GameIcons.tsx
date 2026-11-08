@@ -18,16 +18,8 @@ export function Icon({ name, className = '' }: { name: IconName; className?: str
   return <svg className={`icon ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-const emblems: Record<string, string> = {
-  P01: 'rat', P02: 'imp', P03: 'skeleton', P04: 'moss', P05: 'scout', P06: 'raider',
-  P07: 'guard', P08: 'hawk', P09: 'cultist', P10: 'boar', P11: 'vanguard', P12: 'guard',
-  P13: 'ogre', P14: 'raider', P15: 'guard', P16: 'basilisk', P17: 'ogre', P18: 'bat',
-  E01: 'rat', E02: 'rat', E03: 'rat', E04: 'rat', E05: 'rat', E06: 'skeleton',
-  E07: 'scout', E08: 'cultist', E09: 'cultist', E10: 'guard', E11: 'ogre',
-  E12: 'imp', E13: 'vanguard', E14: 'raider',
-}
 function emblemFor(cardId: string): ReactNode {
-  const id = emblems[cardId] ?? cardId
+  const id = cardId
   if (/rat/.test(id)) return <><path d="M22 67c-10-8-14-23 2-25 6-22 23-18 31-9 17-9 25 5 17 19l13 12-17 9H29c-5 18-22 13-16 4"/><path d="m71 62 20-4m-20 9 21 7M35 34c-8-8-17 2-10 10M47 34c-2-11 12-15 13-3"/><circle cx="64" cy="53" r="2"/></>
   if (/skeleton/.test(id)) return <><path d="M30 53c-16-37 51-45 42-2l-9 8v14H37V59Z"/><circle cx="41" cy="42" r="6"/><circle cx="61" cy="42" r="6"/><path d="m46 57 5-9 5 9M46 65v9m10-9v9M23 83l55-5M25 78l51 9"/></>
   if (/basilisk/.test(id)) return <><path d="M35 87c-28-15-15-34 13-29 26 5 33-16 19-22-12-5-27 3-20 12 5 6 16 0 8-4"/><path d="m65 35-5-13 13 5 12 7-10 12-8-2M83 35l9-4M75 30l3-8"/><circle cx="73" cy="34" r="1.5"/><path d="m40 61-11-9m15 20-15 4"/></>
@@ -44,8 +36,8 @@ function bone(x1: number, y1: number, x2: number, y2: number): ReactNode {
 }
 
 /**
- * UI-1: one recognisable crypt illustration per V0.4B card type (same line style as the legacy emblems).
- * Tones follow the card group: aggro ember, ramp rune, healing shade, neutral stone. Legacy ids never reach this map.
+ * UI-1: one recognisable crypt illustration per V0.4B card type (same line style as the shared emblems).
+ * Tones follow the card group: aggro ember, ramp rune, healing shade, neutral stone. Other ids fall back to a generic portrait.
  */
 const V04B_PORTRAITS: Record<string, { tone: string; art: ReactNode }> = {
   // Diablillo furioso: horned angry face with fangs and a forked tail.
@@ -98,7 +90,7 @@ export const V04B_PORTRAIT_IDS: readonly string[] = Object.keys(V04B_PORTRAITS)
 export function CreaturePortrait({ cardId, className = '' }: { cardId: string; className?: string }) {
   const v04b = V04B_PORTRAITS[cardId]
   if (v04b) return <span className={`creature-portrait portrait-${v04b.tone} ${className}`} aria-hidden="true" data-portrait={cardId}><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle className="portrait-ring" cx="50" cy="50" r="39"/>{v04b.art}<text x="50" y="97" textAnchor="middle" fill="currentColor" stroke="none" fontSize="10">{cardId}</text></svg></span>
-  const emblem = emblems[cardId] ?? cardId
+  const emblem = cardId
   const tone = cardId === 'crypt-echo' ? 'echo' : /imp|cultist|ogre|boar/.test(emblem) ? 'ember' : /basilisk|moss/.test(emblem) ? 'moss' : /hawk|bat/.test(emblem) ? 'sky' : 'stone'
   return <span className={`creature-portrait portrait-${tone} ${className}`} aria-hidden="true"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle className="portrait-ring" cx="50" cy="50" r="39"/>{emblemFor(cardId)}<text x="50" y="97" textAnchor="middle" fill="currentColor" stroke="none" fontSize="10">{cardId === 'crypt-echo' ? 'ECO' : cardId}</text></svg></span>
 }

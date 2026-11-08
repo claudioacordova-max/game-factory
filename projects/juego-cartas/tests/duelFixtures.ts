@@ -4,12 +4,7 @@ import {
   startSessionDuel as startSessionDuelWithRandom,
 } from '../src/engine/index.js'
 import type { DuelSetup, RandomSource } from '../src/engine/types.js'
-import { beginAdventureEncounter as beginAdventureEncounterWithRandom } from '../src/engine/exploration.js'
-import type { AdventureState, DungeonEncounter } from '../src/engine/exploration.js'
-import { interactWorldObject as interactWorldObjectWithRandom } from '../src/engine/world.js'
-import type { ExpeditionState, WorldInteraction } from '../src/engine/world.js'
 import type { CreatureCard, GameSession } from '../src/engine/index.js'
-import type { SpatialPose } from '../src/engine/spatial.js'
 
 /** Keeps pre-existing rule fixtures explicit and reproducible while preserving their authored card order. */
 export const orderedFixtureRandom: RandomSource = () => 1 - Number.EPSILON
@@ -34,12 +29,4 @@ export function startSessionDuel(session: GameSession, cardTypes: readonly Creat
 
 export function beginSessionDuel(session: GameSession, cardTypes: readonly CreatureCard[], opponentDeck: CreatureCard[], options: SessionDuelOptions = {}) {
   return beginSessionDuelWithRandom(session, cardTypes, opponentDeck, { ...options, random: options.random ?? orderedFixtureRandom })
-}
-
-export function beginAdventureEncounter(state: AdventureState, encounterId: string, encounters: readonly DungeonEncounter[], cardTypes: readonly CreatureCard[], random: RandomSource = orderedFixtureRandom) {
-  return beginAdventureEncounterWithRandom(state, encounterId, encounters, cardTypes, random)
-}
-
-export function interactWorldObject(state: ExpeditionState, objectId: string, pose: SpatialPose, random: RandomSource = orderedFixtureRandom): WorldInteraction {
-  return interactWorldObjectWithRandom(state, objectId, pose, random)
 }

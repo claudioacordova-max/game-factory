@@ -40,7 +40,7 @@ function shuffle(deck: CreatureCard[], random: () => number): CreatureCard[] {
   return shuffled
 }
 
-/** UI keys and payloads use instance identity. The fallback supports authored legacy fixtures. */
+/** UI keys and payloads use instance identity. The fallback supports authored base-profile fixtures. */
 export function cardInstanceId(card: CreatureCard): string {
   return card.instanceId ?? card.id
 }

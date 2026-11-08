@@ -1,11 +1,11 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
-  ACTIVE_CONTENT, addCopyToActiveDeck, beginSessionDuel, cardInstanceId, createCopySlotSession,
+  addCopyToActiveDeck, beginSessionDuel, cardInstanceId, createCopySlotSession,
   createDuel, createGameSession, createV04BCatalogSandbox, createV04BInitialSession,
   declareAttackers, discoveredCardIds, endTurn, finishSessionDuel, grantCreatureCopies,
   reinvokeCreatureType, reinvokeStatus, removeCopyFromActiveDeck, requireInvoker, resolveCombat,
   RuleViolation, startCombat, startSessionDuel, summonCreature, unlockedSlotsForType,
-  unlockCreatureType, validateSessionCopies, V04B_CARD_TYPES,
+  unlockCreatureType, V04B_CARD_TYPES,
 } from '../src/engine/index.js'
 import type { CreatureCard, GameSession } from '../src/engine/index.js'
 import { playEnemyCards } from '../src/engine/enemy.js'
@@ -66,13 +66,12 @@ test('metadatos distinguen el dominio M2 incorporado de efectos incorporados M3'
   equal([duel.players.player.creatures.length,duel.players.player.mana,duel.players.player.creatures.map((u) => u.entityKind)], [4,1,['real','token','real','real']])
 })
 
-test('inicio aislado de ocho identidades y siete tipos frente al sandbox de 39, sin activar legado', () => {
+test('inicio aislado de ocho identidades y siete tipos frente al sandbox de 39', () => {
   const initial = createV04BInitialSession(), sandbox = createV04BCatalogSandbox()
   equal(initial.copies.map((c) => c.cardId), ['A01','A01','A02','R01','H01','N02','N05','N06'])
   equal([initial.activeDeckCopyIds.length,discoveredCardIds(initial).length,Object.values(initial.unlockedCopySlots).reduce((a,b) => a+b,0)], [8,7,8])
   equal([sandbox.copies.length,sandbox.activeDeckCopyIds.length,discoveredCardIds(sandbox).length,Object.values(sandbox.unlockedCopySlots).reduce((a,b) => a+b,0)], [39,39,21,39])
   ok(sandbox.copies.every((c) => c.health === card(c.cardId).maxHealth && !c.bonusAttack && !c.bonusHealth))
-  equal(ACTIVE_CONTENT.id, 'legacy-v1')
   initial.copies[0].health = 0
   initial.unlockedCopySlots.A01 = 0
   initial.activeDeckCopyIds.pop()
@@ -311,7 +310,7 @@ test('liquidación rechaza cruzar perfiles en ambos sentidos aunque coincida cop
   }
 })
 
-test('colección y reserva renderizan ambas identidades, salud/cupos y recuperación de vacantes; legado conserva una copia', () => {
+test('colección y reserva renderizan ambas identidades, salud/cupos y recuperación de vacantes', () => {
   const initial = prepare('N02','N02')
   const session = { ...initial,copies:initial.copies.map((c,i) => ({...c,health:i === 0 ? 1 : 2})),activeDeckCopyIds:[initial.copies[1].id] }
   const noop = () => {}
@@ -325,9 +324,6 @@ test('colección y reserva renderizan ambas identidades, salud/cupos y recuperac
   const missing = lose(session,[initial.copies[1].id])
   const vacancy = renderToStaticMarkup(<CollectionView session={missing} cardTypes={V04B_CARD_TYPES} onChangeDeck={noop} onReinvoke={noop} initialTab="reinvoke" />)
   ok(vacancy.includes('×1<small> perdidas</small>') && vacancy.includes('Reinvocar una copia de Limo de huesos (1 de vida máxima)') && vacancy.includes('Máximo: 20 → 19'))
-  const legacy = createGameSession([{...card('N02')},{...card('N02')}])
-  equal([legacy.copies.length,legacy.collectionProfile],[1,'legacy'])
-  validateSessionCopies(legacy)
 })
 
 test('mano duplicada renderizada selecciona solo una instancia y muestra copia, salud y efectos disponibles', () => {

@@ -33,34 +33,6 @@ export const WALK_SPEED = 3.2
 export const INTERACTION_RANGE = 1.65
 export const MAX_FRAME_DELTA = 0.05
 
-function defineRoom(id: string, name: string, variant: number): RoomDefinition {
-  return {
-    id, name, width: 14, depth: 12,
-    spawn: { x: 0, z: 3.3, yaw: Math.PI },
-    obstacles: [
-      { x: -2.5, z: 0, width: 1.15, depth: 2.1, height: 0.85 },
-      { x: 2.5, z: -0.4, width: 1.15, depth: 2.1, height: 0.85 },
-      { x: variant % 2 ? -5 : 5, z: -4.1, width: 0.8, depth: 0.8, height: 1.8 },
-    ],
-    anchors: {
-      enemy: { x: 0, z: -2.4 }, chest: { x: -4.5, z: -2.1 },
-      shrine: { x: 4.6, z: 1.6 }, forward: { x: 0, z: -5.1 },
-      back: { x: 0, z: 5.1 }, wing: { x: -5.8, z: 2.4 },
-    },
-  }
-}
-
-export const ROOMS = {
-  'sector-1': defineRoom('sector-1', 'Sector 1 · El umbral', 0),
-  'sector-2': defineRoom('sector-2', 'Sector 2 · Catacumbas', 1),
-  'sector-3': defineRoom('sector-3', 'Sector 3 · La cripta', 2),
-  'rats-1': defineRoom('rats-1', 'Ala de las ratas · R1', 1),
-  'rats-2': defineRoom('rats-2', 'Ala de las ratas · R2', 2),
-  'rats-3': defineRoom('rats-3', 'Ala de las ratas · R3', 3),
-  'rats-4': defineRoom('rats-4', 'Ala de las ratas · R4', 4),
-} satisfies Record<string, RoomDefinition>
-export type RoomId = keyof typeof ROOMS
-
 export function isWalkable(room: RoomDefinition, point: Point2, radius = AVATAR_RADIUS): boolean {
   if (!Number.isFinite(point.x) || !Number.isFinite(point.z)) return false
   if (Math.abs(point.x) > room.width / 2 - radius || Math.abs(point.z) > room.depth / 2 - radius) return false

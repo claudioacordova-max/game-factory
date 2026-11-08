@@ -1,5 +1,7 @@
 # Duelo en la cripta — interfaz v1
 
+> Nota (LEG-1, 2026-11-08): el prototipo legado de siete salas se retiró del juego; las menciones a R1–R4, B1–B3 y sectores describen aquel prototipo y son históricas. La expedición vigente es la V0.4B (ver [status.md](../status.md)); los contratos de interacción de esta síntesis siguen aplicándose.
+
 Propósito: referencia de la presentación e interacción vigentes de la demo. Revisión: 2026-10-28; código de referencia `54955677ec9430695b233c99a8fb4067b103a86d`. Estado: síntesis editorial de la dirección y contratos aprobados en A1–A6 (`a16c9c560335be109f11ffe58a258f27b82d9f13`), conservando la iteración de combate anterior. No añade decisiones de diseño.
 
 Actualización de la iteración UX y fatiga autorizada el 2026-10-28: cerrada con alcance parcialmente aceptado. Foco, combate, distribución contextual, prioridades, conexiones/transiciones, presentación enemiga, turnos/fases y fatiga tienen aceptación expresa del diseñador, basada en playtesting y verificaciones técnicas. Se conserva la eliminación de transiciones hover en colección, pero el scroll defectuoso persiste y queda diferido. La autorización, evidencia y cierre constan en el [plan vivo](../implementation-plan.md); los cierres anteriores conservan su alcance histórico.
@@ -31,7 +33,7 @@ El ataque propio en duelo muestra durante 420 ms la declaración real con los bl
 
 Los cierres de colección/resultado/ayuda y el descarte de avisos de exploración solicitan devolución de foco después de cerrar la superposición, con entradas limpias. Caducar un aviso solo solicita devolución si tenía foco; los avisos dentro de colección o combate no sacan el foco hacia el mundo.
 
-La legalidad, recursos y daño pertenecen al motor. No se añade una máquina de combate distinta por razones visuales. Detalle normativo en [spec-v1.md](../spec-v1.md).
+La legalidad, recursos y daño pertenecen al motor. No se añade una máquina de combate distinta por razones visuales. Reglas vigentes en [decisions.md](../decisions.md); las del prototipo legado retirado, solo como procedencia, en [spec-v1-legado.md](../history/spec-v1-legado.md).
 
 ## Dirección y recursos
 

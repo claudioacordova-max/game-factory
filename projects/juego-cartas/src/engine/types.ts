@@ -1,5 +1,6 @@
 export type PlayerId = 'player' | 'opponent'
 export type RandomSource = () => number
+/** 'legacy' is the base rules profile (one copy per type, no V0.4B effects) kept for rule fixtures; the game itself only runs 'v04b'. */
 export type CollectionProfile = 'legacy' | 'v04b'
 export type EntityKind = 'real' | 'token'
 

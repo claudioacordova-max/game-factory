@@ -1,15 +1,32 @@
 import {
   AVATAR_RADIUS, cameraRelativeDirection, closestInteractable, INTERACTION_RANGE,
-  isWalkable, MAX_FRAME_DELTA, movePose, ROOMS, roomWithObjects, safeExplorationPose, safePose, WALK_SPEED,
+  isWalkable, MAX_FRAME_DELTA, movePose, roomWithObjects, safeExplorationPose, safePose, WALK_SPEED,
 } from '../src/engine/spatial.js'
-import type { ExplorationObject, Point2, RoomDefinition } from '../src/engine/spatial.js'
+import type { ExplorationObject, RoomDefinition } from '../src/engine/spatial.js'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message)
 }
 function near(a: number, b: number): boolean { return Math.abs(a - b) < 1e-8 }
 
-const room = ROOMS['sector-1']
+/** Reference 14 x 12 room with two sarcophagi and one pillar (the geometry the shared helpers were first tuned on). */
+function fixtureRoom(id: string, pillarX: number): RoomDefinition {
+  return {
+    id, name: id, width: 14, depth: 12,
+    spawn: { x: 0, z: 3.3, yaw: Math.PI },
+    obstacles: [
+      { x: -2.5, z: 0, width: 1.15, depth: 2.1, height: 0.85 },
+      { x: 2.5, z: -0.4, width: 1.15, depth: 2.1, height: 0.85 },
+      { x: pillarX, z: -4.1, width: 0.8, depth: 0.8, height: 1.8 },
+    ],
+    anchors: {
+      enemy: { x: 0, z: -2.4 }, chest: { x: -4.5, z: -2.1 },
+      shrine: { x: 4.6, z: 1.6 }, forward: { x: 0, z: -5.1 },
+      back: { x: 0, z: 5.1 }, wing: { x: -5.8, z: 2.4 },
+    },
+  }
+}
+const room = fixtureRoom('fixture-a', 5)
 const start = { x: 0, z: 1, yaw: 0 }
 const cardinal = movePose(room, start, { x: 1, z: 0 }, 0.03)
 const diagonal = movePose(room, start, { x: 1, z: 1 }, 0.03)
@@ -56,7 +73,7 @@ const withdrawn = roomWithObjects(room, [{ ...objects[4], status: 'completed' }]
 assert(isWalkable(withdrawn, objects[4].position), 'Completed enemy leaves route open')
 
 // Regression: a return pose at a live enemy used to pass static validation and stay trapped.
-const ratRoom = ROOMS['rats-1']
+const ratRoom = fixtureRoom('fixture-b', -5)
 const rat: ExplorationObject = { id: 'R1', label: 'Ratas', kind: 'enemy', position: ratRoom.anchors.enemy, status: 'available' }
 const insideEnemy = { x: 0, z: -2.4, yaw: 0 }
 assert(isWalkable(ratRoom, insideEnemy), 'Reproduction: enemy anchor is valid in the unfurnished room')
@@ -86,30 +103,4 @@ assert(isWalkable(blockedSpawnRoom, alternateReturn), 'An occupied spawn also re
 assert(alternateReturn.x !== ratRoom.spawn.x || alternateReturn.z !== ratRoom.spawn.z, 'Fallback never returns an occupied spawn')
 assert(safeExplorationPose(ratRoom, [rat, spawnChest], alternateReturn) === alternateReturn, 'Resolved fallback is stable on another render')
 
-/** Grid flood fill checks a navigable route from spawn to interaction range of each anchor. */
-function reachablePoints(definition: RoomDefinition): Point2[] {
-  const step = 0.2, queue: Point2[] = [{ ...definition.spawn }], seen = new Set(['0:0'])
-  for (let i = 0; i < queue.length; i++) {
-    const point = queue[i]
-    for (const offset of [{ x: step, z: 0 }, { x: -step, z: 0 }, { x: 0, z: step }, { x: 0, z: -step }]) {
-      const next = { x: point.x + offset.x, z: point.z + offset.z }
-      const key = `${Math.round((next.x - definition.spawn.x) / step)}:${Math.round((next.z - definition.spawn.z) / step)}`
-      if (!seen.has(key) && isWalkable(definition, next)) { seen.add(key); queue.push(next) }
-    }
-  }
-  return queue
-}
-for (const definition of Object.values(ROOMS)) {
-  assert(isWalkable(definition, definition.spawn), `${definition.id}: valid spawn`)
-  const anchorObjects = Object.entries(definition.anchors).map(([id, position]): ExplorationObject => ({
-    id, label: id, position, kind: id === 'enemy' ? 'enemy' : id === 'chest' ? 'chest' : id === 'shrine' ? 'shrine' : 'exit', status: 'available',
-  }))
-  const furnished = roomWithObjects(definition, anchorObjects)
-  assert(isWalkable(furnished, definition.spawn), `${definition.id}: props cannot obstruct spawn`)
-  const reachable = reachablePoints(furnished)
-  for (const [id, anchor] of Object.entries(definition.anchors)) {
-    assert(reachable.some((point) => Math.hypot(point.x - anchor.x, point.z - anchor.z) < INTERACTION_RANGE), `${definition.id}: ${id} must be approachable`)
-  }
-}
-
-console.log('Spatial checks passed: movement, camera, collisions, safe returns, occupancy changes, proximity and seven furnished room routes.')
+console.log('Spatial checks passed: movement, camera, collisions, safe returns, occupancy changes, proximity and occupancy.')

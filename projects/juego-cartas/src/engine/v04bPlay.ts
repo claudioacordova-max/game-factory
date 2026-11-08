@@ -105,7 +105,7 @@ export type V04BInteraction =
   | { kind: 'wall'; state: V04BPlayState; result: WallExamination }
   | { kind: 'chest'; state: V04BPlayState; roomId: V04BRoomId; result: ChestOpening }
 
-/** Rejections throw before any mutation, as in the legacy world. */
+/** Rejections throw before any mutation of the expedition state. */
 export function interactV04BObject(state: V04BPlayState, id: string, pose: SpatialPose, random?: RandomSource): V04BInteraction {
   const exp = state.expedition
   requireOutsideCombat(exp.session)

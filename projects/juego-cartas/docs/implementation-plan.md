@@ -31,7 +31,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M8a | Mazo exhausto (Eco de la cripta), Rendirse, terminación de encuentros | `31f3be6` |
 | V0.4B M8b | Integración: V0.4B por defecto, legado con `?expedicion=legado`, recorrido completo | `69bb33d` |
 | V0.4B M8c | IA nivel 2 e informe de balance ([balance-m8c.md](balance-m8c.md)) | `ed83a85` |
-| Iteración UI-1 | Grimorio V0.4B agrupado (Colección/Reinvocar/Filtros, reinvocar todas ≥ 7), 21 retratos V0.4B, foco del orbe | commit local de cierre UI-1 (hash en Git) |
+| Iteración UI-1 | Grimorio V0.4B agrupado (Colección/Reinvocar/Filtros, reinvocar todas ≥ 7), 21 retratos V0.4B, foco del orbe | `047581b` |
+| Iteración LEG-1 | Retirada del juego legado; solo V0.4B | commit local de cierre LEG-1 (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -294,3 +295,41 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Criterios por defecto, aceptados por el diseñador al cerrar: «Reinvocar todas» ignora los filtros (lo avisa); con vida máxima < 7 queda desactivado aunque solo haya semillas; sin heridas se mueve una copia cualquiera.
 - Revisión: aprobada sin bloqueantes. Observaciones: comportamientos de foco solo cubiertos por inspección y playtesting (tests de marcado estático); `aria-label` sin rol en contadores; A02/N05 reutilizan emblemas legados de rata y esqueleto.
 - Playtesting: **aceptado** por el diseñador (2026-11-08, «Todo bien, cerrar»).
+
+## Iteración LEG-1 — retirar el juego legado (cerrada)
+
+### Brief
+
+- Autorización: decisión del diseñador 2026-11-08: «hay que borrarla»; el legado no se mantiene; queda recuperable desde los commits (último con legado: `047581b`). Se ejecuta antes de UI-2 para que el rediseño del combate no mantenga dos ramas.
+- Comportamiento actual: `?expedicion=legado` abre el prototipo de siete salas; código, contenido P/E, escena, IA, colección y suites legadas conviven con V0.4B.
+- Comportamiento deseado: solo existe la expedición V0.4B; `?expedicion=legado` ya no cambia nada (arranca V0.4B). Se elimina el código exclusivo del legado (adaptador, contenido `content/legacy.ts`, mundo/espacio/escena/actores legados, ramas `collectionProfile` legadas que queden muertas, IA y textos legados) y sus pruebas. Se conservan las pruebas que cubren comportamiento V0.4B, reubicando fixtures que dependieran de contenido legado.
+- Documentación: `spec-v1.md` (reglas legadas) pasa a `docs/history/` con nota de retirada; `status.md`, README del juego y referencias operativas describen solo V0.4B; registros históricos intactos.
+- Fuera de alcance: cambios de reglas, cifras o presentación V0.4B; modo de pruebas `/test` (idea futura, no autorizada; registrada en decisions.md §4).
+- Invariantes: comportamiento V0.4B idéntico (misma suite V0.4B en verde, mismo recorrido 01→19, rendimiento sin regresión).
+- Criterios: sin referencias funcionales al legado en `src/`; build y tests correctos; bundle no mayor que antes; recorrido m8b intacto; enlaces de documentación válidos.
+- Revisión: completa. Playtesting humano: comprobación breve de arranque y un combate (sin cambio de experiencia esperado).
+- Modelos: implementer sonnet, reviewer sonnet.
+
+### Baseline
+
+- `HEAD 047581b1ae30e0f310db4999813e64375cd722bc`, árbol limpio salvo este plan y decisions.md.
+
+### Resultado (cerrado 2026-11-08)
+
+- Borrados: `src/adventure/{legacyAdventure,select}.ts`, `src/engine/{content,world}.ts`, `src/engine/content/legacy.ts`, `src/scene/PrototypeScene.tsx`, `src/ui/explorationMessages.ts`, `tests/{h1,h2,h3,world,expedition,contentCompatibility}.ts`. `docs/spec-v1.md` → `docs/history/spec-v1-legado.md`.
+- Ediciones: App y adaptador fijos en V0.4B; restos legados retirados de `spatial`, `exploration`, `cryptVisuals`, `ExplorationActors`, `CollectionViews`, `GameIcons`, `encounterSummary`; comentarios; pruebas reubicadas con fixtures propias; presupuestos de rendimiento m6b/m7 fijados como constantes medidas en `047581b` (237/10.357/38/67, +25 %); README del juego y raíz, status.md, design/*.md.
+- Se conserva el perfil de reglas base `'legacy'` del motor (lo usan fixtures de pruebas); retirarlo sería una iteración aparte (deuda opcional).
+- Checks: tests 348/348 (antes 428; 80 exclusivamente legados), build correcto, bundle JS 1.352 → 1.327 kB, `git diff --check` limpio; inspección renderizada: `?expedicion=legado` arranca V0.4B y un duelo funciona.
+- Revisión: aprobada sin bloqueantes; corregidos por el coordinador decisions.md §2 y comentarios con `ACTIVE_CONTENT`.
+- Comprobación del diseñador: **aceptada** (2026-11-08, «Todo bien, cerrar»).
+
+## Iteración UI-2 — combate sin scroll y arrastre por gestos (en curso)
+
+### Brief
+
+- Autorización: propuesta del coordinador aceptada por el diseñador 2026-11-08 (decisions.md «Iteración UI-2»). Incluye el bug diferido de arrastre bloqueado.
+- Comportamiento actual: la mano ocupa mucho espacio y en ataque, bloqueo y resolución hay que hacer scroll incluso en escritorio; el arrastre usa el drag nativo del navegador con zonas pequeñas y una caja «Sin asignar»; tras intentar arrastrar en principal el tablero puede quedar sin respuesta hasta cerrar el navegador.
+- Comportamiento deseado: (1) arrastre propio con eventos de puntero (sin drag nativo; imágenes no arrastrables), toda la carta como agarre, cancelación limpia al soltar, cambiar de fase, Esc o perder el foco; (2) gestos por zonas: soltar en la mitad rival/área de combate asigna al atacante u objetivo más cercano (resaltado y línea guía durante el gesto); soltar en el lado propio o fuera retira; sin caja «Sin asignar»; en duelos, arrastrar hacia el rival declara atacante y de vuelta lo cancela, el clic sigue funcionando; (3) la mano solo en invocación; en otras fases, indicador compacto «Mano N · Mazo M»; (4) mesa completa sin scroll en todas las fases a 1440×900 y 1024×768, encogiendo cartas si hay muchas.
+- Criterios: sin scroll vertical ni horizontal del tablero en ninguna fase a ambos tamaños (capturas); gestos de asignar, mover y retirar en bloqueo, escaramuza y ataque de duelo; arrastre en fases sin arrastre no altera nada y no bloquea el tablero (reproducción del bug antes/después); invocación desde la mano sigue funcionando; pruebas de cancelación; suite y build correctos.
+- Revisión: completa. Playtesting humano: **requerido**.
+- Modelos: implementer opus (UI), reviewer sonnet.

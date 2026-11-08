@@ -3,7 +3,7 @@ import type { Creature, CreatureCard, DuelState } from './types.js'
 
 /**
  * Rival AI level (MIG-D07). Level 2 (M8c) is the V0.4B default; level 1 is kept only as the reference strategy for the
- * balance simulation. The legacy profile ignores the parameter and behaves as before.
+ * balance simulation. The base (non-V0.4B) profile ignores the parameter; it only remains for rule fixtures.
  */
 export type EnemyAiLevel = 1 | 2
 

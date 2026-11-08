@@ -2,10 +2,10 @@ import { orbStatus } from '../engine/index.js'
 import type { GameSession } from '../engine/index.js'
 import { Icon } from './GameIcons.js'
 
-/** V0.4B restoration orb control; omitted for legacy sessions. */
+/** Restoration orb control. */
 export interface OrbControl { charged: boolean; canActivate: boolean; reason: string; onActivate: () => void }
 
-/** Undefined for legacy sessions, so the normal game never shows the orb. */
+/** Undefined when the session has no orb. */
 export function orbControlFor(session: GameSession, onActivate: () => void): OrbControl | undefined {
   const status = orbStatus(session)
   return session.collectionProfile === 'v04b' && status.present ? { charged: status.charged, canActivate: status.canActivate, reason: status.reason, onActivate } : undefined
@@ -24,7 +24,7 @@ export function activateOrbControl(orb: OrbControl): boolean {
   return true
 }
 
-/** zoneName is V0.4B only; the legacy HUD keeps its fixed «La cripta» heading. */
+/** zoneName defaults to the «La cripta» heading. */
 export function ExplorationHUD({ life, maxLife, mana, fatigue, level, roomName, zoneName, complete, onCollection, orb }: {
   life: number; maxLife: number; mana: number; fatigue: number; level: number
   roomName: string; zoneName?: string; complete: boolean; onCollection: () => void; orb?: OrbControl

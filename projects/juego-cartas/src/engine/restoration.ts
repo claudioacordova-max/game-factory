@@ -4,8 +4,8 @@ import type { GameSession, RatCycleState, RatRoomId } from './session.js'
 import { V04B_CARD_TYPES } from './content/v04b.js'
 
 /**
- * V0.4B restoration effect, orb and rat cycle (MIG-D01/D03/D06). Pure functions; legacy sessions are rejected.
- * Convention: invalid commands (combat, legacy, incoherent events) throw RuleViolation; legitimate player
+ * V0.4B restoration effect, orb and rat cycle (MIG-D01/D03/D06). Pure functions; base-profile sessions are rejected.
+ * Convention: invalid commands (combat, base profile, incoherent events) throw RuleViolation; legitimate player
  * interactions that simply do nothing (full orb, nothing to recharge at the altar) return `{ recharged: false, reason }`.
  */
 function requireV04B(session: GameSession): void {

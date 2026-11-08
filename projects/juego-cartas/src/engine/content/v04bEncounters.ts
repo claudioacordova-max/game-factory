@@ -1,4 +1,4 @@
-/** Isolated V0.4B encounter data (M4). Not wired to the map, rewards or ACTIVE_CONTENT. */
+/** V0.4B encounter data (M4), used by the adventure since M6b. */
 export interface V04BEncounterData {
   /** Room number, also used as the encounter ID. */
   id: string

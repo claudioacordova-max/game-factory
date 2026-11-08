@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PLAYER_CARD_TYPES } from '../src/engine/content.js'
+import type { CreatureCard } from '../src/engine/types.js'
 import { createGameSession } from '../src/engine/session.js'
 import { startCombat, summonCreature } from '../src/engine/rules.js'
 import { CombatView } from '../src/ui/CombatView.js'
@@ -10,7 +10,8 @@ import { blockDefenseFixture } from './blockAssignments.js'
 export const combatPresentationTests: { name: string; run: () => void }[] = []
 function test(name: string, run: () => void) { combatPresentationTests.push({ name: `A3 tablero · ${name}`, run }) }
 function ok(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message) }
-const cards = PLAYER_CARD_TYPES.slice(0, 3)
+const fixtureCard = (id: string, attack: number, maxHealth: number, mana = 0): CreatureCard => ({ id, name: `Criatura ${id}`, attack, maxHealth, cost: { mana, sacrifices: 0 }, rarity: 'common', seed: true, reinvokeCost: 0, growthCap: 0 })
+const cards = [fixtureCard('fx-1', 1, 2), fixtureCard('fx-2', 2, 1), fixtureCard('fx-3', 1, 3)]
 const noop = () => {}
 function fixture(skirmish = false): CombatViewProps {
   return {
@@ -56,7 +57,7 @@ test('el objetivo dirigido se conserva junto a la carta atacante', () => {
 
 test('las cartas no se deshabilitan por maná insuficiente en fase principal', () => {
   const props = fixture()
-  const costly = PLAYER_CARD_TYPES.find((card) => card.cost.mana > 0)!
+  const costly = fixtureCard('fx-costly', 2, 5, 1)
   const hand = [...props.duel.players.player.hand, costly]
   props.duel = { ...props.duel, players: { ...props.duel.players, player: { ...props.duel.players.player, mana: 0, hand } } }
   const markup = renderToStaticMarkup(<CombatView {...props} />)

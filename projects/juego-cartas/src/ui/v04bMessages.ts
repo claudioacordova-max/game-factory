@@ -14,7 +14,7 @@ const type = (id: string) => {
   return card
 }
 
-/** Same structure as the legacy result; consequences come from the committed transaction. Encounters grant no cards (chests do, M7). */
+/** Consequences come from the committed transaction. Encounters grant no cards (chests do, M7). */
 export function v04bEncounterSummary(before: GameSession, settlement: V04BSettlement, duel: DuelState, sacrificedCopyIds: readonly string[] = []): EncounterSummary {
   const encounter = V04B_ENCOUNTERS.find((entry) => entry.id === duel.encounterId)
   if (!encounter || duel.phase !== 'finished' || !duel.winner) throw new Error('Resultado incompleto.')

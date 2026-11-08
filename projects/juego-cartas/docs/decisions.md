@@ -41,15 +41,17 @@ Propósito: lectura obligatoria y suficiente sobre **reglas aprobadas, invariant
 - **MIG-D07 — IA en dos niveles (M4/M8):** Nivel 1 obligatorio: reconocer jugadas, pagar maná/sacrificios, elegir materiales válidos, distinguir reales/fichas, ejecutar habilidades/activaciones/rituales y evitar acciones imposibles o turnos bloqueados. Nivel 2 separado: sacrificios razonables, preservación, oportunidad de cartas costosas, recursos, curas, escudos y rituales. Sin optimizador avanzado. La legalidad no acredita calidad del encuentro: heurísticas en M4, comportamiento y playtesting posteriormente. Sin ventajas ilegales, costes gratuitos ni restricciones artificiales.
 - **MIG-D03 — recarga y repetición de ratas (M5/M6):** nueva recarga exige completar otra vez el circuito. Recarga efectiva en 10 reactiva 07/08/09, cierra el regreso 10→09 y exige salir por 10→04 y volver a la entrada desde 03. No reactiva cofres ni permite otra recarga quedándose en el altar. Sin recarga no hay reinicio: se puede volver a 09, que sigue derrotada. Orbe lleno: interactuar no recarga ni reinicia.
 - **MIG-D06 — orbe inicial (M5):** el jugador empieza con el orbe, cargado, capacidad máxima uno; no es recompensa.
+- **Convención A02 predesplegada (M4, ratificada por el diseñador 2026-11-07):** las A02 que empiezan desplegadas en 07/08 no crean ficha; una A02 invocada durante el combate sí la crea.
+- **Maná base rival 1 (M4, ratificado por el diseñador 2026-11-07):** valor experimental del ensayo M4, sujeto a balance posterior; no es decisión derivada de MIG-D02.
+- **Heurísticas IA nivel 1 (M4, aprobadas con el plan 2026-11-07):** orden de mano jugando toda carta pagable, sin límite artificial por turno; sacrificios fichas primero y luego reales de menor ATQ+VID (H04 solo reales); R01 solo si habilita una carta de mano impagable; curas H02/H03 a la aliada con más vida perdida, desempate por orden de campo; ataque y bloqueo previos. Experimentales; nivel 2 en M8.
 - **MIG-D05 — escaramuza obligatoria 04 (M6):** antes de vencer 04, bloquear salidas que permitan eludirla y permitir volver por la puerta de entrada si la conexión admite retorno; demás salidas bloqueadas. Tras victoria, tránsito del grafo aprobado.
 
 ## 4. Pendientes abiertos (requieren decisión del diseñador antes de implementar)
 
-- **Convención A02 predesplegada (antes de M4):** ensayo previsto sin fichas en 07/08; una A02 invocada sí crea ficha. Pendiente de ratificar.
-- **Maná base rival 1 (M4):** baseline verificado e hipótesis de ensayo, **no decisión nueva derivada de MIG-D02**; heurísticas concretas pendientes.
 - **Restauración y orbe (antes de M5):** baseline de referencia máxima 20; cerrar referencia/ajuste y condiciones de activación del orbe fuera de combate, mensajes e interacciones sin efecto.
 - **Excepción MIG-D05 (M6):** entrada 10→04 no admite volver por esa conexión. Proponer alternativas y decidir; no invertir la arista, crear acceso ni elegir otra salida. Intención: exigir combate sin encierro innecesario.
 - **M6:** interacción/solución del puzle y acceso oculto 18. Sin habilidades de exploración ni accesos inventados.
+- **Agotamiento mutuo sin ganador (M8, aplazado por el diseñador 2026-11-07):** si ambos bandos quedan sin criaturas, mano ni mazo, el combate no termina (no hay empate ni derrota por mazo agotado; no inventar regla). Reproducción: `createV04BEncounterDuel(createV04BInitialSession(), '18', { random: seededRandom(5), firstPlayer: 'opponent' })` con jugador automático que invoca todo, ataca con todo y nunca bloquea; también semilla 8 con `firstPlayer: 'player'` (la simulación alterna quién empieza por paridad de semilla). La simulación M4 lo acepta solo en esos casos conocidos. Decidir regla o ajuste de contenido en M8.
 - **Suelo 10 no aprobado:** el suelo 1 es referencia provisional; no introducir cambio global.
 - **Presentación:** El Devoto, arte final y nombres tentativos de escaramuzas pueden esperar a sus superficies; nombres oficiales de cartas, salas y jefes ya están fijados.
 - Cualquier caso funcional nuevo no cubierto se documenta con estado y secuencia reproducibles y se consulta; el implementer no decide.
@@ -58,7 +60,7 @@ Propósito: lectura obligatoria y suficiente sobre **reglas aprobadas, invariant
 
 | Hito | Alcance | Depende de |
 |---|---|---|
-| M4 | Diez encuentros aislados e IA | M3; MIG-D02, MIG-D07, convención A02 |
+| M4 | Diez encuentros aislados e IA | M3; MIG-D02, MIG-D07, convención A02 (ratificada) |
 | M5 | Restauración, orbe y ciclo | M3; contrato restante del orbe; MIG-D03, MIG-D06 |
 | M6 | Grafo, estado, 3D, puzle y secreto | M5; resolver excepción MIG-D05 |
 | M7 | Ocho iniciales y 31 premios únicos | M1, M5, M6; MIG-D01 |

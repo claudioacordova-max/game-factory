@@ -533,6 +533,11 @@ function removeFinishedTokens(state: DuelState): DuelState {
   return next
 }
 
+/** MIG-D02 (V0.4B only): the rival invoker does not draw during its own first turn (turn 2 when the player starts). */
+function skipsFirstRivalDraw(state: DuelState, activePlayer: PlayerId): boolean {
+  return state.collectionProfile === 'v04b' && activePlayer === 'opponent' && state.turn + 1 === 2
+}
+
 /** Ends the resolved turn and starts the opponent's turn with maintenance applied. */
 export function endTurn(state: DuelState): DuelState {
   requirePhase(state, 'resolved')
@@ -542,8 +547,10 @@ export function endTurn(state: DuelState): DuelState {
     ...current,
     mana: baseMana(current, state.collectionProfile),
     ...(state.collectionProfile === 'v04b' ? { temporaryMana: 0 } : {}),
-    hand: current.deck.length > 0 ? [...current.hand, current.deck[0]] : current.hand,
-    deck: current.deck.slice(current.deck.length > 0 ? 1 : 0),
+    ...(skipsFirstRivalDraw(state, activePlayer) ? {} : {
+      hand: current.deck.length > 0 ? [...current.hand, current.deck[0]] : current.hand,
+      deck: current.deck.slice(current.deck.length > 0 ? 1 : 0),
+    }),
   }
   const nextState = updateSide(state, activePlayer, nextInvoker)
   return enterMainHealing({

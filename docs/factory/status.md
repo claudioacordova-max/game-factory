@@ -8,8 +8,8 @@ Lectura obligatoria al iniciar cualquier sesión (Codex o Claude Code), junto co
 
 | Campo | Valor |
 |---|---|
-| Último cambio | Adopción v1.2 en `comerciante-medieval` (solo documentación), 2026-11-07; commit local `comerciante-medieval: adopt token efficiency v1.2 docs`. Anterior: harness reutilizable de inspección visual (`5873925`) |
-| Juegos | `juego-cartas`: M3 cerrado, M4 no autorizado ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: ITER-10 cerrado, sin hito autorizado ([ficha](../../projects/comerciante-medieval/docs/status.md)) |
+| Último cambio | `juego-cartas` V0.4B M4 cerrado, 2026-11-08 (primer hito completo con agentes de Claude Code). Anterior: adopción v1.2 en `comerciante-medieval` (`ae4f3b1`) |
+| Juegos | `juego-cartas`: M4 cerrado 2026-11-08, M5 no autorizado ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: ITER-10 cerrado, sin hito autorizado ([ficha](../../projects/comerciante-medieval/docs/status.md)) |
 | Limitaciones vigentes | Agentes de Claude Code requieren sesión nueva; `deny` de `.claude/settings.json` cubre Bash, no PowerShell; ejecutor instalado en `%USERPROFILE%\.codex\bin\`; CLI Playwright 0.1.22 instalada fuera del repo en `%USERPROFILE%\.game-factory\tools\` (no en `%LOCALAPPDATA%`, que Claude Desktop virtualiza) |
 
 Pendientes de Factory (ninguno autorizado para ejecución):

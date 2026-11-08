@@ -5,6 +5,7 @@ import { m2Tests } from './m2.js'
 import { m3Tests } from './m3.js'
 import { m4Tests } from './m4.js'
 import { m5Tests } from './m5.js'
+import { m6aTests } from './m6a.js'
 import { requireInvoker } from '../src/engine/rules.js'
 import { addCopyToActiveDeck, advanceMainPhaseIfNoLegalSummons, baseMana, createGameSession, declareAttackers, declareBlockers, endTurn, finishSessionDuel, hasLegalSummon, removeCopyFromActiveDeck, resolveCombat, RuleViolation, startCombat, summonAvailability, summonCreature, unlockCreatureType } from '../src/engine/index.js'
 import { createDuel as createShuffledDuel, startSessionDuel as startShuffledSessionDuel } from '../src/engine/index.js'
@@ -748,7 +749,7 @@ test('el aviso distingue la victoria final de una victoria que habilita el sigui
 })
 
 tests.push(...contentCompatibilityTests, ...iterationUxTests, ...h1Tests, ...h2Tests, ...h3Tests, ...worldTests, ...presentationTests, ...expeditionTests, ...explorationUiTests, ...combatPresentationTests, ...combatActionTests, ...blockAssignmentTests, ...boardGeometryTests, ...blockDragTests, ...activationTests, ...cryptVisualTests, ...cryptRenderingTests)
-tests.push(...m1Tests, ...m2Tests, ...m3Tests, ...m4Tests, ...m5Tests)
+tests.push(...m1Tests, ...m2Tests, ...m3Tests, ...m4Tests, ...m5Tests, ...m6aTests)
 let failed = 0
 for (const entry of tests) {
   try {

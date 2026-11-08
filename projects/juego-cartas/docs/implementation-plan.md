@@ -4,9 +4,9 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 
 ## Estado actual
 
-- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6–M8 no autorizados**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
+- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 dividido: M6a cerrado (2026-11-08), M6b (3D) no autorizado**; **M7–M8 no autorizados**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
 - Juego activo: legado. Incidencia diferida: scroll de Colección.
-- Última evidencia técnica (cierre M5): 309/309 + spatial, build correcto (aviso de bundle >500 kB conocido).
+- Última evidencia técnica (cierre M6a): 336/336 + spatial, build correcto (aviso de bundle >500 kB conocido).
 
 ## Cierres
 
@@ -24,7 +24,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M2 | Recursos, fichas, R01 y P5 | `a449504` |
 | V0.4B M3 | Escudos, A03/N01, H02/H03, ritual H04 (P3/P4/P8) | `52b9e77` |
 | V0.4B M4 | Diez encuentros aislados, MIG-D02, IA nivel 1 | `fbde853` |
-| V0.4B M5 | Restauración, orbe en HUD, ciclo de ratas MIG-D03 | commit local de cierre M5 (hash en Git) |
+| V0.4B M5 | Restauración, orbe en HUD, ciclo de ratas MIG-D03 | `7aabf7a` |
+| V0.4B M6a | Grafo de 19 salas y estado de exploración, puzle, muro | commit local de cierre M6a (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -85,4 +86,30 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Revisión: completa, aprobada sin bloqueantes; N1 (texto «Vacío · Orbe vacío») corregido en un ciclo y revisión acotada aprobada; N2 (orden de imports) y N3 (posición fija del botón) aceptados sin cambio. Ciclos correctivos 1/2.
 - Playtesting: no requerido (botón no alcanzable desde el juego normal; se prueba al integrar en M6/M8).
 - Decisiones nuevas en decisions.md: restauración y orbe con sus detalles (2026-11-08).
-- Cierre: commit local `juego-cartas: cerrar V0.4B M5 de restauración y orbe`, sin push.
+- Cierre: `7aabf7a` (`juego-cartas: cerrar V0.4B M5 de restauración y orbe`), sin push.
+
+## V0.4B M6a — grafo y estado de exploración (cerrado 2026-11-08)
+
+### Brief
+
+- Autorización: el diseñador aprobó las decisiones de 04, puzle, muro, bloqueo por encuentro y runas, la división M6a/M6b, y autorizó «M6a», 2026-11-08.
+- Alcance (solo V0.4B, aislado, motor sin UI): datos de 19 salas con nombres oficiales y zonas; aristas aprobadas (bidireccionales y 10→04 de un sentido) con condiciones; estado de exploración (sala actual, encuentros vencidos, progreso del puzle, sello, muro); interacciones (viajar, leer inscripción 11, activar pedestal 12, examinar muro 14, registrar victoria por sala); integración con el ciclo de ratas M5 (03→07 entra, 10→04 sale, 07/08/09 registran victoria, cierre 10→09); exposición de cofres disponibles sin concederlos; pruebas `tests/m6a`.
+- Fuera de alcance: 3D/escena, UI, cofres y premios (M7), combates reales y restauración B1/B2 conectada (M8), juego legado.
+- Criterios de aceptación: grafo exacto (19 salas, aristas de la fuente; sin 12→13, 18→15, 04→10 ni 13 desde 12); condiciones: 02→03 tras B1, 06→14 tras B2, bloqueo hacia delante en salas con encuentro y regreso siempre abierto, 04→03 siempre abierta, 03→13 visible tras B1 y abierta tras puzle, 14↔18 oculta hasta examinar el muro, 10→09 cerrada tras recarga; puzle Hueso→Sombra→Maná con reinicio sin penalización y disponibilidad del cofre 12; camino a 19 sin opcionales; ningún estado alcanzable sin salida; nombres oficiales; legado intacto; suite previa + nuevas y build correctos.
+- **Mecánicas e invariantes:** decisions.md §2; MIG-D03 y contrato M5 (eventos incoherentes lanzan, interacción legítima sin efecto devuelve motivo); MIG-D05 y su excepción; decisiones M6 de 2026-11-08; `ACTIVE_CONTENT = LEGACY_CONTENT`.
+- Decisiones creativas: ninguna abierta.
+- Revisión: completa. Playtesting humano: no requerido (sin UI).
+- Modelos: implementer sonnet, reviewer sonnet.
+
+### Baseline
+
+- `HEAD 7aabf7a1cfefd727622251d4496a8767b8049ce4`; cambios previos de esta sesión, autorizados e incluidos en M6a: `docs/decisions.md`, `docs/status.md`.
+
+### Resultado
+
+- Rutas: `src/engine/content/v04bMap.ts` (nuevo: 19 salas, zonas provisionales, aristas, regreso por sala, cofres informativos, datos del puzle), `src/engine/v04bWorld.ts` (nuevo: expedición V0.4B, salidas con estado y motivo, viaje, victoria por sala, altar, inscripción, pedestales, muro, disponibilidad de cofres), `src/engine/index.ts`, `tests/m6a.ts` (nuevo), `tests/run.ts`; docs `decisions.md`, `status.md`, este plan.
+- Checks del coordinador: tests 336/336 + spatial, build correcto, `git diff --check` limpio. BFS exhaustivo: 34.012 estados alcanzables, ninguno sin salida abierta y B3 alcanzable desde todos.
+- Revisión: completa, aprobada sin hallazgos. Ciclos correctivos 0/2.
+- Inspección visual y playtesting: no aplican (sin UI).
+- Decisiones en decisions.md: bloqueo por encuentro, runas, criterios M6a aceptados (zonas provisionales, regreso por conexión de entrada, condiciones de cofre).
+- Cierre: commit local `juego-cartas: cerrar V0.4B M6a de grafo y exploración`, sin push.

@@ -8,11 +8,11 @@ Lectura mínima para retomar trabajo (workflow v1.2): esta ficha → [decisions.
 
 | Campo | Valor |
 |---|---|
-| Último cierre | V0.4B M5, 2026-11-08 (restauración, orbe en HUD, ciclo de ratas; sin playtesting requerido). Anterior: M4 `fbde853` |
-| Siguiente hito | M6 — grafo, estado, 3D, puzle y secreto. **No autorizado** |
-| Decisiones abiertas | Excepción MIG-D05, puzle y acceso 18 (M6, bloquean su plan); agotamiento mutuo sin ganador (M8). Ver [decisions.md](decisions.md#4-pendientes-abiertos-requieren-decisión-del-diseñador-antes-de-implementar) |
+| Último cierre | V0.4B M6a, 2026-11-08 (grafo de 19 salas y estado de exploración, sin UI). Anterior: M5 `7aabf7a` |
+| Siguiente hito | M6b — escena 3D de las 19 salas. **No autorizado** (plan por proponer) |
+| Decisiones abiertas | Zonas por sala provisionales (revisar en M6b); agotamiento mutuo sin ganador (M8). Ver [decisions.md](decisions.md#4-pendientes-abiertos-requieren-decisión-del-diseñador-antes-de-implementar) |
 | Juego activo | Legado (`ACTIVE_CONTENT = LEGACY_CONTENT`); V0.4B solo en preparaciones aisladas |
-| Comprobaciones | `npm test` (309/309 + spatial al cierre M5) y `npm run build` desde `projects/juego-cartas/` |
+| Comprobaciones | `npm test` (336/336 + spatial al cierre M6a) y `npm run build` desde `projects/juego-cartas/` |
 | Incidencias conocidas | Onda de scroll en Colección, diferida sin autorización |
 
 ## Propuesta y experiencia

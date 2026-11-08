@@ -8,8 +8,8 @@ Lectura obligatoria al iniciar cualquier sesión (Codex o Claude Code), junto co
 
 | Campo | Valor |
 |---|---|
-| Último cambio | `juego-cartas` V0.4B M7 (cofres y 31 premios) cerrado con playtesting, 2026-11-08. Anteriores: M6b (`0e0d2b5`), M6a (`7c0b1c1`), M5 (`7aabf7a`) |
-| Juegos | `juego-cartas`: M7 cerrado 2026-11-08, M8 no autorizado ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: ITER-10 cerrado, sin hito autorizado ([ficha](../../projects/comerciante-medieval/docs/status.md)) |
+| Último cambio | `juego-cartas` V0.4B M8a (mazo exhausto y rendirse) cerrado con playtesting, 2026-11-08. Anteriores: M7 (`dc03b34`), M6b (`0e0d2b5`), M6a (`7c0b1c1`) |
+| Juegos | `juego-cartas`: M8 autorizado por fases; M8a cerrado 2026-11-08, M8b siguiente ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: ITER-10 cerrado, sin hito autorizado ([ficha](../../projects/comerciante-medieval/docs/status.md)) |
 | Limitaciones vigentes | Agentes de Claude Code requieren sesión nueva; `deny` de `.claude/settings.json` cubre Bash, no PowerShell; ejecutor instalado en `%USERPROFILE%\.codex\bin\`; CLI Playwright 0.1.22 instalada fuera del repo en `%USERPROFILE%\.game-factory\tools\` (no en `%LOCALAPPDATA%`, que Claude Desktop virtualiza) |
 
 Pendientes de Factory (ninguno autorizado para ejecución):

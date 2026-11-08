@@ -85,7 +85,7 @@ export function chooseEnemyBlockers(state: DuelState): Record<string, string[]> 
   }
 
   if (state.mode === 'skirmish') throw new RuleViolation('El grupo no declara bloqueadores.')
-  const available = [...state.players.opponent.creatures]
+  const available = state.players.opponent.creatures.filter((creature) => !creature.echo)
   const assignments: Record<string, string[]> = {}
   for (const attackerId of state.attackers) {
     const attacker = state.players.player.creatures.find((creature) => creature.id === attackerId)

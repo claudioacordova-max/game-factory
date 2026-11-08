@@ -1,4 +1,4 @@
-import { activateN01, activateR01, advanceMainPhaseIfNoLegalSummons, cardInstanceId, findHandCard, declareAttackers, declareBlockers, endTurn, healingCandidates, mainHealingSource, n01ActivationAvailability, resolveMainHealing, resolveCombat, RuleViolation, sacrificeCandidates, startCombat, summonAvailability, summonCreature } from '../engine/rules.js'
+import { activateN01, activateR01, advanceMainPhaseIfNoLegalSummons, cardInstanceId, findHandCard, declareAttackers, declareBlockers, endTurn, healingCandidates, mainHealingSource, n01ActivationAvailability, resolveMainHealing, resolveCombat, RuleViolation, sacrificeCandidates, startCombat, summonAvailability, summonCreature, surrender } from '../engine/rules.js'
 import { chooseEnemyBlockers, runEnemyTurn } from '../engine/enemy.js'
 import type { CreatureCard, DuelState } from '../engine/types.js'
 
@@ -27,6 +27,7 @@ export type CombatAction =
   | { type: 'edit-ritual' }
   | { type: 'cancel' }
   | { type: 'begin-attack' }
+  | { type: 'surrender' }
   | { type: 'attack'; attackerIds: string[]; targets: Record<string, string> }
   | { type: 'blocks'; choices: Record<string, string[]> }
   | { type: 'advance' }
@@ -190,6 +191,10 @@ export function applyCombatAction(current: CombatControls, action: CombatAction,
         pending = { ...selection, stage: 'confirm', snapshot: ritualSnapshot(duel, ids), previewRevision: current.revision + 1 }
         message = 'Revisa los tres materiales y confirma el ritual. La pérdida será irreversible.'
       } else paySummon(selection)
+    } else if (action.type === 'surrender') {
+      if (pending) throw new RuleViolation('Completa o cancela la selección pendiente antes de rendirte.')
+      next = surrender(duel)
+      message = 'Te rendiste: derrota normal.'
     } else if (action.type === 'begin-attack') {
       requirePlayerPhase(duel, 'main')
       if (pending) throw new RuleViolation('Completa o cancela la selección antes de atacar.')

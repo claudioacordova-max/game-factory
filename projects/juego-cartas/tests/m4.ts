@@ -248,12 +248,7 @@ function enemyTurn(start: DuelState): DuelState {
   if (d.phase !== 'blockers') throw new Error(`Turno rival bloqueado en fase ${d.phase}`)
   return resolveCombat(declareBlockers(d, {}))
 }
-/** Open case (no tie rule exists): both sides have no creatures, hand or deck, so no legal progress is possible. */
-function exhausted(d: DuelState): boolean {
-  const sides = [d.players.player, d.players.opponent]
-  return d.phase !== 'finished' && sides.every((side) => side.creatures.length === 0 && (side.kind === 'group' || (side.hand.length === 0 && side.deck.length === 0)))
-}
-export interface M4Run { room: string; seed: number; turns: number; winner: string | null; exhausted: boolean; rivalPlayed: Record<string, number> }
+export interface M4Run { room: string; seed: number; turns: number; winner: string | null; rivalPlayed: Record<string, number> }
 export function simulateEncounter(session: GameSession, room: string, seed: number, cap = 400): M4Run {
   const first = seed % 2 === 0 ? 'player' : 'opponent'
   let d = createV04BEncounterDuel(session, room, { random: seededRandom(seed), firstPlayer: first }).duel
@@ -262,7 +257,7 @@ export function simulateEncounter(session: GameSession, room: string, seed: numb
   const note = (state: DuelState) => {
     for (const c of state.players.opponent.creatures) if (!seen.has(c.id) && c.entityKind === 'real') { seen.add(c.id); played[c.card.id] = (played[c.card.id] ?? 0) + 1 }
   }
-  for (let step = 0; step < cap && d.phase !== 'finished' && !exhausted(d); step += 1) {
+  for (let step = 0; step < cap && d.phase !== 'finished'; step += 1) {
     validateCombatIdentities(d)
     if (d.activePlayer === 'player') {
       if (d.phase !== 'main') throw new Error(`Jugador en fase ${d.phase}`)
@@ -274,24 +269,19 @@ export function simulateEncounter(session: GameSession, room: string, seed: numb
     if (d.phase === 'finished') break
     d = endTurn(d)
   }
-  if (d.phase !== 'finished' && !exhausted(d)) throw new Error(`Encuentro ${room} (semilla ${seed}) sin terminar en ${cap} pasos`)
-  return { room, seed, turns: d.turn, winner: d.winner, exhausted: d.phase !== 'finished', rivalPlayed: played }
+  if (d.phase !== 'finished') throw new Error(`Encuentro ${room} (semilla ${seed}) sin terminar en ${cap} pasos`)
+  return { room, seed, turns: d.turn, winner: d.winner, rivalPlayed: played }
 }
 const SIM_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8]
-const EXHAUSTED_INITIAL = ['18/5', '18/8']
-/** Mutual exhaustion (no tie rule; deferred to M8): the exact known cases, as `room/seed`. */
-const EXPECTED_EXHAUSTED: Record<string, string[]> = { 'sesión inicial': EXHAUSTED_INITIAL, sandbox: [] }
+/** M8a: «Mazo exhausto» removes the old accepted hung cases (18/5, 18/8); every run must now end with a winner. */
 for (const [label, make] of [['sesión inicial', createV04BInitialSession], ['sandbox', createV04BCatalogSandbox]] as [string, () => GameSession][]) {
-  test(`simulación (${label}): los diez encuentros terminan sin acciones ilegales ni turnos bloqueados`, () => {
-    const exhausted: string[] = []
+  test(`simulación (${label}): los diez encuentros terminan siempre con ganador, sin acciones ilegales ni turnos bloqueados`, () => {
     for (const data of V04B_ENCOUNTERS) {
       for (const seed of SIM_SEEDS) {
         const run = simulateEncounter(make(), data.id, seed)
-        ok(run.exhausted ? run.winner === null : run.winner === 'player' || run.winner === 'opponent', `${data.id}/${seed}: estado final incoherente`)
-        if (run.exhausted) exhausted.push(`${data.id}/${seed}`)
+        ok(run.winner === 'player' || run.winner === 'opponent', `${data.id}/${seed}: sin ganador`)
         if ((globalThis as { M4_REPORT?: boolean }).M4_REPORT) console.log(`M4 ${label} ${data.id} seed ${seed} turns ${run.turns} winner ${run.winner} played ${JSON.stringify(run.rivalPlayed)}`)
       }
     }
-    equal(exhausted, EXPECTED_EXHAUSTED[label])
   })
 }

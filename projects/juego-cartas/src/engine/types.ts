@@ -57,6 +57,8 @@ export interface Creature {
   shieldCharges?: number
   /** Combat-only H04 stat bonus, independent of the offensive A04 bonus. */
   ritualBonus?: number
+  /** V0.4B «Eco de la cripta» (M8a): rival reinforcement created by an exhausted player deck. Combat-only. */
+  echo?: true
 }
 
 export interface Invoker {
@@ -99,6 +101,8 @@ export interface DuelState {
   nextCreatureNumber: number
   /** Captured once on main entry, consumed in stable field order before other actions. */
   mainHealing?: { sourceIds: string[]; index: number }
+  /** V0.4B only: echoes created so far in this combat; the next one has size `echoCount + 1`. */
+  echoCount?: number
 }
 
 export interface DuelSetup {

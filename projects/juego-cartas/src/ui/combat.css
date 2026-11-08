@@ -159,3 +159,17 @@
 .ritual-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 22px; }
 .ritual-actions button { padding: 10px; border: 1px solid #a4b393; border-radius: 4px; background: #294842; color: #eee4cf; cursor: pointer; }
 .ritual-actions button:focus-visible { outline: 2px solid #b5dec2; outline-offset: 3px; }
+
+/* M8a: Eco de la cripta, indicador de mazo agotado y rendición */
+.creature-portrait.portrait-echo { color: #b9a7e0; background: radial-gradient(ellipse at 50% 55%,#6b5a9a55,transparent 67%); }
+.combat-view .creature-tile.is-echo { border-style: dashed; border-color: #9d8bd0aa; background: radial-gradient(ellipse at 50% 20%,#7d6bb040,transparent 80%),linear-gradient(155deg,#35314f,#1c1f31); }
+.combat-view .creature-tile .card-rarity.echo-label { color: #c9b9ee; }
+.combat-hand-label small.deck-exhausted { font-size: 11px; color: #e6c9a0; border: 1px solid #c79a6a88; border-radius: 3px; padding: 2px 7px; background: #3a2b2288; }
+.combat-hand-label small.deck-exhausted strong { color: #f1d9ae; font-weight: 600; margin: 0; }
+.combat-action > .combat-surrender { padding: 6px 12px; border: 1px solid #a8826a88; border-radius: 3px; background: transparent; color: #d9b9a2; font-size: 11px; cursor: pointer; }
+.combat-action > .combat-surrender:hover { background: #3a2b2299; }
+.combat-action > .combat-surrender:focus-visible { outline: 2px solid #b5dec2; outline-offset: 3px; }
+.game-overlay.surrender-confirmation { width: min(520px,calc(100vw - 40px)); height: fit-content; max-height: calc(100dvh - 40px); overflow: auto; padding: 24px; color: #eee4cf; }
+.surrender-confirmation h2 { margin: 6px 0 14px; }
+.surrender-confirmation p { line-height: 1.5; }
+.surrender-confirmation .ritual-actions kbd { margin-left: 8px; font: 10px system-ui; color: #9eafa9; }

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, DragEvent } from 'react'
 import type { CreatureCard, DuelState, GameSession } from '../engine/index.js'
-import { baseMana, cardInstanceId, findHandCard, n01ActivationAvailability, r01ActivationAvailability, sacrificeCandidates } from '../engine/index.js'
+import { baseMana, cardInstanceId, findHandCard, isDeckExhausted, n01ActivationAvailability, nextEchoSize, r01ActivationAvailability, sacrificeCandidates, surrenderAvailability } from '../engine/index.js'
 import { CreatureTile, HandCard, N01ActivationButton, R01ActivationButton } from './CardViews.js'
 import { GameOverlay } from './CollectionOverlay.js'
 import { GameNotice } from './GameNotice.js'
@@ -36,6 +36,7 @@ export interface CombatViewProps {
   onChooseEffectTarget?: (creatureId: string) => void
   onConfirmRitual?: () => void
   onEditRitual?: () => void
+  onSurrender?: () => void
   onAllowFieldDrop: (event: DragEvent<HTMLElement>) => void
   onDropHandCard: (event: DragEvent<HTMLElement>) => void
   onToggleSacrifice: (id: string) => void
@@ -64,6 +65,14 @@ export function RitualConfirmation({ duel, pending, onConfirm, onEdit, onCancel 
     <p className="ritual-result">X = {x} · Resultado: <strong>{x}/{1 + x}</strong> ATQ/VID</p>
     <p>El bono dura este combate. Si sobrevive, vuelve a 0/1 con salud 1. Los materiales no regresan.</p>
     <div className="ritual-actions"><button type="button" onClick={(event) => activateOnce(event, onEdit)} onKeyDown={preventRepeatedActivationKey}>Editar materiales</button><button type="button" onClick={onCancel}>Cancelar ritual <kbd>Esc</kbd></button><button type="button" className="button button-primary" onClick={(event) => activateOnce(event, onConfirm)} onKeyDown={preventRepeatedActivationKey}>Confirmar ritual</button></div>
+  </GameOverlay>
+}
+
+export function SurrenderConfirmation({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return <GameOverlay label="Confirmar rendición" className="surrender-confirmation" onClose={onCancel}>
+    <p className="section-kicker">Rendirse</p><h2>¿Rendirte en este combate?</h2>
+    <p>Cuenta como una derrota normal: ganas 1 de fatiga (máximo 1), conservas las heridas y bajas ya sufridas, y vuelves a la exploración. Puedes reintentar el encuentro.</p>
+    <div className="ritual-actions"><button type="button" onClick={onCancel}>Seguir luchando <kbd>Esc</kbd></button><button type="button" className="button button-primary surrender-confirm" onClick={(event) => activateOnce(event, onConfirm)} onKeyDown={preventRepeatedActivationKey}>Confirmar rendición</button></div>
   </GameOverlay>
 }
 
@@ -96,6 +105,9 @@ export function CombatView(props: CombatViewProps) {
   const scrollDimensions = useRef<{ duelId: string; width: number; clientWidth: number } | null>(null)
   const [draggingBlocker, setDraggingBlocker] = useState<string | null>(null)
   const [hoveredAttacker, setHoveredAttacker] = useState<string | null>(null)
+  const [confirmingSurrender, setConfirmingSurrender] = useState(false)
+  const canSurrender = !props.presenting && !interactionPending && surrenderAvailability(duel).allowed
+  const exhausted = isDeckExhausted(duel)
   const choiceKey = pending ? `${pending.kind}:${pending.kind === 'summon' ? pending.cardId : pending.sourceId}:${pending.kind === 'summon' ? pending.stage : ''}` : ''
   useEffect(() => {
     if (!pending || pending.kind === 'summon' && pending.stage === 'confirm') return
@@ -124,7 +136,7 @@ export function CombatView(props: CombatViewProps) {
     observer?.observe(element)
     return () => observer?.disconnect()
   }, [duel.id, layout.width])
-  useEffect(() => { setDraggingBlocker(null); setHoveredAttacker(null) }, [duel.id, duel.turn, duel.phase, duel.activePlayer])
+  useEffect(() => { setDraggingBlocker(null); setHoveredAttacker(null); setConfirmingSurrender(false) }, [duel.id, duel.turn, duel.phase, duel.activePlayer])
   useEffect(() => {
     const cancel = (event: KeyboardEvent) => { if (event.key === 'Escape' && draggingBlocker) finishDrag() }
     window.addEventListener('keydown', cancel)
@@ -214,12 +226,14 @@ export function CombatView(props: CombatViewProps) {
         {main && !interactionPending && <button type="button" className="button button-primary" onClick={(event) => activateOnce(event, props.onBeginCombat)} onKeyDown={preventRepeatedActivationKey}>Ir al ataque<Icon name="arrow" /></button>}
         {attack && <><span>{attackerIds.length} atacante{attackerIds.length === 1 ? '' : 's'} elegido{attackerIds.length === 1 ? '' : 's'}</span><button type="button" className="button button-primary" disabled={!attacksReady(duel, attackerIds, targetChoices)} onClick={(event) => activateOnce(event, props.onDeclareAttacks)} onKeyDown={preventRepeatedActivationKey}>{attackerIds.length ? 'Confirmar ataques' : 'Pasar sin atacar'}<Icon name="sword" /></button></>}
         {defense && <><span>{Object.values(blockerChoices).flat().length} bloqueadores elegidos</span><button type="button" className="button button-primary" onClick={(event) => activateOnce(event, props.onConfirmBlocks)} onKeyDown={preventRepeatedActivationKey}>Resolver bloqueos<Icon name="shield" /></button></>}
+        {canSurrender && (main || attack) && <button type="button" className="combat-surrender" onClick={() => setConfirmingSurrender(true)}>Rendirse</button>}
       </div>
     </div>
 
-    <section className="combat-hand" aria-label="Tu mano"><div className="combat-hand-label"><Icon name="cards" /><span>Tu mano <strong>{player.hand.length}</strong></span><small>{player.deck.length} en mazo</small></div><div className="combat-hand-row">
+    <section className="combat-hand" aria-label="Tu mano"><div className="combat-hand-label"><Icon name="cards" /><span>Tu mano <strong>{player.hand.length}</strong></span>{exhausted ? <small className="deck-exhausted" role="status"><strong>Mazo agotado</strong> · tu próximo mantenimiento invoca un Eco de la cripta {nextEchoSize(duel)}/{nextEchoSize(duel)} rival</small> : <small>{player.deck.length} en mazo</small>}</div><div className="combat-hand-row">
       {player.hand.length ? player.hand.map((card) => <HandCard key={cardInstanceId(card)} card={card} selected={selectedCard === card} unavailableReason={main ? interactionPending ? 'Resuelve la selección pendiente' : '' : 'Fuera de fase principal'} draggable={main && !interactionPending} onDragStart={(event) => writeHandCardDrag(event.dataTransfer, card)} onClick={() => props.onSelectCard(card)} />) : <p className="combat-empty"><Icon name="cards" /><span>{player.deck.length ? 'Robarás en tu próximo turno' : 'No quedan cartas en mano o mazo'}</span></p>}
     </div></section>
+    {confirmingSurrender && canSurrender && <SurrenderConfirmation onConfirm={() => { setConfirmingSurrender(false); props.onSurrender?.() }} onCancel={() => setConfirmingSurrender(false)} />}
     <BoardConnections boardRef={board} links={links} />
     {main && pending?.kind === 'summon' && pending.stage === 'confirm' && <RitualConfirmation duel={duel} pending={pending} onConfirm={() => props.onConfirmRitual?.()} onEdit={() => props.onEditRitual?.()} onCancel={props.onCancelSummon} />}
     <GameNotice message={props.notice} revision={props.noticeRevision} expiresAt={props.noticeExpiresAt} onClear={props.onClearNotice} />

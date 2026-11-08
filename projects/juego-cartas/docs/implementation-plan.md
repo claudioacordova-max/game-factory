@@ -4,9 +4,9 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 
 ## Estado actual
 
-- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 cerrado: M6a y M6b (2026-11-08)**; **M7 cerrado (2026-11-08)**; **M8 no autorizado**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
+- Migración V0.4B: **M0–M3 cerrados y aceptados**. **M4 cerrado (2026-11-08)**; **M5 cerrado (2026-11-08)**; **M6 cerrado: M6a y M6b (2026-11-08)**; **M7 cerrado (2026-11-08)**; **M8 autorizado por fases: M8a cerrado (2026-11-08), M8b siguiente**; ver hoja de ruta y pendientes en [decisions.md](decisions.md#5-hoja-de-ruta-m4m8-ninguno-autorizado).
 - Juego activo: legado. Incidencia diferida: scroll de Colección.
-- Última evidencia técnica (cierre M7): 369/369 + spatial, build correcto (aviso de bundle >500 kB conocido).
+- Última evidencia técnica (cierre M8a): 396/396 + spatial, build correcto (aviso de bundle >500 kB conocido).
 
 ## Cierres
 
@@ -27,7 +27,8 @@ Propósito: autorizaciones, estado de hitos y cierres de `projects/juego-cartas/
 | V0.4B M5 | Restauración, orbe en HUD, ciclo de ratas MIG-D03 | `7aabf7a` |
 | V0.4B M6a | Grafo de 19 salas y estado de exploración, puzle, muro | `7c0b1c1` |
 | V0.4B M6b | Expedición V0.4B jugable en 3D (`?expedicion=v04b`), combates reales, rendimiento | `0e0d2b5` |
-| V0.4B M7 | Once cofres, 31 premios únicos a reserva, panel de premios | commit local de cierre M7 (hash en Git) |
+| V0.4B M7 | Once cofres, 31 premios únicos a reserva, panel de premios | `dc03b34` |
+| V0.4B M8a | Mazo exhausto (Eco de la cripta), Rendirse, terminación de encuentros | commit local de cierre M8a (hash en Git) |
 
 ## Registro de la siguiente intervención
 
@@ -173,3 +174,30 @@ Usar la [plantilla de hito](../../../docs/factory/templates/milestone-record.md)
 - Limitaciones: ancla de cofre común a las 11 salas; retratos genéricos de cartas V0.4B (estilo existente).
 - Playtesting: **aceptado por el diseñador 2026-11-08** («Todo bien, cerrar»); no bloqueantes aceptados sin cambio.
 - Cierre: commit local `juego-cartas: cerrar V0.4B M7 de cofres y premios únicos`, sin push.
+
+## V0.4B M8a — mazo exhausto y rendirse (cerrado 2026-11-08)
+
+### Brief
+
+- Autorización: el diseñador autorizó M8 por fases y la regla «Mazo exhausto», «Rendirse» y su alcance, 2026-11-08 (decisions.md §3).
+- Alcance: perfil V0.4B únicamente. (1) «Mazo exhausto: refuerzos de la cripta» según decisions.md, en duelos y escaramuzas: invocación rival N/N creciente (1/1, 2/2…) por cada mantenimiento del jugador sin robo posible, no bloquea, no sacrificable por el rival, no cuenta para A04, afectable por efectos del jugador, no cuenta para la victoria de escaramuza, sin colección/cupos/premios/persistencia; derrota normal. Nombre provisional «Eco de la cripta» con representación sencilla en la mesa e indicador visible de mazo agotado con el tamaño de la próxima invocación. (2) Botón «Rendirse» con confirmación, en el turno del jugador sin selección pendiente; derrota normal (+1 fatiga) y vuelta a exploración. (3) Simulación: los diez encuentros terminan en un número acotado de turnos con jugadores automáticos variados (incluido el que nunca bloquea y uno con solo ATQ 0), incluidos 18/semilla 5 y 18/semilla 8; retirar la aceptación de esos casos colgados.
+- Fuera de alcance: V0.4B por defecto e integración completa (M8b), IA nivel 2 y balance (M8c), legado, scroll de Colección.
+- Criterios de aceptación: legado idéntico (suite legada intacta); reglas (1)–(2) cubiertas por pruebas de dominio (aparición y tamaño, sin bloqueo, IA no la sacrifica, A04 no la cuenta, N01/A03 la afectan, escaramuza se gana sin eliminarla, derrota normal); rendirse con confirmación, bloqueado durante selección, liquida derrota normal; simulación sin combates colgados; tests previos + nuevos y build correctos; inspección visual de la mesa con invocación, indicador y confirmación de rendirse a 1440×900 y 1024×768.
+- **Mecánicas e invariantes:** decisions.md §2; M2–M7 y sus contratos; IA nivel 1; `ACTIVE_CONTENT = LEGACY_CONTENT` por defecto.
+- Decisiones creativas: ninguna abierta (nombre y aspecto provisionales aceptados).
+- Revisión: completa. Playtesting humano: **requerido**.
+- Modelos: implementer sonnet (lógica con UI acotada), reviewer sonnet.
+
+### Baseline
+
+- `HEAD dc03b34`; cambios previos de esta sesión incluidos en M8a: `docs/decisions.md`, `docs/status.md`, este plan.
+
+### Resultado
+
+- Rutas: `src/engine/{types,rules,enemy}.ts` (Eco `echo`/`echoCount`, creación en `endTurn` solo V0.4B, `surrender`/`surrenderAvailability`, exclusiones de bloqueo, sacrificio, A04 y curas), `src/ui/{CombatView,CardViews,GameIcons,combatActions}.ts(x)`, `src/ui/combat.css`, `src/App.tsx`, `tests/m8a.tsx` (nuevo), `tests/m4.ts` (retirada la aceptación de 18/5 y 18/8), `tests/run.ts`; docs `decisions.md`, `status.md`, este plan.
+- Checks del coordinador: tests 396/396 + spatial, build correcto, `git diff --check` limpio, rutas dentro del alcance.
+- Simulación: diez encuentros × semillas 1–8 × ambos iniciales con tres estrategias (todo al ataque sin bloquear, solo bloquear, solo ATQ 0), cota 40 turnos; máximos medidos 18/24/12. Simulación M4 sin casos colgados.
+- Inspección visual: Eco en mesa, indicador de mazo agotado y confirmación de rendirse a 1440×900 y 1024×768 con estado de fixture; foco y Esc comprobados por script; 0 errores de consola.
+- Revisión: aprobada sin bloqueantes. Dudas del implementer resueltas por el diseñador (Eco no curable; rendirse en principal y ataque; Eco ficha normal salvo exclusiones). Ciclo correctivo 1/2 (filtro de curas) revisado y aprobado.
+- Playtesting: **aceptado por el diseñador 2026-11-08** («Todo bien, cerrar»).
+- Cierre: commit local `juego-cartas: cerrar V0.4B M8a de mazo exhausto y rendirse`, sin push.

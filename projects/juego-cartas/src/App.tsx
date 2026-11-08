@@ -384,7 +384,7 @@ function GameApp<S>({ adapter, perf }: { adapter: AdventureAdapter<S>; perf: boo
       </div> : <CombatView duel={duel} session={session} enemyName={activeEncounter.name} enemyMaxLife={activeEncounter.maxLife}
         notice={notice} noticeRevision={noticeRevision} noticeExpiresAt={noticeExpiresAt} onClearNotice={clearNotice} selectedCardId={selectedCardId} sacrificeIds={sacrificeIds} attackerIds={attackerIds} targetChoices={targetChoices} blockerChoices={blockerChoices} presenting={presenting}
         pending={controls.current.pending} onActivateN01={(creatureId) => dispatchCombat({ type: 'activate-n01', creatureId })}
-        onChooseEffectTarget={(creatureId) => dispatchCombat({ type: 'effect-target', creatureId })} onConfirmRitual={() => dispatchCombat({ type: 'confirm-ritual' })} onEditRitual={() => dispatchCombat({ type: 'edit-ritual' })}
+        onChooseEffectTarget={(creatureId) => dispatchCombat({ type: 'effect-target', creatureId })} onSurrender={() => dispatchCombat({ type: 'surrender' })} onConfirmRitual={() => dispatchCombat({ type: 'confirm-ritual' })} onEditRitual={() => dispatchCombat({ type: 'edit-ritual' })}
         onSelectCard={selectCard} onActivateR01={activateRune} onAllowFieldDrop={allowFieldDrop} onDropHandCard={dropHandCard} onToggleSacrifice={toggleSacrifice} onSelectAttacker={selectPlayerAttacker}
         onStartBlockDrag={startBlockDrag} onEndBlockDrag={endBlockDrag} onDropRelation={dropRelation} onMoveBlocker={moveBlocker} onMoveAttacker={moveAttacker}
         onCancelSummon={cancelSummon} onBeginCombat={beginCombat} onDeclareAttacks={declarePlayerAttacks} onConfirmBlocks={confirmBlocks} />}

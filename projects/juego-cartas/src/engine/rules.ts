@@ -152,7 +152,18 @@ export function baseMana(invoker: CombatSide, profile: CollectionProfile = 'lega
 
 /** Real enemies do not need a collection copyId; tokens are identified explicitly. */
 export function sacrificeCandidates(invoker: Invoker, card: CreatureCard): Creature[] {
-  return invoker.creatures.filter((unit) => unit.health > 0 && (card.id !== 'H04' || unit.entityKind === 'real'))
+  // Echoes (M8a) are never usable as sacrifice material by their owner.
+  return invoker.creatures.filter((unit) => unit.health > 0 && !unit.echo && (card.id !== 'H04' || unit.entityKind === 'real'))
+}
+
+/** Size of the echo the next exhausted maintenance of the player would create (1/1, 2/2, ...). */
+export function nextEchoSize(state: DuelState): number {
+  return (state.echoCount ?? 0) + 1
+}
+
+/** V0.4B: the player's deck is empty, so every following maintenance creates an echo. */
+export function isDeckExhausted(state: DuelState): boolean {
+  return state.collectionProfile === 'v04b' && state.players.player.deck.length === 0
 }
 
 export function effectiveAttack(creature: Creature): number {
@@ -188,7 +199,7 @@ function applyGroupedDamage(state: DuelState, damage: ReadonlyMap<string, number
 function finishIfTerminal(state: DuelState): DuelState {
   const enemy = state.players.opponent
   const winner: PlayerId | null = state.players.player.life <= 0 ? 'opponent'
-    : state.mode === 'skirmish' ? enemy.creatures.length === 0 ? 'player' : null
+    : state.mode === 'skirmish' ? enemy.creatures.every((unit) => unit.echo) ? 'player' : null
       : enemy.kind === 'invoker' && enemy.life <= 0 ? 'player' : null
   if (!winner) return state
   const next = removeFinishedTokens(state)
@@ -196,7 +207,7 @@ function finishIfTerminal(state: DuelState): DuelState {
 }
 
 export function healingCandidates(state: DuelState, sourceId?: string): Creature[] {
-  return state.players[state.activePlayer].creatures.filter((unit) => unit.id !== sourceId && unit.health > 0 && unit.health < effectiveMaxHealth(unit))
+  return state.players[state.activePlayer].creatures.filter((unit) => unit.id !== sourceId && !unit.echo && unit.health > 0 && unit.health < effectiveMaxHealth(unit))
 }
 
 function heal(state: DuelState, targetId: string, amount: number): DuelState {
@@ -430,7 +441,8 @@ export function declareAttackers(state: DuelState, attackerIds: string[], target
   }
   const declared = state.collectionProfile === 'v04b' ? updateSide(state, state.activePlayer, {
     ...state.players[state.activePlayer], creatures: units.map((unit) => ({ ...unit,
-      attackBonus: attackerIds.includes(unit.id) && unit.entityKind === 'real' && unit.card.id === 'A04' ? attackerIds.length - 1 : 0 })),
+      attackBonus: attackerIds.includes(unit.id) && unit.entityKind === 'real' && unit.card.id === 'A04'
+        ? attackerIds.filter((id) => !units.find((candidate) => candidate.id === id)?.echo).length - 1 : 0 })),
   }) : state
   if (state.mode === 'skirmish' && state.activePlayer === 'player') {
     const enemies = state.players.opponent.creatures
@@ -456,6 +468,7 @@ export function declareBlockers(state: DuelState, assignments: Record<string, st
     for (const blockerId of blockerIds) {
       if (usedBlockers.has(blockerId)) throw new RuleViolation('Cada criatura solo puede bloquear a un atacante.')
       if (!defenderUnits.some((unit) => unit.id === blockerId)) throw new RuleViolation('Los bloqueadores deben ser criaturas defensoras en juego.')
+      if (defenderUnits.find((unit) => unit.id === blockerId)?.echo) throw new RuleViolation('Un Eco de la cripta no puede bloquear.')
       usedBlockers.add(blockerId)
     }
   }
@@ -538,6 +551,31 @@ function skipsFirstRivalDraw(state: DuelState, activePlayer: PlayerId): boolean 
   return state.collectionProfile === 'v04b' && activePlayer === 'opponent' && state.turn + 1 === 2
 }
 
+/** Creates the next «Eco de la cripta» N/N on the rival side. No collection, slot or reward identity. */
+function addCryptEcho(state: DuelState): DuelState {
+  const size = nextEchoSize(state)
+  const rival = state.players.opponent
+  const card: CreatureCard = { id: 'crypt-echo', name: 'Eco de la cripta', attack: size, maxHealth: size,
+    cost: { mana: 0, sacrifices: 0 }, entityKind: 'token', instanceId: `${state.id}-echo-${size}` }
+  const echo: Creature = { id: `creature-${state.nextCreatureNumber}`, card, entityKind: 'token', owner: 'opponent', health: size, summonedTurn: state.turn + 1, echo: true }
+  return { ...updateSide(state, 'opponent', { ...rival, creatures: [...rival.creatures, echo] }), nextCreatureNumber: state.nextCreatureNumber + 1, echoCount: size }
+}
+
+/** Why the player cannot surrender now; empty when allowed. The UI additionally blocks pending selections. */
+export function surrenderAvailability(state: DuelState): SummonAvailability {
+  if (state.collectionProfile !== 'v04b') return { allowed: false, reason: 'Rendirse pertenece al perfil V0.4B.' }
+  if (state.winner !== null || state.activePlayer !== 'player' || (state.phase !== 'main' && state.phase !== 'attackers')) return { allowed: false, reason: 'Solo puedes rendirte durante tu turno.' }
+  if (mainHealingSource(state)) return { allowed: false, reason: 'Resuelve primero la sanación obligatoria.' }
+  return { allowed: true, reason: '' }
+}
+
+/** Normal defeat settled through the existing liquidation (the winner is the rival). */
+export function surrender(state: DuelState): DuelState {
+  const availability = surrenderAvailability(state)
+  if (!availability.allowed) throw new RuleViolation(availability.reason)
+  return { ...removeFinishedTokens(state), phase: 'finished', winner: 'opponent', attackers: [], blockers: {}, targets: {}, mainHealing: undefined }
+}
+
 /** Ends the resolved turn and starts the opponent's turn with maintenance applied. */
 export function endTurn(state: DuelState): DuelState {
   requirePhase(state, 'resolved')
@@ -552,7 +590,11 @@ export function endTurn(state: DuelState): DuelState {
       deck: current.deck.slice(current.deck.length > 0 ? 1 : 0),
     }),
   }
-  const nextState = updateSide(state, activePlayer, nextInvoker)
+  let nextState = updateSide(state, activePlayer, nextInvoker)
+  // M8a (V0.4B): a player maintenance that should draw from an empty deck reinforces the rival instead.
+  if (state.collectionProfile === 'v04b' && activePlayer === 'player' && current.kind === 'invoker' && current.deck.length === 0) {
+    nextState = addCryptEcho(nextState)
+  }
   return enterMainHealing({
     ...nextState,
     activePlayer,

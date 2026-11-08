@@ -40,6 +40,6 @@ function emblemFor(cardId: string): ReactNode {
 }
 export function CreaturePortrait({ cardId, className = '' }: { cardId: string; className?: string }) {
   const emblem = emblems[cardId] ?? cardId
-  const tone = /imp|cultist|ogre|boar/.test(emblem) ? 'ember' : /basilisk|moss/.test(emblem) ? 'moss' : /hawk|bat/.test(emblem) ? 'sky' : 'stone'
-  return <span className={`creature-portrait portrait-${tone} ${className}`} aria-hidden="true"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle className="portrait-ring" cx="50" cy="50" r="39"/>{emblemFor(cardId)}<text x="50" y="97" textAnchor="middle" fill="currentColor" stroke="none" fontSize="10">{cardId}</text></svg></span>
+  const tone = cardId === 'crypt-echo' ? 'echo' : /imp|cultist|ogre|boar/.test(emblem) ? 'ember' : /basilisk|moss/.test(emblem) ? 'moss' : /hawk|bat/.test(emblem) ? 'sky' : 'stone'
+  return <span className={`creature-portrait portrait-${tone} ${className}`} aria-hidden="true"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle className="portrait-ring" cx="50" cy="50" r="39"/>{emblemFor(cardId)}<text x="50" y="97" textAnchor="middle" fill="currentColor" stroke="none" fontSize="10">{cardId === 'crypt-echo' ? 'ECO' : cardId}</text></svg></span>
 }

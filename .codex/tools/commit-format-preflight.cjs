@@ -7,6 +7,8 @@ const os = require('node:os');
 const { createHash } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 
+function fail(message) { throw new Error(message); }
+
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 function validatePath(value) {
@@ -20,8 +22,38 @@ function validatePath(value) {
   return value;
 }
 
+const REPO_ARGUMENT = /^projects\/[a-z0-9][a-z0-9-]*$/u;
+
+function validateRepoArgument(value) {
+  if (typeof value !== 'string' || !REPO_ARGUMENT.test(value)) {
+    fail('--repo must be exactly projects/<name> with <name> matching [a-z0-9][a-z0-9-]*');
+  }
+  return value;
+}
+
+// Resolves --repo to a nested repository root under factoryRoot. The target
+// must be a real directory (no link or junction) with its own .git directory
+// (not a file, so worktrees and gitlinks are refused) and be its own toplevel.
+function resolveRepoRoot(value, factoryRoot, makeGitFor = makeGit) {
+  validateRepoArgument(value);
+  const root = path.resolve(factoryRoot, ...value.split('/'));
+  let stat;
+  try { stat = fs.lstatSync(root); }
+  catch (error) { if (error.code === 'ENOENT') fail('--repo directory does not exist: ' + value); throw error; }
+  if (!stat.isDirectory()) fail('--repo is not a directory: ' + value);
+  if (fs.realpathSync(root).toLowerCase() !== root.toLowerCase()) fail('--repo resolves through a link');
+  let dotGit;
+  try { dotGit = fs.lstatSync(path.join(root, '.git')); }
+  catch (error) { if (error.code === 'ENOENT') fail('--repo has no .git directory: ' + value); throw error; }
+  if (!dotGit.isDirectory()) fail('--repo .git must be a real directory (worktrees and gitlinks are refused)');
+  const top = makeGitFor(root)(['rev-parse', '--show-toplevel']).stdout.trim();
+  if (path.resolve(top).toLowerCase() !== root.toLowerCase()) fail('--repo is not the toplevel of its own repository');
+  return root;
+}
+
 function parseArguments(argv) {
   const paths = [];
+  let repo;
   const safeEof = new Map();
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--path' && i + 1 < argv.length) paths.push(validatePath(argv[++i]));
@@ -30,16 +62,17 @@ function parseArguments(argv) {
       const digest = argv[++i].toLowerCase();
       if (!/^[a-f0-9]{64}$/u.test(digest) || safeEof.has(file)) throw new Error('each --safe-eof needs a unique path and SHA-256');
       safeEof.set(file, digest);
+    } else if (argv[i] === '--repo' && i + 1 < argv.length) {
+      if (repo !== undefined) throw new Error('--repo may be provided at most once');
+      repo = validateRepoArgument(argv[++i]);
     } else throw new Error(`unknown or incomplete argument: ${argv[i]}`);
   }
   if (!paths.length || new Set(paths.map((file) => file.toLowerCase())).size !== paths.length) {
     throw new Error('provide unique --path entries; directories and patterns are not supported');
   }
   for (const file of safeEof.keys()) if (!paths.includes(file)) throw new Error(`--safe-eof is outside authorized --path entries: ${file}`);
-  return { paths, safeEof };
+  return { paths, safeEof, repo };
 }
-
-function fail(message) { throw new Error(message); }
 
 function inspectPath(root, file, filesystem = fs) {
   validatePath(file);
@@ -165,10 +198,19 @@ function preflight(root, { paths, safeEof = new Map() }, git = makeGit(root)) {
   }
 }
 
+// Without --repo the root is the toplevel of the current directory. With --repo
+// the factory root is the repository holding this script, which must itself be
+// a toplevel, and the nested repository is validated under it.
+function resolveRoot(repo, factoryRoot = path.resolve(__dirname, '..', '..')) {
+  if (repo === undefined) return makeGit(process.cwd())(['rev-parse', '--show-toplevel']).stdout.trim();
+  const top = makeGit(factoryRoot)(['rev-parse', '--show-toplevel']).stdout.trim();
+  if (path.resolve(top).toLowerCase() !== factoryRoot.toLowerCase()) fail('unexpected factory repository root');
+  return resolveRepoRoot(repo, factoryRoot);
+}
+
 function main(argv = process.argv.slice(2)) {
   const options = parseArguments(argv);
-  const cwdGit = makeGit(process.cwd());
-  const root = cwdGit(['rev-parse', '--show-toplevel']).stdout.trim();
+  const root = resolveRoot(options.repo);
   const result = preflight(root, options);
   for (const file of result.fixed) process.stdout.write(`commit-format-preflight: corrected reviewed EOF: ${file}\n`);
   for (const check of result.checks) if (!check.ok) {
@@ -179,7 +221,7 @@ function main(argv = process.argv.slice(2)) {
   return result.ok ? 0 : 1;
 }
 
-module.exports = { parseArguments, validatePath, inspectPath, deletionEntry, classifyPath, trimReviewedEof, preflight, sha256, main };
+module.exports = { validateRepoArgument, resolveRepoRoot, resolveRoot, parseArguments, validatePath, inspectPath, deletionEntry, classifyPath, trimReviewedEof, preflight, sha256, main };
 if (require.main === module) {
   try { process.exitCode = main(); }
   catch (error) { process.stderr.write(`commit-format-preflight: ${error.message}\n`); process.exitCode = 1; }

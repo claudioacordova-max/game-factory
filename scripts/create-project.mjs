@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryDirectory = path.resolve(scriptDirectory, '..');
 const templateDirectory = path.join(repositoryDirectory, 'template');
-const projectsDirectory = path.join(repositoryDirectory, 'projects');
+const defaultProjectsDirectory = path.join(repositoryDirectory, 'projects');
 
 const excludedDirectories = new Set([
   '.git',
@@ -115,12 +116,44 @@ async function updateProjectMetadata(projectDirectory, projectName) {
   await writeFile(readmePath, updatedReadme, 'utf8');
 }
 
-async function main() {
-  const [projectName, ...extraArguments] = process.argv.slice(2);
-  if (!projectName || extraArguments.length > 0) {
-    throw new Error('Uso: node scripts/create-project.mjs <nombre-del-proyecto>');
+async function listFiles(directory, prefix = '') {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) files.push(...(await listFiles(path.join(directory, entry.name), relative)));
+    else if (entry.isFile()) files.push(relative);
   }
+  return files.sort();
+}
 
+function runGit(cwd, args) {
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !/^GIT_(DIR|WORK_TREE|INDEX_FILE)$/i.test(key)),
+  );
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8', windowsHide: true, env });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error((result.stderr || result.stdout || `git salió con código ${result.status}`).trim());
+  }
+  return result.stdout;
+}
+
+// Initializes the game's own repository and commits exactly the files copied
+// from the template (enumerated; never `git add -A` or `git add .`).
+export async function initGameRepository(projectDirectory, projectName) {
+  const files = await listFiles(projectDirectory);
+  runGit(projectDirectory, ['init', '-b', 'main']);
+  runGit(projectDirectory, ['--literal-pathspecs', 'add', '--', ...files]);
+  runGit(projectDirectory, ['commit', '-m', `${projectName}: proyecto inicial desde la plantilla`]);
+  return files;
+}
+
+// Returns { projectDirectory, git: 'created' | 'skipped' | 'failed', gitError? }.
+// A Git failure keeps the project (it is valid and usable) and is reported.
+export async function createProject(
+  projectName,
+  { projectsDirectory = defaultProjectsDirectory, git = true } = {},
+) {
   validateProjectName(projectName);
 
   const projectDirectory = path.resolve(projectsDirectory, projectName);
@@ -150,13 +183,44 @@ async function main() {
     throw error;
   }
 
+  if (!git) return { projectDirectory, git: 'skipped' };
+  try {
+    await initGameRepository(projectDirectory, projectName);
+    return { projectDirectory, git: 'created' };
+  } catch (error) {
+    // Drop a half-initialized repository so the manual steps start clean.
+    await rm(path.join(projectDirectory, '.git'), { recursive: true, force: true });
+    return { projectDirectory, git: 'failed', gitError: error.message };
+  }
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const noGit = args.includes('--no-git');
+  const [projectName, ...extraArguments] = args.filter((argument) => argument !== '--no-git');
+  if (!projectName || extraArguments.length > 0 || args.filter((argument) => argument === '--no-git').length > 1) {
+    throw new Error('Uso: node scripts/create-project.mjs <nombre-del-proyecto> [--no-git]');
+  }
+
+  const { projectDirectory, git, gitError } = await createProject(projectName, { git: !noGit });
+
   console.log(`Proyecto creado en: ${path.relative(repositoryDirectory, projectDirectory)}`);
+  const manualGit = `cd projects/${projectName} && git init -b main && git add -- <archivos> && git commit -m "${projectName}: proyecto inicial desde la plantilla"`;
+  if (git === 'created') console.log('Repositorio Git propio creado (rama main) con un commit inicial.');
+  if (git === 'skipped') console.log(`Sin repositorio Git (--no-git). Para crearlo después: ${manualGit}`);
+  if (git === 'failed') {
+    console.warn(`AVISO: el proyecto se conservó, pero no se pudo crear su repositorio Git: ${gitError}`);
+    console.warn(`Pasos manuales: ${manualGit}`);
+  }
   console.log('Para instalar sus dependencias:');
   console.log(`  cd projects/${projectName}`);
   console.log('  npm install');
+  console.log(`El juego se versiona en su propio repositorio (projects/${projectName}/.git); la factory ignora projects/*/.`);
 }
 
-main().catch((error) => {
-  console.error(`Error: ${error.message}`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(`Error: ${error.message}`);
+    process.exitCode = 1;
+  });
+}

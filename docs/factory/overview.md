@@ -28,11 +28,10 @@ La autonomía cubre operaciones rutinarias de trabajo ya aprobado. Se consulta c
 
 La Factory mantiene aquí su [estado](status.md) y procedimiento. Cada juego dispone de README práctico, estado implementado, especificación de alcance y plan de continuidad. `history/` conserva procedencia sin convertir requisitos sustituidos en tareas nuevas.
 
-- [Duelo en la cripta](../../projects/juego-cartas/docs/status.md): RPG de cartas con expedición 3D, consecuencias persistentes durante la sesión y recuperación de criaturas.
-- [Comerciante Medieval](../../projects/comerciante-medieval/docs/status.md): sandbox comercial 3D con economía familiar, producción y simulaciones reproducibles.
+Los juegos son repositorios Git independientes que se crean o clonan en `projects/<juego>/`; la Factory no los versiona ni depende de ellos, y cada juego se publica como sitio estático sin la Factory.
 
 ## Límites
 
 La revisión es independiente por contexto, pero los agentes comparten workspace y sandbox: el reviewer no tiene una barrera técnica de escritura. Las herramientas y permisos dependen de la sesión e instalación local. La inspección visual puede quedar limitada por navegador, políticas o disponibilidad de CLI; se registra su alcance real.
 
-La evidencia de reutilización corresponde a los dos juegos existentes. Los resultados históricos de pruebas y aceptaciones no acreditan automáticamente cambios posteriores. Algunas capturas y diagnósticos están fuera del repositorio. El [estado de capacidades](status.md) enlaza evidencias y distingue configuración presente de verificaciones realizadas.
+La evidencia de reutilización corresponde a los dos juegos desarrollados antes de la separación de repositorios (2026-11-13), cuyo historial previo sigue en el de la Factory. Los resultados históricos de pruebas y aceptaciones no acreditan automáticamente cambios posteriores. Algunas capturas y diagnósticos están fuera del repositorio. El [estado de capacidades](status.md) enlaza evidencias y distingue configuración presente de verificaciones realizadas.

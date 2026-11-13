@@ -1,29 +1,30 @@
 # Game Factory — estado vigente
 
-Propósito: capacidades implementadas, evidencia y limitaciones. Ámbito: Factory. Revisión: 2026-11-07 (ficha de continuidad); resto del documento 2026-10-28. Corte base de la reorganización: `54955677ec9430695b233c99a8fb4067b103a86d`. Reorganización documental aceptada y cierre autorizado por el usuario el 2026-10-28; el impedimento técnico quedó resuelto en `a773dff6f5314bb1c28eda7fef401e4a256fbbd2`. Este registro integra la entrega de cierre documental, cuyo identificador real se informa después de comprobar Git.
+Propósito: capacidades implementadas, evidencia y limitaciones. Ámbito: Factory. Revisión: 2026-11-13 (ficha de continuidad); resto del documento 2026-10-28. Corte base de la reorganización: `54955677ec9430695b233c99a8fb4067b103a86d`. Reorganización documental aceptada y cierre autorizado por el usuario el 2026-10-28; el impedimento técnico quedó resuelto en `a773dff6f5314bb1c28eda7fef401e4a256fbbd2`. Este registro integra la entrega de cierre documental, cuyo identificador real se informa después de comprobar Git.
 
 ## Ficha de continuidad de Factory
 
-Lectura obligatoria al iniciar cualquier sesión (Codex o Claude Code), junto con la ficha del juego activo. Revisión: 2026-11-07. Toda propuesta o pendiente de Factory que no se ejecute en su sesión se registra aquí antes de cerrarla ([workflow v1.2](workflow-v1.md#token-efficiency-v12)).
+Lectura obligatoria al iniciar cualquier sesión (Codex o Claude Code), junto con la ficha del juego activo. Revisión: 2026-11-13. Toda propuesta o pendiente de Factory que no se ejecute en su sesión se registra aquí antes de cerrarla ([workflow v1.2](workflow-v1.md#token-efficiency-v12)).
 
 | Campo | Valor |
 |---|---|
-| Último cambio | `juego-cartas` iteración UI-2 (combate sin scroll y arrastre por gestos) cerrada, 2026-11-08. Anteriores: LEG-1 (`6f85bdb`), UI-1 (`047581b`), M8c (`ed83a85`) |
-| Juegos | `juego-cartas`: M8, UI-1, LEG-1 y UI-2 cerrados 2026-11-08 (solo V0.4B); sin hito autorizado, candidato balance ([ficha](../../projects/juego-cartas/docs/status.md)). `comerciante-medieval`: ITER-10 cerrado, sin hito autorizado ([ficha](../../projects/comerciante-medieval/docs/status.md)) |
+| Último cambio | Separación de juegos y Factory (SEP-1), 2026-11-13: cada juego es un repo propio en `projects/<juego>/`, ignorado por la Factory; ejecutor y preflight con `--repo`; el generador crea el repo del juego |
+| Juegos | No se versionan aquí; cada juego tiene su repo y su propia ficha de pendientes ([projects/README.md](../../projects/README.md)). El historial anterior al 2026-11-13 conserva los juegos de entonces |
 | Limitaciones vigentes | Agentes de Claude Code requieren sesión nueva; `deny` de `.claude/settings.json` cubre Bash, no PowerShell; ejecutor instalado en `%USERPROFILE%\.codex\bin\`; CLI Playwright 0.1.22 instalada fuera del repo en `%USERPROFILE%\.game-factory\tools\` (no en `%LOCALAPPDATA%`, que Claude Desktop virtualiza) |
 
 Pendientes de Factory (ninguno autorizado para ejecución):
 
 | Pendiente | Estado | Qué falta |
 |---|---|---|
+| Proteger `.git` de los juegos | Hallazgo no bloqueante de la revisión SEP-1 | Valorar una regla `deny` de edición de `projects/*/.git/**` en `.claude/settings.json` (mismo nivel de confianza que el `.git` de la Factory; no es regresión) |
 | Ajustes menores del harness visual | Hallazgos no bloqueantes de la revisión, 2026-11-07 | `patches.mjs` exige `export default` (un export con nombre se ignora sin aviso): validar o documentar; la skill dice que el escenario debe estar fuera del repo pero solo se comprueban fixture y salida. Los errores de consola se cuentan pero no cambian el código de salida |
 
 ## Capacidades existentes
 
 | Capacidad | Estado y evidencia |
 |---|---|
-| Proyectos independientes | [Plantilla](../../template/README.md) y [generador](../../scripts/create-project.mjs) presentes; dos juegos implementados. El generador copia la base, adapta metadatos y rechaza destinos existentes; no crea toda la documentación del juego. |
-| Hitos e iteraciones | [Workflow](workflow-v1.md), [AGENTS.md](../../AGENTS.md) y registros de ambos juegos documentan implementación, checks, revisión y aceptación. Los planes vivos enlazan el historial anterior. |
+| Proyectos independientes | [Plantilla](../../template/README.md) y [generador](../../scripts/create-project.mjs) presentes; dos juegos desarrollados antes de SEP-1. El generador copia la base, adapta metadatos, rechaza destinos existentes y crea el repositorio Git propio del juego (`--no-git` lo omite); no crea toda la documentación del juego. |
+| Hitos e iteraciones | [Workflow](workflow-v1.md), [AGENTS.md](../../AGENTS.md) y los registros de los juegos documentan implementación, checks, revisión y aceptación. Los planes vivos enlazan el historial anterior. |
 | Roles especializados | Perfiles [implementer](../../.codex/agents/implementer.toml) y [reviewer](../../.codex/agents/reviewer.toml) presentes; coordinación en la sesión principal. |
 | Briefs y presentación | Skills [game-iteration](../../.agents/skills/game-iteration/SKILL.md) y [game-ui-ux](../../.agents/skills/game-ui-ux/SKILL.md) presentes y utilizadas según los registros. |
 | Inspección visual | Harness compartido Codex/Claude [`scripts/visual-inspect.mjs`](../../scripts/visual-inspect.mjs): Vite del juego + Playwright CLI `0.1.22` headless (no ocupa pantalla ni navegador del diseñador), fixtures/parches en memoria fuera del repo, 1440×900/1024×768 por defecto, resumen compacto. Uso en la skill [game-ui-ux](../../.agents/skills/game-ui-ux/SKILL.md). Los registros distinguen inspecciones ejecutadas, limitaciones y aprobación humana. |
@@ -31,6 +32,8 @@ Pendientes de Factory (ninguno autorizado para ejecución):
 | Continuidad documental | Referencias de Factory en esta carpeta y de cada juego en `projects/<juego>/docs/`; planes vivos separados de antecedentes históricos. Sin nueva arquitectura de ejecución. |
 
 ## Evidencia de desarrollo
+
+Desde SEP-1 (2026-11-13) los juegos no se versionan aquí: sus enlaces solo resuelven con el juego clonado en `projects/`; el contenido de entonces sigue en el historial de este repositorio.
 
 - [RPG: continuidad y cierres](../../projects/juego-cartas/docs/implementation-plan.md): expedición/recuperación, controles, A1–A6 y transformación/estabilización 3D; último cierre `54955677ec9430695b233c99a8fb4067b103a86d`.
 - [Comerciante Medieval: continuidad](../../projects/comerciante-medieval/docs/implementation-plan.md): siete hitos e iteraciones posteriores; último cierre `737fea910ae0461eabf2520d365cbb49035b1cd5`. ITER-07/08 fueron sustituidas sin cierre formal acreditado; no se les atribuye la aprobación de ITER-09/10.
@@ -86,3 +89,14 @@ Los [contextos originales](history/00-contexto-comun.md) y las [instrucciones de
 - Entorno: CLI 0.1.22 copiada sin descargas desde la caché temporal de M1 a `%USERPROFILE%\.game-factory\tools\playwright-cli-0.1.22`; `NO_UPDATE_NOTIFIER=1` evita su consulta de actualizaciones.
 - Checks: `node --test scripts/*.test.mjs` 7/7. Reproducción real de la inspección inicial M3 de `juego-cartas` con fixture en temporal: pass, 16 PNG, 0 errores, 17 s; capturas 1440×900 y 1024×768 abiertas y correctas. Sin cambios en juegos ni dependencias.
 - Revisión independiente `reviewer`: aprobada, sin hallazgos bloqueantes; hallazgos menores en la tabla de pendientes. Cero ciclos correctivos. No requiere playtesting humano.
+
+## Separación de juegos y Factory (SEP-1) — 2026-11-13
+
+- Autorización: el diseñador aprobó ejecutar el brief tal como se propuso (2026-11-13), con las recomendaciones: registros de `history/` intactos y repos con el nombre de su carpeta. Sin reescribir el historial de la Factory.
+- Baseline `5e28aeaca8cfb9117e2ab5fd4a0d7d0d66c6e036`; copia previa `git bundle --all` verificada en `%USERPROFILE%\.game-factory\backups\game-factory-pre-sep1-5e28aea.bundle`.
+- Juegos: repos propios en `projects/juego-cartas/` (32 commits) y `projects/comerciante-medieval/` (17 commits) extraídos con `git subtree split`; árboles idénticos a la baseline. Tests y build desde cada repo: 359/359 y 51/51. Sus docs vigentes ya no enlazan a la Factory y anotan que los hashes anteriores son de este repositorio. La carpeta de `comerciante-medieval` pertenecía a la cuenta del sandbox de Codex (Git la rechazaba por propiedad dudosa); se recreó con el usuario actual moviendo su contenido.
+- Factory: `.gitignore` ignora `projects/*/`; los archivos de juegos salen del índice en este cierre (siguen en el historial); `projects/README.md` explica cómo crear o clonar juegos. `AGENTS.md`, `README.md`, `overview.md` y `workflow-v1.md` ya no nombran juegos y describen un repo por juego.
+- Herramientas: ejecutor y preflight aceptan `--repo projects/<nombre>` (lista cerrada; directorio real sin enlaces, `.git` directorio, toplevel exacto); sin `--repo` se comportan igual. Ejecutor reinstalado con SHA-256 `573e8e185e7bb5561da5c786569e06eb1b1a152267248685d83e2ac262d0e5bf`. `create-project.mjs` hace `git init -b main` y un commit inicial con lista explícita (`--no-git` lo omite; si Git falla conserva el proyecto y avisa). Comprobado generando un juego en temporal: repo limpio con un commit, build correcto.
+- Checks: `node --test .codex/tools/*.test.cjs` 44/44, `node --test scripts/*.test.mjs` 11/11.
+- Revisión independiente `reviewer`: aprobada sin bloqueantes. No bloqueantes: enlaces de evidencia a juegos (nota añadida), redacción residual (corregida), protección de `.git` de los juegos (pendiente en la ficha). Sin ciclos correctivos ni playtesting.
+- Pendiente del diseñador: crear los repos en GitHub y autorizar remotos y push (también de este repositorio).

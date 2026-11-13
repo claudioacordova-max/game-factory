@@ -35,7 +35,7 @@ The executor accepts only a single-line commit message and individual repository
 
 It stages only those paths with literal pathspecs, verifies exact staged paths and expected deletion types, runs `git diff --cached --check`, and invokes only a normal `git commit -m` through process arguments without a shell. It then verifies committed paths and types with rename detection disabled. For a move, include both its old and new paths explicitly; do not stage a directory or depend on rename similarity. If a commit hook is configured, it stops before staging rather than disable or bypass the hook, since hooks can change the index. It does not amend or push. Tests, independent review, and required human playtesting remain workflow gates; the executor does not replace them. If any validation differs or Git reports an error such as `.git/index.lock` permission denial, stop without retrying or committing.
 
-The executor receives only the approved file paths, keeping unrelated and untracked paths out of a factory commit. If Git state or any other condition is uncertain, leave the work uncommitted.
+Each game is its own repository nested at `projects/<game>/` and ignored by the Factory repository. For game work, pass `--repo projects/<game>` to both the preflight and the executor; paths are then relative to that game's repository. Without `--repo` they target the Factory repository. A milestone that touches both commits each repository separately. The executor receives only the approved file paths, keeping unrelated and untracked paths out of a factory commit. If Git state or any other condition is uncertain, leave the work uncommitted.
 
 ## Record and resume milestone state
 
@@ -92,7 +92,7 @@ Command permissions exist in `.codex/rules/*.rules` and `.claude/settings.json`;
 
 ## Start a new project
 
-Start from the new project's approved game specification and approved technical milestone plan. Check that both define the gameplay scope and acceptance criteria before delegating implementation. Use the repository's existing project/template process when authorized; do not migrate or modify another project as part of setup. Establish documentation in `projects/<game>/docs/` under the conventions below, including the continuity card and `decisions.md` from `docs/factory/templates/` (see Token efficiency); the generator provides the technical template and does not automatically create these documents. Track milestone status in `implementation-plan.md`, and execute only approved milestones through this workflow.
+Start from the new project's approved game specification and approved technical milestone plan. Check that both define the gameplay scope and acceptance criteria before delegating implementation. Use the repository's existing project/template process when authorized; do not migrate or modify another project as part of setup. Establish documentation in `projects/<game>/docs/` under the conventions below, including the continuity card and `decisions.md` from `docs/factory/templates/` (see Token efficiency); the generator provides the technical template and the game's own Git repository (initial commit), and does not automatically create these documents. Track milestone status in `implementation-plan.md`, and execute only approved milestones through this workflow.
 
 ## Post-closure iterations (v1.1)
 

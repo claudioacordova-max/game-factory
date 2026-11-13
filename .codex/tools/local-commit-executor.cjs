@@ -24,8 +24,38 @@ function validatePathSyntax(value) {
   return value;
 }
 
+const REPO_ARGUMENT = /^projects\/[a-z0-9][a-z0-9-]*$/u;
+
+function validateRepoArgument(value) {
+  if (typeof value !== 'string' || !REPO_ARGUMENT.test(value)) {
+    fail('--repo must be exactly projects/<name> with <name> matching [a-z0-9][a-z0-9-]*');
+  }
+  return value;
+}
+
+// Resolves --repo to a nested repository root under factoryRoot. The target
+// must be a real directory (no link or junction) with its own .git directory
+// (not a file, so worktrees and gitlinks are refused) and be its own toplevel.
+function resolveRepoRoot(value, factoryRoot, makeGitFor = makeGit) {
+  validateRepoArgument(value);
+  const root = path.resolve(factoryRoot, ...value.split('/'));
+  let stat;
+  try { stat = fs.lstatSync(root); }
+  catch (error) { if (error.code === 'ENOENT') fail('--repo directory does not exist: ' + value); throw error; }
+  if (!stat.isDirectory()) fail('--repo is not a directory: ' + value);
+  if (fs.realpathSync(root).toLowerCase() !== root.toLowerCase()) fail('--repo resolves through a link');
+  let dotGit;
+  try { dotGit = fs.lstatSync(path.join(root, '.git')); }
+  catch (error) { if (error.code === 'ENOENT') fail('--repo has no .git directory: ' + value); throw error; }
+  if (!dotGit.isDirectory()) fail('--repo .git must be a real directory (worktrees and gitlinks are refused)');
+  const top = makeGitFor(root)(['rev-parse', '--show-toplevel']).stdout.trim();
+  if (path.resolve(top).toLowerCase() !== root.toLowerCase()) fail('--repo is not the toplevel of its own repository');
+  return root;
+}
+
 function parseArguments(argv) {
   let message;
+  let repo;
   const paths = [];
   for (let i = 0; i < argv.length; i += 1) {
     const option = argv[i];
@@ -35,6 +65,9 @@ function parseArguments(argv) {
     } else if (option === '--path') {
       if (i + 1 >= argv.length) fail('--path requires one file path');
       paths.push(validatePathSyntax(argv[++i]));
+    } else if (option === '--repo') {
+      if (repo !== undefined || i + 1 >= argv.length) fail('--repo may be provided at most once, with a value');
+      repo = validateRepoArgument(argv[++i]);
     } else fail('unknown argument: ' + option);
   }
   if (typeof message !== 'string' || !message.trim() || CONTROL_CHARS.test(message) || message.length > 300) {
@@ -43,7 +76,7 @@ function parseArguments(argv) {
   if (!paths.length || new Set(paths.map((file) => file.toLowerCase())).size !== paths.length) {
     fail('provide unique individual --path entries');
   }
-  return { message, paths };
+  return { message, paths, repo };
 }
 
 function makeGit(root, executable = GIT_EXECUTABLE) {
@@ -170,11 +203,13 @@ function commitAuthorizedFiles(root, runGit, { message, paths }) {
 }
 
 function main(argv = process.argv.slice(2)) {
-  const result = commitAuthorizedFiles(REPOSITORY_ROOT, makeGit(REPOSITORY_ROOT), parseArguments(argv));
+  const options = parseArguments(argv);
+  const root = options.repo ? resolveRepoRoot(options.repo, REPOSITORY_ROOT) : REPOSITORY_ROOT;
+  const result = commitAuthorizedFiles(root, makeGit(root), options);
   process.stdout.write(result + '\n');
 }
 
-module.exports = { validatePathSyntax, parseArguments, makeGit, verifyRepository, inspectPath, deletionEntry, classifyPath,
+module.exports = { validateRepoArgument, resolveRepoRoot, validatePathSyntax, parseArguments, makeGit, verifyRepository, inspectPath, deletionEntry, classifyPath,
   readStagedPaths, refuseConfiguredCommitHooks, assertExactPaths, assertChangeTypes, commitAuthorizedFiles, main };
 if (require.main === module) {
   try { main(); }

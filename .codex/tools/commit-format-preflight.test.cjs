@@ -178,7 +178,7 @@ test('preflight Git errors do not get treated as whitespace or bypassed', () => 
 
 test('safe executor matches its reviewed hash and retains security/format gates', () => {
   const executor = fs.readFileSync(path.join(__dirname, 'local-commit-executor.cjs'));
-  assert.equal(sha256(executor), '758fa50726a64fd33b07a9485e04d5d358376a0c517e6ed29eefbd11401aefdf');
+  assert.equal(sha256(executor), '573e8e185e7bb5561da5c786569e06eb1b1a152267248685d83e2ac262d0e5bf');
   for (const gate of ["runGit(['diff', '--cached', '--check'])", 'refuseConfiguredCommitHooks(root, runGit)', "runGit(['--literal-pathspecs', 'add'", 'initiallyStaged.length > 0']) {
     assert.ok(executor.toString('utf8').includes(gate));
   }
@@ -227,4 +227,76 @@ test('classifies filesystem permission errors as errors, never as deletions', ()
   const { classifyPath } = require('./commit-format-preflight.cjs');
   const filesystem = { lstatSync() { const error = new Error('denied'); error.code = 'EACCES'; throw error; }, readdirSync: fs.readdirSync };
   assert.throws(() => classifyPath(root, 'gone.md', git, filesystem), /denied/u);
+}));
+
+// --- --repo (SEP-1) ---------------------------------------------------------
+const { validateRepoArgument, resolveRepoRoot } = require('./commit-format-preflight.cjs');
+const CLEAN_ENV = () => Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^GIT_/iu.test(key)));
+const gitIn = (cwd, args) => {
+  const result = spawnSync('git', args, { cwd, windowsHide: true, encoding: 'utf8', env: CLEAN_ENV() });
+  if (result.error || result.status !== 0) throw new Error((result.error && result.error.message) || result.stderr || 'Git failed');
+  return result.stdout.trim();
+};
+
+// Temporary "factory" directory (itself a repo) holding projects/<name> repos.
+function repoFixture(run) {
+  const factory = fs.mkdtempSync(path.join(os.tmpdir(), 'gf-repoarg-test-'));
+  const initRepo = (dir) => {
+    fs.mkdirSync(dir, { recursive: true });
+    gitIn(dir, ['init', '--quiet']);
+    for (const [k, v] of [['user.name', 'Fixture'], ['user.email', 'fixture@example.invalid'], ['core.autocrlf', 'false'], ['commit.gpgsign', 'false']]) gitIn(dir, ['config', k, v]);
+    fs.writeFileSync(path.join(dir, 'a.md'), 'one\n');
+    gitIn(dir, ['add', 'a.md']);
+    gitIn(dir, ['commit', '--quiet', '-m', 'baseline']);
+  };
+  try {
+    initRepo(factory);
+    initRepo(path.join(factory, 'projects', 'game-one'));
+    run({ factory, initRepo, nested: path.join(factory, 'projects', 'game-one') });
+  } finally {
+    assert.ok(path.basename(factory).startsWith('gf-repoarg-test-'));
+    fs.rmSync(factory, { recursive: true, force: true });
+  }
+}
+
+test('--repo accepts only projects/<name> syntax and at most once', () => {
+  assert.equal(validateRepoArgument('projects/juego-1'), 'projects/juego-1');
+  for (const bad of ['../x', 'projects/../x', 'C:\\x', 'C:/x', '/projects/a', 'projects\\a', 'projects/A', 'projects/-a',
+    'projects/a_b', 'projects/a/b', 'projects/', 'projects', 'other/a', 'projects/a ', './projects/a', '']) {
+    assert.throws(() => validateRepoArgument(bad), /--repo/u, bad);
+  }
+  assert.throws(() => parseArguments(['--repo', 'projects/a', '--repo', 'projects/b'].concat(['--path', 'a.md'])), /at most once/u);
+  assert.throws(() => parseArguments(['--repo'].concat([])), /./u);
+  assert.equal(parseArguments(['--repo', 'projects/a'].concat(['--path', 'a.md'])).repo, 'projects/a');
+  assert.equal(parseArguments(['--path', 'a.md']).repo, undefined);
+});
+
+test('resolveRepoRoot rejects missing dir, no .git, .git file, non-toplevel and links', () => repoFixture(({ factory, nested }) => {
+  assert.equal(resolveRepoRoot('projects/game-one', factory).toLowerCase(), nested.toLowerCase());
+  assert.throws(() => resolveRepoRoot('projects/missing', factory), /does not exist/u);
+  fs.mkdirSync(path.join(factory, 'projects', 'plain'));
+  assert.throws(() => resolveRepoRoot('projects/plain', factory), /no \.git/u);
+  fs.mkdirSync(path.join(factory, 'projects', 'gitfile'));
+  fs.writeFileSync(path.join(factory, 'projects', 'gitfile', '.git'), 'gitdir: ../game-one/.git\n');
+  assert.throws(() => resolveRepoRoot('projects/gitfile', factory), /real directory/u);
+  fs.mkdirSync(path.join(factory, 'projects', 'fakegit', '.git'), { recursive: true });
+  assert.throws(() => resolveRepoRoot('projects/fakegit', factory), /not the toplevel|not a git|Git/iu);
+  fs.writeFileSync(path.join(factory, 'projects', 'afile'), 'x');
+  assert.throws(() => resolveRepoRoot('projects/afile', factory), /not a directory/u);
+  let linked = false;
+  try { fs.symlinkSync(nested, path.join(factory, 'projects', 'linked'), 'junction'); linked = true; } catch { /* OS cannot create it */ }
+  if (linked) assert.throws(() => resolveRepoRoot('projects/linked', factory), /not a directory|link/u);
+}));
+
+test('preflight through --repo checks the nested repository and refuses a non-toplevel factory', () => repoFixture(({ factory, nested }) => {
+  const { resolveRoot } = require('./commit-format-preflight.cjs');
+  fs.writeFileSync(path.join(nested, 'a.md'), 'two\n');
+  const root = resolveRoot('projects/game-one', factory);
+  assert.equal(root.toLowerCase(), nested.toLowerCase());
+  const result = preflight(root, { paths: ['a.md'] });
+  assert.equal(result.ok, true);
+  assert.equal(gitIn(nested, ['diff', '--cached', '--name-only']), '');
+  const notFactory = fs.mkdtempSync(path.join(os.tmpdir(), 'gf-repoarg-test-'));
+  try { assert.throws(() => resolveRoot('projects/x', notFactory), /unexpected factory|Git|not a git/iu); }
+  finally { fs.rmSync(notFactory, { recursive: true, force: true }); }
 }));

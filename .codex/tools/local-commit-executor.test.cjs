@@ -60,7 +60,7 @@ function noWrites(calls) {
 }
 
 test('CLI accepts only the existing explicit interface and rejects aliases or ambiguous paths', () => {
-  assert.deepEqual(parseArguments(['--message', 'ok', '--path', 'file.md']), { message: 'ok', paths: ['file.md'] });
+  assert.deepEqual(parseArguments(['--message', 'ok', '--path', 'file.md']), { message: 'ok', paths: ['file.md'], repo: undefined });
   for (const value of ['../a', 'a/../b', '/a', 'C:/a', 'a\\b', '*.md', 'a?[b]', 'a//b',
     '.git/config', 'nested/.git/config', '.git./config', 'NUL.txt', 'a./b', 'a /b', '-x', 'a\nb']) {
     assert.throws(() => validatePathSyntax(value));
@@ -270,4 +270,78 @@ test('propagates Git failure without staging and validates committed paths and t
   for (const output of ['M\0a.md\0M\0b.md\0', 'M\0a.md\0', 'R100\0b.md\0a.md\0', 'M\0a.md']) {
     assert.throws(() => assertChangeTypes(output, candidates, 'committed'));
   }
+}));
+
+// --- --repo (SEP-1) ---------------------------------------------------------
+const { validateRepoArgument, resolveRepoRoot } = require('./local-commit-executor.cjs');
+const CLEAN_ENV = () => Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^GIT_/iu.test(key)));
+const gitIn = (cwd, args) => {
+  const result = spawnSync('git', args, { cwd, windowsHide: true, encoding: 'utf8', env: CLEAN_ENV() });
+  if (result.error || result.status !== 0) throw new Error((result.error && result.error.message) || result.stderr || 'Git failed');
+  return result.stdout.trim();
+};
+
+// Temporary "factory" directory (itself a repo) holding projects/<name> repos.
+function repoFixture(run) {
+  const factory = fs.mkdtempSync(path.join(os.tmpdir(), 'gf-repoarg-test-'));
+  const initRepo = (dir) => {
+    fs.mkdirSync(dir, { recursive: true });
+    gitIn(dir, ['init', '--quiet']);
+    for (const [k, v] of [['user.name', 'Fixture'], ['user.email', 'fixture@example.invalid'], ['core.autocrlf', 'false'], ['commit.gpgsign', 'false']]) gitIn(dir, ['config', k, v]);
+    fs.writeFileSync(path.join(dir, 'a.md'), 'one\n');
+    gitIn(dir, ['add', 'a.md']);
+    gitIn(dir, ['commit', '--quiet', '-m', 'baseline']);
+  };
+  try {
+    initRepo(factory);
+    initRepo(path.join(factory, 'projects', 'game-one'));
+    run({ factory, initRepo, nested: path.join(factory, 'projects', 'game-one') });
+  } finally {
+    assert.ok(path.basename(factory).startsWith('gf-repoarg-test-'));
+    fs.rmSync(factory, { recursive: true, force: true });
+  }
+}
+
+test('--repo accepts only projects/<name> syntax and at most once', () => {
+  assert.equal(validateRepoArgument('projects/juego-1'), 'projects/juego-1');
+  for (const bad of ['../x', 'projects/../x', 'C:\\x', 'C:/x', '/projects/a', 'projects\\a', 'projects/A', 'projects/-a',
+    'projects/a_b', 'projects/a/b', 'projects/', 'projects', 'other/a', 'projects/a ', './projects/a', '']) {
+    assert.throws(() => validateRepoArgument(bad), /--repo/u, bad);
+  }
+  assert.throws(() => parseArguments(['--repo', 'projects/a', '--repo', 'projects/b'].concat(['--message', 'm', '--path', 'a.md'])), /at most once/u);
+  assert.throws(() => parseArguments(['--repo'].concat([])), /./u);
+  assert.equal(parseArguments(['--repo', 'projects/a'].concat(['--message', 'm', '--path', 'a.md'])).repo, 'projects/a');
+  assert.equal(parseArguments(['--message', 'm', '--path', 'a.md']).repo, undefined);
+});
+
+test('resolveRepoRoot rejects missing dir, no .git, .git file, non-toplevel and links', () => repoFixture(({ factory, nested }) => {
+  assert.equal(resolveRepoRoot('projects/game-one', factory).toLowerCase(), nested.toLowerCase());
+  assert.throws(() => resolveRepoRoot('projects/missing', factory), /does not exist/u);
+  fs.mkdirSync(path.join(factory, 'projects', 'plain'));
+  assert.throws(() => resolveRepoRoot('projects/plain', factory), /no \.git/u);
+  fs.mkdirSync(path.join(factory, 'projects', 'gitfile'));
+  fs.writeFileSync(path.join(factory, 'projects', 'gitfile', '.git'), 'gitdir: ../game-one/.git\n');
+  assert.throws(() => resolveRepoRoot('projects/gitfile', factory), /real directory/u);
+  fs.mkdirSync(path.join(factory, 'projects', 'fakegit', '.git'), { recursive: true });
+  assert.throws(() => resolveRepoRoot('projects/fakegit', factory), /not the toplevel|not a git|Git/iu);
+  fs.writeFileSync(path.join(factory, 'projects', 'afile'), 'x');
+  assert.throws(() => resolveRepoRoot('projects/afile', factory), /not a directory/u);
+  let linked = false;
+  try { fs.symlinkSync(nested, path.join(factory, 'projects', 'linked'), 'junction'); linked = true; } catch { /* OS cannot create it */ }
+  if (linked) assert.throws(() => resolveRepoRoot('projects/linked', factory), /not a directory|link/u);
+}));
+
+test('commit through --repo root touches only the nested repository', () => repoFixture(({ factory, nested }) => {
+  const { makeGit } = require('./local-commit-executor.cjs');
+  const factoryHead = gitIn(factory, ['rev-parse', 'HEAD']);
+  const factoryStatusBefore = gitIn(factory, ['status', '--porcelain']);
+  fs.writeFileSync(path.join(nested, 'a.md'), 'two\n');
+  const root = resolveRepoRoot('projects/game-one', factory);
+  const nestedHead = gitIn(nested, ['rev-parse', 'HEAD']);
+  const hash = commitAuthorizedFiles(root, makeGit(root), { message: 'nested change', paths: ['a.md'] });
+  assert.notEqual(hash, nestedHead);
+  assert.equal(gitIn(nested, ['rev-parse', 'HEAD']), hash);
+  assert.equal(gitIn(nested, ['status', '--porcelain']), '');
+  assert.equal(gitIn(factory, ['rev-parse', 'HEAD']), factoryHead);
+  assert.equal(gitIn(factory, ['status', '--porcelain']), factoryStatusBefore);
 }));
